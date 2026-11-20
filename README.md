@@ -57,3 +57,4 @@ Interfejs wykorzystuje React, Lucide i lokalne fonty Inter. Wydanie konkursowe m
 Testy przeglądarkowe: `npx playwright install chromium`, następnie `npm run build` i `npm run test:e2e`. Testy uruchamiają własne lokalne serwery na portach 4183 i 4184.
 
 "# Mobywatel0-konkurs" 
+"# Mobywatel0-konkurs" 
