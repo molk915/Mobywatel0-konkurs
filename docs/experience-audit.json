@@ -1,0 +1,101 @@
+{
+  "errors": [],
+  "frames": {
+    "samples": 120,
+    "median": 16.699999999999818,
+    "p95": 16.800000000000182,
+    "max": 100
+  },
+  "layouts": [
+    {
+      "size": {
+        "width": 390,
+        "height": 844
+      },
+      "tab": "Portfel",
+      "overflow": false,
+      "contentOverflow": false,
+      "bar": {
+        "x": 18,
+        "y": 705,
+        "width": 354,
+        "height": 56
+      }
+    },
+    {
+      "size": {
+        "width": 390,
+        "height": 844
+      },
+      "tab": "Sprawy",
+      "overflow": false,
+      "contentOverflow": false,
+      "bar": {
+        "x": 18,
+        "y": 705,
+        "width": 354,
+        "height": 56
+      }
+    },
+    {
+      "size": {
+        "width": 390,
+        "height": 844
+      },
+      "tab": "Dane",
+      "overflow": false,
+      "contentOverflow": false,
+      "bar": {
+        "x": 18,
+        "y": 705,
+        "width": 354,
+        "height": 56
+      }
+    },
+    {
+      "size": {
+        "width": 320,
+        "height": 740
+      },
+      "tab": "Portfel",
+      "overflow": false,
+      "contentOverflow": false,
+      "bar": {
+        "x": 13,
+        "y": 601,
+        "width": 294,
+        "height": 56
+      }
+    },
+    {
+      "size": {
+        "width": 320,
+        "height": 740
+      },
+      "tab": "Sprawy",
+      "overflow": false,
+      "contentOverflow": false,
+      "bar": {
+        "x": 13,
+        "y": 601,
+        "width": 294,
+        "height": 56
+      }
+    },
+    {
+      "size": {
+        "width": 320,
+        "height": 740
+      },
+      "tab": "Dane",
+      "overflow": false,
+      "contentOverflow": false,
+      "bar": {
+        "x": 13,
+        "y": 601,
+        "width": 294,
+        "height": 56
+      }
+    }
+  ]
+}

@@ -1,0 +1,260 @@
+import { expect, test, type Locator, type Page } from "@playwright/test";
+
+const origin = "http://127.0.0.1:4184";
+const wellness = (page: Page) => page.getByRole("dialog", { name: "Zdrowie", exact: true });
+const button = (view: Page | Locator, name: string | RegExp) => view.getByRole("button", { name, exact: typeof name === "string" });
+const capture = (page: Page, name: string) => page.screenshot({ path: "docs/screenshots/wellness-" + name + ".png", animations: "disabled" });
+async function ewa(page: Page) {
+  await page.goto(origin);
+  await button(page, "Profil i ustawienia").click();
+  await button(page.getByRole("dialog"), /^Ewa Wiśniewska/).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+}
+async function openDashboard(page: Page) {
+  await button(page, "Usługi").click();
+  await button(page.getByRole("region", { name: "Katalog usług" }), /^Zdrowie Skierowania/).click();
+  await expect(button(wellness(page), "Historia leczenia")).toBeVisible();
+  return wellness(page);
+}
+async function invite(page: Page) {
+  const health = wellness(page);
+  await button(health, "Poproś o pomoc").click();
+  await health.getByRole("checkbox", { name: "Szczegóły i placówka kierująca" }).uncheck();
+  await health.getByLabel("Czas dostępu").selectOption("5");
+  await button(health, "Utwórz upoważnienie").click();
+  const href = await health.getByRole("link", { name: "Otwórz zadanie Kacpra" }).getAttribute("href");
+  expect(href).toContain("#zdrowie=");
+  return href!;
+}
+
+test("wellness prepares, approves and restores a visit across two browser sessions", async ({ page, browser, request }) => {
+  test.setTimeout(70_000);
+  await ewa(page);
+  await expect(page.locator(".base .notification-count")).toHaveText("4");
+  await button(page, "Powiadomienia").click();
+  await button(page.getByRole("dialog"), /Nowe skierowanie.*Nowe/).click();
+  const owner = wellness(page);
+  await expect(owner.getByRole("heading", { name: "Konsultacja okulistyczna" })).toBeVisible();
+  const href = await invite(page);
+  const guest = await browser.newContext({ viewport: { width: 375, height: 812 }, reducedMotion: "reduce" });
+  try {
+    const helper = await guest.newPage();
+    await helper.goto(href);
+    const task = helper.getByRole("dialog", { name: "Pomoc dla Ewy" });
+    await button(task, "Powiadomienia").click();
+    await button(helper, /Ewa zaprosiła Cię do pomocy/).click();
+    await expect(helper.getByText("DEMO-OK-01", { exact: false })).toHaveCount(0);
+    await expect(helper.getByRole("heading", { name: "Historia leczenia" })).toHaveCount(0);
+    expect(await helper.locator(".most-scroll").evaluate((el) => el.scrollWidth === el.clientWidth)).toBe(true);
+    await button(helper, "Przygotuj wizytę").click();
+    const final = button(helper, "Przekaż do zatwierdzenia");
+    await expect(final).toBeDisabled();
+    await helper.getByLabel("Placówka i termin").selectOption("parkowa");
+    await task.getByLabel("Przypomnienie").selectOption("telefon-demo");
+    await helper.getByRole("checkbox", { name: "Zapisz pytania do lekarza" }).check();
+    await button(helper, "Zapisz szkic wizyty").click();
+    await expect(helper.getByText("Plan jest zapisany w sprawie.")).toBeVisible();
+    await helper.reload();
+    await expect(helper.getByLabel("Placówka i termin")).toHaveValue("parkowa");
+    await expect(final).toBeInViewport({ ratio: 1 });
+    await capture(helper, "plan-375");
+    await final.click();
+    await expect(task.getByText("Czeka na decyzję Ewy", { exact: true })).toBeVisible();
+    await page.reload();
+    await button(owner, "Powiadomienia").click();
+    await button(page.getByRole("dialog"), /Kacper przygotował wizytę do zatwierdzenia/).click();
+    await expect(owner.getByRole("heading", { name: "Sprawdź przygotowaną wizytę" })).toBeVisible();
+    await expect(owner.getByText(/Centrum Zdrowia Parkowa/)).toBeVisible();
+    await expect(owner.getByText("Zapisz pytania do lekarza")).toBeVisible();
+    await capture(page, "review-390");
+    await button(owner, "Zatwierdź wizytę").click();
+    await expect(owner.getByText("Zapisano w terminarzu")).toBeVisible();
+    await page.reload();
+    await expect(owner.getByText("Zapisano w terminarzu")).toBeVisible();
+    await button(owner, "Powiadomienia").click();
+    await expect(button(page.getByRole("dialog"), /Nowe skierowanie.*Przeczytane/)).toBeVisible();
+    await button(page.getByRole("dialog"), /Dodano wizytę do terminarza demo/).click();
+    await expect(owner.getByText(/Centrum Zdrowia Parkowa/)).toBeVisible();
+    await button(task, "Powiadomienia").click();
+    await expect(button(helper, /Ewa zatwierdziła wizytę demonstracyjną/)).toBeVisible();
+    await button(owner, "Wstecz").click();
+    await button(owner, "Wstecz").click();
+    await button(owner, "Wstecz").click();
+    await expect(owner).toHaveCount(0);
+    await page.getByRole("tab", { name: /Zakończone/ }).click();
+    await expect(button(page, /Konsultacja okulistyczna.*Wizyta zaplanowana/)).toBeVisible();
+    await button(page, "Pomagam").click();
+    await expect(button(page, /Konsultacja okulistyczna.*Wizyta zaplanowana/)).toHaveCount(0);
+    const token = new URL(href).hash.split("=")[1];
+    const response = await request.get(origin + "/api/wellness/case", { headers: { Authorization: "Bearer " + token } });
+    expect((await response.json()).view.cases[0].status).toBe("confirmed");
+  } finally { await guest.close(); }
+});
+
+test("revoking mid-process removes helper view and blocks subsequent API requests", async ({ page, browser, request }) => {
+  await ewa(page);
+  const owner = await openDashboard(page);
+  await button(owner, /Konsultacja okulistyczna.*Otwórz skierowanie/).click();
+  const href = await invite(page);
+  const context = await browser.newContext();
+  try {
+    const helper = await context.newPage();
+    await helper.goto(href);
+    await button(helper, "Przygotuj wizytę").click();
+    await helper.getByLabel("Placówka i termin").selectOption("nad-rzeka");
+    await button(helper, "Zapisz szkic wizyty").click();
+    await expect(helper.getByText("Plan jest zapisany w sprawie.")).toBeVisible();
+    await button(owner, "Cofnij dostęp").click();
+    await expect(owner.getByText(/Dostęp cofnięty/)).toBeVisible();
+    await expect(helper.getByRole("dialog", { name: "Pomoc dla Ewy" }).getByText("Ewa cofnęła dostęp do skierowania.")).toBeVisible();
+    await expect(helper.getByLabel("Placówka i termin")).toHaveCount(0);
+    const headers = { Authorization: "Bearer " + new URL(href).hash.split("=")[1] };
+    expect((await request.get(origin + "/api/wellness/case", { headers })).status()).toBe(410);
+    expect((await request.post(origin + "/api/wellness/case", { headers, data: { type: "submit" } })).status()).toBe(410);
+  } finally { await context.close(); }
+});
+
+test("320px catalogue, history filters, prescriptions, result document, visits and contextual assistant", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 740 });
+  await ewa(page);
+  const owner = await openDashboard(page);
+  await expect(button(owner, "Powiadomienia")).toBeInViewport({ ratio: 1 });
+  await expect(page.locator(".toast")).toHaveCount(0);
+  expect(await owner.locator(".most-scroll").evaluate((el) => el.scrollWidth === el.clientWidth)).toBe(true);
+  await capture(page, "dashboard-320");
+  await button(owner, "Historia leczenia").click();
+  await owner.getByLabel("Rodzaj zdarzenia").selectOption("hospital");
+  await expect(button(owner, /Pobyt na oddziale/)).toBeVisible();
+  await expect(button(owner, /Morfologia/)).toHaveCount(0);
+  const years = await owner.getByLabel("Rok").locator("option").allTextContents();
+  expect(years.length).toBeGreaterThan(2);
+  await owner.getByLabel("Rok").selectOption(years.at(-1)!);
+  await button(owner, /Pobyt na oddziale/).click();
+  await expect(owner.getByText("Fikcyjna karta pobytu jednodniowego.")).toBeVisible();
+  await button(owner, "Wstecz").click();
+  await button(owner, "Wstecz").click();
+  await button(owner, "Recepty").click();
+  await owner.getByLabel("Status recepty").selectOption("filled");
+  await expect(button(owner, /Loratadyna/)).toHaveCount(0);
+  await button(owner, /Witamina D₃/).click();
+  await expect(owner.getByText("DEMO-RX-ARCH")).toBeVisible();
+  await button(owner, "Wstecz").click();
+  await button(owner, "Wstecz").click();
+  await button(owner, "Wyniki badań").click();
+  await button(owner, /Morfologia krwi/).click();
+  await expect(owner.getByRole("link", { name: "Pobierz dokument" })).toHaveAttribute("download", /-demo\.txt$/);
+  await button(owner, "Wstecz").click();
+  await button(owner, "Wstecz").click();
+  await button(owner, "Wizyty").click();
+  await expect(owner.getByText(/Brak nadchodzących wizyt/)).toBeVisible();
+  await button(owner, "Przeszłe").click();
+  await button(owner, /Wizyta kontrolna/).click();
+  await expect(owner.getByText("Wizyta zakończona w demonstracji.")).toBeVisible();
+  await button(owner, "Wstecz").click();
+  await button(owner, "Wstecz").click();
+  await button(owner, "Skierowania").click();
+  await owner.getByLabel("Status skierowania").selectOption("new");
+  await button(owner, /Konsultacja okulistyczna/).click();
+  await button(owner, "Pomoc w przygotowaniu do wizyty").click();
+  await expect(owner.getByText(/Przygotowania do sprawy.*Konsultacja okulistyczna/)).toBeVisible();
+  await owner.getByRole("checkbox", { name: "Gdzie znajdę opis badania?" }).check();
+  await page.reload();
+  await expect(owner.getByRole("checkbox", { name: "Gdzie znajdę opis badania?" })).toBeChecked();
+  await button(owner, "Wstecz").click();
+  await button(owner, "Wstecz").click();
+  await button(owner, "Wstecz").click();
+  await button(owner, "Wstecz").click();
+  await expect(owner).toHaveCount(0);
+  await expect(page.locator(".civic-avatar")).toHaveAttribute("title", "Ewa Wiśniewska");
+  await button(page, "Profil i ustawienia").click();
+  await button(page.getByRole("dialog"), /^Kacper Zieliński/).click();
+  await openDashboard(page);
+  await button(owner, "Skierowania").click();
+  await expect(owner.getByText("Brak skierowań w tym widoku.")).toBeVisible();
+  await expect(button(owner, /Konsultacja okulistyczna/)).toHaveCount(0);
+});
+
+test("help is available under shared cases and keeps native navigation and profile selection", async ({ page, browser }) => {
+  await ewa(page);
+  const owner = await openDashboard(page);
+  await expect(owner.getByRole("navigation", { name: "Nawigacja główna" })).toBeVisible();
+  await button(owner, /Konsultacja okulistyczna.*Otwórz skierowanie/).click();
+  const href = await invite(page);
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  try {
+    const helper = await context.newPage();
+    await helper.goto(href);
+    const task = helper.getByRole("dialog", { name: "Pomoc dla Ewy" });
+    await expect(task.getByText("Pomagasz Ewie", { exact: true })).toBeVisible();
+    await button(task.getByRole("navigation"), "Sprawy").click();
+    await expect(task).toHaveCount(0);
+    await expect(button(helper, "Pomagam")).toHaveAttribute("aria-pressed", "true");
+    await button(helper, /Pomoc dla Ewy.*Konsultacja okulistyczna/).click();
+    await button(task.getByRole("navigation"), "Dokumenty").click();
+    await expect(task).toHaveCount(0);
+    await expect(helper.locator(".civic-avatar")).toHaveAttribute("title", "Aleksandra Nowak");
+    await button(helper, "Powiadomienia").click();
+    await button(helper.getByRole("dialog"), /Ewa zaprosiła Cię do pomocy/).click();
+    await expect(task.getByRole("heading", { name: "Konsultacja okulistyczna" })).toBeVisible();
+    await capture(helper, "shared-assignment");
+    await helper.reload();
+    await expect(task.getByRole("heading", { name: "Konsultacja okulistyczna" })).toBeVisible();
+    await button(task, "Wstecz").click();
+    await button(helper, "Profil i ustawienia").click();
+    await button(helper.getByRole("dialog"), /^Kacper Zieliński/).click();
+    await button(helper, "Sprawy").click();
+    await expect(button(helper, /Pomoc dla Ewy.*Konsultacja okulistyczna/)).toBeVisible();
+    await button(helper, "Profil i ustawienia").click();
+    await button(helper.getByRole("dialog"), /^Ewa Wiśniewska/).click();
+    await button(helper, "Sprawy").click();
+    await button(helper, "Pomagam").click();
+    await expect(button(helper, /Pomoc dla Ewy.*Konsultacja okulistyczna/)).toHaveCount(0);
+  } finally { await context.close(); }
+});
+
+test("home services lead to a reminder and a scoped result at 430px", async ({ page, browser }) => {
+  await page.setViewportSize({ width: 430, height: 932 });
+  await ewa(page);
+  await expect(page.getByText("Ewa Wiśniewska", { exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: /Pokaż dwa telefony|Pokaz Zdrowia/ })).toHaveCount(0);
+  await expect(page.locator(".toast")).toHaveCount(0);
+  await capture(page, "home-430");
+  await button(page, "Usługi").click();
+  const services = page.getByRole("region", { name: "Katalog usług" });
+  await expect(button(services, /^Rodzina/)).toBeVisible();
+  await expect(button(services, /^Otwórz asystenta/)).toBeVisible();
+  await capture(page, "services-430");
+  await button(services, /^Zdrowie/).click();
+  const owner = wellness(page);
+  await expect(owner.getByRole("heading", { name: "Twoje zdrowie" })).toBeVisible();
+  await button(owner, /Konsultacja okulistyczna.*Otwórz skierowanie/).click();
+  await button(owner, "Przypomnij jutro").click();
+  await expect(owner.getByText(/Przypomnienie ustawione na/)).toBeVisible();
+  await page.reload();
+  await button(owner, "Wyłącz przypomnienie").click();
+  await expect(button(owner, "Przypomnij jutro")).toBeVisible();
+  await button(owner, "Wstecz").click();
+  await button(owner, "Wstecz").click();
+  await button(owner, "Historia leczenia").click();
+  await owner.getByRole("searchbox", { name: "Szukaj w historii" }).fill("szwow");
+  await expect(button(owner, /Usunięcie szwów/)).toBeVisible();
+  await expect(button(owner, /Morfologia/)).toHaveCount(0);
+  await button(owner, "Wstecz").click();
+  await button(owner, "Wyniki badań").click();
+  await button(owner, /Morfologia krwi/).click();
+  await button(owner, "Udostępnij wynik").click();
+  await button(owner, "Utwórz link dostępu").click();
+  const link = await owner.getByRole("link", { name: "Otwórz link dla Kacpra" }).getAttribute("href");
+  const context = await browser.newContext();
+  try {
+    const helper = await context.newPage();
+    await helper.goto(link!);
+    const task = helper.getByRole("dialog", { name: "Pomoc dla Ewy" });
+    await expect(task.getByRole("heading", { name: "Udostępniony wynik" })).toBeVisible();
+    await expect(task.getByRole("link", { name: "Pobierz dokument" })).toBeVisible();
+    await expect(button(task, "Historia leczenia")).toHaveCount(0);
+    await button(owner, "Cofnij dostęp").click();
+    await expect(task.getByText("Ewa cofnęła dostęp do dokumentu.")).toBeVisible();
+    await expect(task.getByRole("link", { name: "Pobierz dokument" })).toHaveCount(0);
+  } finally { await context.close(); }
+});

@@ -1,0 +1,27 @@
+{
+  "id": "/",
+  "name": "mObywatel MOST",
+  "short_name": "MOST",
+  "description": "Niezależna koncepcja konkursowa. Dane i operacje demonstracyjne.",
+  "lang": "pl",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#101620",
+  "theme_color": "#101620",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

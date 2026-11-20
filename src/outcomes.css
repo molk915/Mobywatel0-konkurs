@@ -1,0 +1,164 @@
+.move-plan,
+.move-outcomes {
+  text-align: left;
+  margin: 24px 0;
+}
+.move-plan > div {
+  padding: 16px 0;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.move-plan strong {
+  font-size: 16px;
+}
+.move-plan span,
+.move-plan small {
+  font-size: 13px;
+  color: #52615a;
+}
+.move-plan p {
+  font-size: 14px;
+  color: #485950;
+  line-height: 1.5;
+}
+.move-plan > p {
+  margin-top: 16px;
+}
+.move-plan small {
+  color: #8b4b22;
+  font-weight: 550;
+}
+.outcomes-title {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  justify-content: space-between;
+}
+.outcomes-title h2 {
+  font-size: 19px;
+}
+.outcomes-title > span {
+  font-size: 12px;
+  color: #52615a;
+  text-align: right;
+  line-height: 1.5;
+}
+.outcomes-progress {
+  height: 4px;
+  background: #dce4d9;
+  border-radius: 4px;
+  margin: 16px 0 22px;
+}
+.outcomes-progress i {
+  height: 4px;
+  display: block;
+  background: #3d7254;
+  border-radius: 4px;
+  transition: width 0.3s;
+}
+.operation {
+  border: 1px solid #d8dfd4;
+  background: #fff;
+  border-radius: 14px;
+  padding: 17px;
+  margin: 14px 0;
+}
+.operation-top {
+  display: flex;
+  gap: 11px;
+  align-items: center;
+}
+.operation-top > span {
+  width: 34px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9px;
+  background: #f3e9db;
+  color: #926127;
+  flex-shrink: 0;
+}
+.operation.accepted .operation-top > span {
+  background: #e5f0e7;
+  color: #2d6947;
+}
+.operation.manual .operation-top > span {
+  background: #e9edf0;
+  color: #52616c;
+}
+.operation h3 {
+  font-size: 16px;
+  margin: 0 0 5px;
+  line-height: 1.4;
+}
+.operation small {
+  font-size: 12px;
+  color: #52615a;
+}
+.operation-status {
+  display: block;
+  font-size: 13px;
+  color: #855521;
+  margin: 17px 0 9px;
+}
+.operation.accepted .operation-status {
+  color: #2d6947;
+}
+.operation.manual .operation-status {
+  color: #52616c;
+}
+.operation p {
+  font-size: 14px;
+  color: #4c5e52;
+  line-height: 1.6;
+}
+.operation details {
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 1px solid #e1e6dc;
+}
+.operation summary {
+  font-size: 13px;
+  color: #344f3e;
+  cursor: pointer;
+  min-height: 35px;
+  line-height: 1.5;
+}
+.operation code {
+  display: block;
+  font-size: 11px;
+  overflow-wrap: anywhere;
+  margin-top: 12px;
+  color: #586659;
+}
+.operation .text-button {
+  font-size: 13px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.operation .secondary {
+  font-size: 14px;
+}
+.move-outcomes > p {
+  font-size: 14px;
+}
+
+.receipt-body:has(.move-outcomes) > .success-icon {
+  display: none;
+}
+.receipt-body:has(.move-outcomes) {
+  padding-top: 20px;
+}
+.receipt-body:has(.move-outcomes) > h1 {
+  font-size: 27px;
+  margin: 17px 0 12px;
+}
+.receipt-body:has(.move-outcomes) > .lead {
+  font-size: 14px;
+  line-height: 1.5;
+  margin-bottom: 20px;
+}
+

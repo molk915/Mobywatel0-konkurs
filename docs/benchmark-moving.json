@@ -1,0 +1,18 @@
+{
+  "date": "2026-11-17",
+  "scope": "Porównanie jednej intencji w publicznych wersjach demo; nie jest oceną całych produktów ani gwarancją wyniku konkursu.",
+  "results": [
+    {
+      "target": "publiczny prototyp referencyjny",
+      "task": "Przeprowadzam się do Warszawy",
+      "observed": "Odpowiedź o braku obsługi; propozycje innych spraw",
+      "evidence": "reference-moving.png"
+    },
+    {
+      "target": "nasz prototyp",
+      "task": "Przeprowadzam się do Warszawy",
+      "observed": "Otwarty proces przeprowadzki; miejscowość Warszawa uzupełniona i edytowalna",
+      "evidence": "own-moving.png"
+    }
+  ]
+}

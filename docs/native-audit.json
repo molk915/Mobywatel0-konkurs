@@ -1,0 +1,23 @@
+{
+  "at": "2026-11-17T19:40:19.399Z",
+  "reference": {
+    "initial": "mObywatel Challenge\nDokumenty\nUkład dokumentów\nOsoba w pokazie\nRozmowy\n+ Nowa rozmowa\nMoje pojazdy\nPL\nGD 8K113\nVOLKSWAGEN GOLF IV 1.4\nOC do\n01.02.2027\nBadanie do\n20.01.2027\nmPrawo jazdy\nKACPER ZIELIŃSKI\nKategorie\nB\nOkres próbny\ndo 14.01.2028\nNr blankietu\n00512/26/2861\nPunkty karne\n3\nmLegitymacja studencka\nKACPER ZIELIŃSKI\nNr albumu\n198442\nWażna do\n31.03.2027\nUczelnia\nPG\nUlga PKP\n51%\nmDowód\nKACPER\nPokaż dane\n4\nMandat do zapłaty\n200 zł do 22.10 · i 3 inne sprawy\n\nDotknij, aby mówić\n\nPisz zamiast mówić\nDo załatwienia\nZapytaj asystenta o wszystkie sprawy\nFace ID",
+    "moving": "mObywatel Challenge\nDokumenty\nUkład dokumentów\nOsoba w pokazie\nRozmowy\n+ Nowa rozmowa\nPrzeprowadzam się z Warszawy do Krakowa\nTego w tej wersji jeszcze nie załatwię. Najbliżej pasuje:\n20:40\nMoje pojazdy\nPL\nGD 8K113\nVOLKSWAGEN GOLF IV 1.4\nOC do\n01.02.2027\nBadanie do\n20.01.2027\nmPrawo jazdy\nKACPER ZIELIŃSKI\nKategorie\nB\nOkres próbny\ndo 14.01.2028\nNr blankietu\n00512/26/2861\nPunkty karne\n3\nmLegitymacja studencka\nKACPER ZIELIŃSKI\nNr albumu\n198442\nWażna do\n31.03.2027\nUczelnia\nPG\nUlga PKP\n51%\nmDowód\nKACPER\nPokaż dane\n4\nMandat do zapłaty\n200 zł do 22.10 · i 3 inne sprawy\nPrzeprowadzam się z Warszawy do Krakowa\nTego w tej wersji jeszcze nie załatwię. Najbliżej pasuje:\nCo mam do załatwienia?\nZgubiłam portfel\nKupuję używane auto\n\nDotknij, aby mówić\n\nPisz zamiast mówić\nDo załatwienia\nZapytaj asystenta o wszystkie sprawy\nFace ID",
+    "wallet": "mObywatel Challenge\nDokumenty\nUkład dokumentów\nOsoba w pokazie\nRozmowy\n+ Nowa rozmowa\nZgubiłem portfel\nPrzykro mi. Najpierw zadbajmy, żeby nikt nie użył Twoich dokumentów. Co było w portfelu?\n20:40\nMoje pojazdy\nPL\nGD 8K113\nVOLKSWAGEN GOLF IV 1.4\nOC do\n01.02.2027\nBadanie do\n20.01.2027\nmPrawo jazdy\nKACPER ZIELIŃSKI\nKategorie\nB\nOkres próbny\ndo 14.01.2028\nNr blankietu\n00512/26/2861\nPunkty karne\n3\nmLegitymacja studencka\nKACPER ZIELIŃSKI\nNr albumu\n198442\nWażna do\n31.03.2027\nUczelnia\nPG\nUlga PKP\n51%\nmDowód\nKACPER\nPokaż dane\n4\nMandat do zapłaty\n200 zł do 22.10 · i 3 inne sprawy\nZgubiłem portfel\nPrzykro mi. Najpierw zadbajmy, żeby nikt nie użył Twoich dokumentów. Co było w portfelu?\nDowód osobisty\nPrawo jazdy\nKarty płatnicze\nKarta Dużej Rodziny\nDalej\n\nDotknij, aby mówić\n\nPisz zamiast mówić\nDo załatwienia\nZapytaj asystenta o wszystkie sprawy\nFace ID"
+  },
+  "own": {
+    "home": {
+      "x": 22,
+      "y": 680,
+      "width": 346,
+      "height": 68
+    },
+    "motion": {
+      "frames": 119,
+      "median": 16.699999999999818,
+      "p95": 16.700000000000273,
+      "max": 16.800000000000182
+    }
+  },
+  "errors": []
+}

@@ -1,0 +1,88 @@
+/* Wallet art direction: one object, quiet controls, a consistent 1.5:1 card. */
+.deck-home {padding-top:9px;}
+.deck-heading {margin:0 0 28px;min-height:40px;}
+.deck-heading h1 {font-size:29px;letter-spacing:-1px;font-weight:680;}
+.wallet-layout-choice {display:block;position:relative;height:0;margin:0;z-index:30;}
+.wallet-layout-choice .wallet-view-trigger {position:absolute;right:0;top:-70px;width:39px;height:39px;padding:0;border-radius:50%;background:#e8eaf0;color:#303b4b;font-size:14px;letter-spacing:2px;}
+.wallet-view-menu {position:absolute;right:0;top:-22px;width:210px;border:1px solid #e2e5eb;border-radius:18px;padding:7px;background:#fff;box-shadow:0 14px 35px #25324a22;}
+.wallet-view-menu button {width:100%;text-align:left;min-height:43px;border-radius:11px;font-size:13px;padding:0 13px;}
+.wallet-view-menu button[aria-pressed=true] {background:#f1f3f7;color:#a51c40;}
+.wallet-view-menu .expand-deck {margin:0;padding:0 13px;}
+.deck-home .digital-card,.gesture-card {height:232px;}
+.digital-card {border-radius:20px;padding:17px 19px 0;box-shadow:0 11px 18px -13px #17273d66,0 1px 2px #1b2c4012;border-color:#d8dce1;background:#f5f4ee;}
+.digital-card:after {display:none;}
+.digital-card:before {width:42px;height:3px;right:19px;border-radius:0 0 3px 3px;}
+.digital-card-0 {background:linear-gradient(115deg,#fcfbf7 35%,#eceeea);}
+.digital-card-head > span:first-child {gap:5px;}
+.digital-card-head strong {font-size:20px;font-weight:650;letter-spacing:-.6px;}
+.digital-card-head small {font-size:7px;letter-spacing:1.1px;color:#6b747d;}
+.digital-card-head > svg {width:22px;height:22px;stroke-width:1.4;}
+.digital-country {font-size:10px;color:#515c6a;gap:6px;}
+.digital-country i {width:21px;height:14px;}
+.digital-person {gap:17px;margin:10px 0;}
+.digital-person > img {width:78px;height:96px;border-radius:7px;box-shadow:none;}
+.digital-person > span {gap:8px;}
+.digital-person small {font-size:9px;letter-spacing:.1px;font-weight:450;color:#6f7781;}
+.digital-person strong {font-size:22px;line-height:1.13;letter-spacing:-.55px;font-weight:630;}
+.digital-person-note {font-size:10px;color:#66717e;}
+.digital-card-data {margin:0 0 9px;gap:25px;}
+.digital-card-data small {font-size:7px;color:#76808b;letter-spacing:.8px;}
+.digital-card-data b {font-size:11px;font-weight:560;letter-spacing:.15px;}
+.digital-card-foot {height:25px;min-height:25px;font-size:8px;border-color:#727f8d22;}
+.digital-card-foot b {font-size:7px;letter-spacing:1px;}
+.digital-card-1 {background:linear-gradient(115deg,#eee7f4,#dcd0e8);color:#40334e;}
+.digital-card-1 .digital-card-data {padding:0;background:none;border-radius:0;margin-bottom:9px;}
+.licence-category {font-size:17px;}
+.licence-category > span {font-size:9px;}
+.digital-card-2 {background:linear-gradient(120deg,#42627e,#2c455e);border-color:#385671;color:#fff;}
+.digital-car .vehicle-art {height:78px;margin-top:-5px;}
+.digital-car strong {font-size:15px;}
+.digital-card-3 {background:linear-gradient(115deg,#488477,#32695f);border-color:#3c796d;color:#fff;}
+.digital-card-3 :is(.digital-person small,.digital-person-note,.digital-card-head small,.digital-card-data small,.digital-card-foot) {color:#d7e9e2;}
+.digital-card-3 .digital-card-foot {border-color:#ffffff25;}
+.digital-card-3 .digital-person strong {font-size:21px;}
+.mode-stack .deck-rear .digital-card {padding-top:13px;}
+.mode-stack .deck-rear .digital-card-head strong {font-size:15px;font-weight:620;}
+.mode-stack .deck-rear .digital-card-head small {display:none;}
+.mode-stack .deck-rear .digital-person {opacity:.6;}
+.mode-stack .gesture-card {transform-origin:50% 0;}
+.gesture-deck.mode-carousel {margin-left:-20px;margin-right:-20px;}
+.mode-carousel .gesture-card {left:calc(50% - 151px);width:302px;}
+.mode-carousel .digital-person strong {font-size:21px;}
+.mode-carousel .digital-person > img {width:72px;height:92px;}
+.mode-carousel .digital-card-head strong {font-size:20px;}
+.mode-carousel .digital-card {padding-left:17px;padding-right:17px;}
+.wallet-gesture-hint {display:none;}
+.deck-controls {position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);margin:0;}
+.deck-controls:focus-within {position:relative;width:auto;height:26px;overflow:visible;clip-path:none;}
+.deck-controls > span {display:none;}
+.deck-controls button:focus-visible {outline:2px solid #315b8b;}
+.deck-actions {margin-top:17px;gap:12px;align-items:center;}
+.deck-actions > button {min-height:46px;border:0;background:none;border-radius:23px;font-size:13px;}
+.deck-actions > button:last-child {background:#263849;color:#fff;border:0;flex:1.4;}
+.attention-trigger.wallet-reminder {border:0;border-radius:0;background:none;border-top:1px solid #e0e3e8;box-shadow:none;padding:17px 1px;margin-top:23px;}
+.attention-trigger .attention-dot {background:#e7eaf0;color:#536275;}
+.attention-trigger strong {font-size:13px;font-weight:590;}
+.attention-trigger small {font-size:11px;}
+.phone:has(.deck-home) .context-assistant-bar {background:none;border:0;box-shadow:none;margin-top:0;margin-bottom:2px;min-height:45px;}
+.phone:has(.deck-home) .context-assistant-bar > span:first-child {background:none;color:#7e6375;width:25px;}
+.phone:has(.deck-home) .context-assistant-bar small {display:none;}
+.phone:has(.deck-home) .context-assistant-bar > span:nth-child(2) {font-weight:500;color:#64707e;font-size:12px;}
+.phone:has(.deck-home) .context-assistant-bar > svg {width:15px;}
+@media(min-width:601px){.deck-home .digital-person > img {width:78px;height:96px;}.deck-home .digital-person {margin:10px 0;}.deck-heading {margin-bottom:25px;}.deck-home .digital-card {height:232px;}}
+@media(max-width:360px){.mode-carousel .gesture-card {width:270px;left:calc(50% - 135px);}.digital-person strong {font-size:20px;}.digital-person > img {width:72px;height:92px;}.digital-person {gap:13px;}.digital-card-head strong {font-size:20px;}.digital-card-3 .digital-person strong {font-size:19px;}}
+.large-text .gesture-card,.large-text .deck-home .digital-card {height:270px;}.large-text .digital-person strong {font-size:27px;}
+
+.digital-card-data small {font-size:8px;letter-spacing:.4px;}
+.mode-carousel .deck-rear .digital-card :is(.digital-person,.digital-car,.digital-card-data,.digital-card-foot,.digital-card-head > span) {opacity:0;}
+.card-edge-label {position:absolute;top:62px;writing-mode:vertical-rl;font-size:11px;font-weight:550;letter-spacing:.1px;pointer-events:none;color:#344654;}
+.neighbor-before .card-edge-label {right:13px;}.neighbor-after .card-edge-label {left:13px;}
+.mode-carousel .deck-rear:has(.digital-card-2) .card-edge-label,.mode-carousel .deck-rear:has(.digital-card-3) .card-edge-label {color:#f4f8f6;}
+
+.large-text .gesture-deck {margin-bottom:45px;}
+
+.deck-home {position:relative;}
+.deck-controls:focus-within {position:absolute;width:100%;height:28px;margin-top:-12px;z-index:25;background:#fff;border-radius:12px;}
+
+.brand-mark,.top-brand .brand-mark {background:transparent;padding:0;letter-spacing:normal;}
+.brand-mark > img {display:block;width:100%;height:100%;object-fit:contain;}

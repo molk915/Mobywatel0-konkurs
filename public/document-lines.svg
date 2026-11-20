@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" fill="none">
+  <defs>
+    <path id="arc" d="M20 80c0-34 26-60 60-60 18 0 40 15 40 34s-13 35-40 55c-8-19-22-29-42-29H20Z"/>
+  </defs>
+  <g stroke="#a8c7fa" stroke-width=".9">
+    <use href="#arc"/>
+    <use href="#arc" transform="rotate(30 80 80)"/>
+    <use href="#arc" transform="rotate(60 80 80)"/>
+    <use href="#arc" transform="rotate(90 80 80)"/>
+    <use href="#arc" transform="rotate(120 80 80)"/>
+    <use href="#arc" transform="rotate(150 80 80)"/>
+    <use href="#arc" transform="rotate(180 80 80)"/>
+    <use href="#arc" transform="rotate(210 80 80)"/>
+    <use href="#arc" transform="rotate(240 80 80)"/>
+    <use href="#arc" transform="rotate(270 80 80)"/>
+    <use href="#arc" transform="rotate(300 80 80)"/>
+    <use href="#arc" transform="rotate(330 80 80)"/>
+    <circle cx="80" cy="80" r="63"/>
+    <circle cx="80" cy="80" r="66" stroke-dasharray=".5 1.7"/>
+  </g>
+</svg>

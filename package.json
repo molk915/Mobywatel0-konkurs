@@ -1,0 +1,31 @@
+{
+  "name": "mobywatel-next",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "tsc -b && vite build && node scripts/generate-sw.mjs",
+    "preview": "vite preview --host 0.0.0.0",
+    "test": "node --experimental-strip-types --test tests/domain.test.ts tests/attachments.test.ts tests/navigation.test.ts tests/sw.test.mjs tests/server.test.mjs tests/family.test.mjs tests/most.test.mjs tests/wellness.test.mjs",
+    "test:e2e": "playwright test",
+    "server": "node --experimental-strip-types server/index.mjs"
+  },
+  "dependencies": {
+    "@fontsource-variable/inter": "^5.3.0",
+    "lucide-react": "^0.468.0",
+    "motion": "^14.14.0",
+    "qrcode": "1.5.4",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.65.1",
+    "@types/qrcode": "1.5.6",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "@vitejs/plugin-react": "^6.3.0",
+    "typescript": "~5.9.3",
+    "vite": "^8.3.8"
+  }
+}

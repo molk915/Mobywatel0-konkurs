@@ -1,0 +1,11 @@
+.git
+.env
+.env.*
+.most-state
+node_modules
+dist
+docs
+test-results
+playwright-report
+*.log
+*.tsbuildinfo
