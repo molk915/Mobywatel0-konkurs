@@ -13,6 +13,7 @@ export function PrivacyHub({
   onShare,
   onAccess,
   onProtect,
+  onTrusted,
   collaboration,
 }: {
   p: Profile;
@@ -20,6 +21,7 @@ export function PrivacyHub({
   onShare: (scope: "adult" | "identity") => void;
   onAccess: (a: Access) => void;
   onProtect: () => void;
+  onTrusted: () => void;
   collaboration?: ReactNode;
 }) {
   const [scope, setScope] = useState<"adult" | "identity">("adult");
@@ -28,9 +30,6 @@ export function PrivacyHub({
     <section className="privacy-workspace">
       <h1>Dane</h1>
       <p>Zakres udostępnienia, zgody i ślad użycia informacji.</p>
-      {collaboration && <section className="privacy-collaboration">
-        <h2>Dostęp do spraw i zdrowia</h2>{collaboration}
-      </section>}
       <section className="privacy-scope-card">
         <header>
           <h2>Udostępnij minimum</h2>
@@ -70,17 +69,15 @@ export function PrivacyHub({
           <ArrowRight size={17} />
         </button>
       </section>
-      <div className="privacy-ai-note">
-        <Sparkles size={21} />
-        <span>
-          <strong>Z jakich danych korzysta asystent?</strong>
-          <small>
-            Imię z profilu demo, status ochrony, bieżący ekran i etap otwartej
-            sprawy. Bez zdjęcia, PESEL i treści plików. Domyślnie obliczenia są
-            lokalne.
-          </small>
-        </span>
-      </div>
+      <section className="privacy-permissions" aria-label="Zarządzaj dostępem">
+      <button className="inbox-item" onClick={onTrusted}>
+        <span className="inbox-symbol"><ShieldCheck size={21} aria-hidden="true" /></span>
+        <span><strong>Osoba zaufana</strong><small>Centrum kontroli upoważnień, terminów i historii dostępu.</small></span>
+        <ChevronRight size={16} aria-hidden="true" />
+      </button>
+      {collaboration && <section className="privacy-collaboration">
+        <h2>Dostęp do spraw i zdrowia</h2>{collaboration}
+      </section>}
       <div className="section-title">
         <h2>Aktywne zgody</h2>
         <span>{active.length}</span>
@@ -93,7 +90,7 @@ export function PrivacyHub({
             </span>
             <span>
               <strong>{a.who}</strong>
-              <small>{a.scope}</small>
+              <small>{a.scope} · {a.purpose}</small>
               <b className="case-cta">
                 Sprawdź lub cofnij zgodę
                 <ArrowRight size={14} />
@@ -127,11 +124,12 @@ export function PrivacyHub({
         </span>
         <ChevronRight size={16} />
       </button>
+      </section>
       <div className="section-title">
         <h2>Historia dostępu</h2>
       </div>
       <div className="access-timeline">
-        {c.access.map((a) => (
+        {[...c.access].sort((a, b) => Date.parse(b.at) - Date.parse(a.at)).map((a) => (
           <button key={a.id} onClick={() => onAccess(a)}>
             <span className={"timeline-dot " + (!a.active ? "inactive" : "")} />
             <span>
@@ -145,7 +143,7 @@ export function PrivacyHub({
               </small>
               <strong>{a.who}</strong>
               <span>{a.purpose}</span>
-              {!a.active && <em>Zgoda wycofana</em>}
+              {!a.active && <em>{a.inactiveReason === "expired" ? "Dostęp wygasł" : "Zgoda wycofana"}</em>}
             </span>
             <ChevronRight size={16} />
           </button>
@@ -155,6 +153,10 @@ export function PrivacyHub({
         Historia dotyczy wyłącznie zdarzeń w pokazie. Zgody można cofnąć tylko
         tam, gdzie typ operacji na to pozwala.
       </p>
+      <details className="privacy-ai-note">
+        <summary><Sparkles size={18} /> Z jakich danych korzysta asystent?</summary>
+        <p>Imię z profilu demo, status ochrony, bieżący ekran i etap otwartej sprawy. Domyślny tryb przetwarza rozmowę na urządzeniu.</p>
+      </details>
     </section>
   );
 }

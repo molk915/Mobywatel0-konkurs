@@ -1,0 +1,20 @@
+.workflow-body { display: grid; align-content: start; gap: 14px; }
+.workflow-badge { display: flex; align-items: center; gap: 7px; font-size: .78rem; font-weight: 650; color: #21429a; }
+.workflow-badge span { width: 8px; height: 8px; border-radius: 50%; background: #4165db; }
+.workflow-amount { font-size: clamp(2rem, 7vw, 3rem); font-weight: 750; letter-spacing: -.04em; }
+.workflow-form, .workflow-form fieldset { display: grid; gap: 12px; min-width: 0; }
+.workflow-form fieldset { border: 1px solid #c9d6ee; border-radius: 14px; padding: 12px; }
+.workflow-form legend { padding: 0 5px; font-weight: 650; }
+.workflow-form label { display: grid; gap: 5px; font-size: .9rem; font-weight: 600; }
+.workflow-form input:not([type=radio]), .workflow-form select {
+  width: 100%; min-height: 44px; padding: 8px 10px; border: 1px solid #a1afcb; border-radius: 10px;
+  color: #19254a; background: #fff; font: inherit;
+}
+.workflow-form label.workflow-option { display: flex; align-items: center; min-height: 44px; gap: 8px; }
+.workflow-form small, .workflow-history li { color: #485778; }
+.workflow-receipt { display: flex; gap: 12px; align-items: center; border-radius: 14px; background: #e5f4ed; color: #164b36; padding: 15px; }
+.workflow-receipt h2, .workflow-receipt p { margin: 0; overflow-wrap: anywhere; }
+.workflow-receipt h2 { font-size: 1rem; }
+.workflow-receipt p { font-size: .85rem; }
+.workflow-history summary { cursor: pointer; font-weight: 640; }
+.workflow-history li { padding: 5px 0; font-size: .85rem; }

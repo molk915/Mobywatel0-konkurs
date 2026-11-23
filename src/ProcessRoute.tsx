@@ -35,7 +35,7 @@ export function ProcessRoute({ receipt: r }: { receipt: Receipt }) {
   }
   return (
     <section className="process-route">
-      <h2>Twój plan przeprowadzki</h2>
+      <h2>Formalności po przeprowadzce</h2>
       <p>
         Każda formalność ma własny wynik. Dotknij etapu, aby przejść do
         działania.
@@ -69,6 +69,7 @@ export function ProcessRoute({ receipt: r }: { receipt: Receipt }) {
                 <b>
                   {o.status === "needs-document"
                     ? "Dołącz brakujący dokument →"
+                    : o.status === "ready-to-send" ? "Wyślij zgłoszenie →"
                     : o.status === "manual"
                       ? "Sprawdź następny krok →"
                       : o.status === "manual-done"

@@ -238,7 +238,7 @@ export function FamilyWorkspace({ onClose, onGo, activeTab, onAssistant, session
   } else if (screen === "family") {
     body = (
       <>
-        {owner && (
+        {owner && !current && (
           <section className="family-hero">
             <WavePattern />
             <span className="family-icon"><Plane size={23} /></span>
@@ -253,7 +253,7 @@ export function FamilyWorkspace({ onClose, onGo, activeTab, onAssistant, session
           <section className="family-section">
             <h2>Wspólna sprawa</h2>
             {current ? (
-              <button className="family-row family-paper" aria-describedby="family-card-status" onClick={() => open(owner ? "case" : "consent")}>
+              <button className="family-row family-paper family-current" aria-describedby="family-card-status" onClick={() => open(owner ? "case" : "consent")}>
                 <span className="family-icon"><FileText size={19} /></span>
                 <span className="family-row-text">
                   <strong>{owner ? "Paszport Zosi" : "Prośba o zgodę"}</strong>
@@ -270,6 +270,7 @@ export function FamilyWorkspace({ onClose, onGo, activeTab, onAssistant, session
           <h2>Domownicy</h2>
           <MemberRows members={view.members} onMember={openMember} />
         </section>
+        {owner && current && <button className="family-text-button" onClick={() => open("travel")}><Plane size={17} /> Przygotuj rodzinę do wyjazdu <ChevronRight size={16} /></button>}
         {current && <button className="family-text-button" onClick={() => open("history")}><History size={17} /> Historia współpracy <ChevronRight size={16} /></button>}
         {owner && <button className="family-text-button" onClick={() => open("sessions")}><Link2 size={17} /> Udostępnij link dla Tomasza <ChevronRight size={16} /></button>}
       </>

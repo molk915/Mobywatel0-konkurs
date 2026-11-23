@@ -78,13 +78,17 @@ export default function HealthWorkspace({ session, target, navigate, close, help
       <article className="health-panel health-feature">
         <HeartPulse size={24} />
         <h2>{priority ? healthCaption[priority.status] : next ? "Najbliższa wizyta" : "Twoje dokumenty i wizyty"}</h2>
-        {priority ? row(priority.referral.title, "Otwórz skierowanie", () => open("referrals", priority.referral.id))
+        {priority ? row(priority.referral.title, priority.status === "review" ? "Sprawdź plan wizyty" : "Otwórz skierowanie",
+          () => open(priority.status === "review" ? "review" : "referrals", priority.referral.id))
           : next ? row(next.title, healthDate(next.time, true), () => open("visits", next.id))
           : <p>Przeglądaj historię leczenia, dokumenty i nadchodzące wizyty.</p>}
       </article>
-      <div className="health-grid" aria-label="Usługi zdrowotne">
-        {catalog.map(([key, label, Icon]) => <button key={key} onClick={() => open(key)}><Icon size={22} /><span>{label}</span><ChevronRight size={15} /></button>)}
-      </div>
+      <section className="health-directory" aria-labelledby="health-directory-heading">
+        <h2 id="health-directory-heading">Dokumentacja i wizyty</h2>
+        <div className="health-grid" aria-label="Usługi zdrowotne">
+          {catalog.map(([key, label, Icon]) => <button key={key} onClick={() => open(key)}><Icon size={22} /><span>{label}</span><ChevronRight size={15} /></button>)}
+        </div>
+      </section>
       {priority && next && <section className="health-panel"><h2>Najbliższa wizyta</h2>
         {row(next.title, healthDate(next.time, true), () => open("visits", next.id))}
       </section>}

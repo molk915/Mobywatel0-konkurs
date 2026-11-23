@@ -18,7 +18,7 @@ test("refresh restores an existing draft but cannot open a nonexistent case", ()
     tab: "cases",
     layer: { type: "flow", kind: "move" },
   };
-  assert.equal(restoreNavigation(value, s).layer?.type, "flow");
+  assert.equal(restoreNavigation(value, s).layer?.type, "moving");
   assert.equal(
     restoreNavigation({ ...value, layer: { type: "flow", kind: "wallet" } }, s)
       .layer,

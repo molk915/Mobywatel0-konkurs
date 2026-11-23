@@ -1,17 +1,18 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+const apiTarget = "http://127.0.0.1:" + (process.env.MOBYWATEL_API_PORT || "4190");
 export default defineConfig({
   plugins: [react()],
   server: {
     host: "0.0.0.0",
     port: 5173,
     strictPort: true,
-    proxy: { "/api": "http://127.0.0.1:4190" },
+    proxy: { "/api": apiTarget },
   },
   preview: {
     host: "0.0.0.0",
     port: 4173,
     strictPort: true,
-    proxy: { "/api": "http://127.0.0.1:4190" },
+    proxy: { "/api": apiTarget },
   },
 });

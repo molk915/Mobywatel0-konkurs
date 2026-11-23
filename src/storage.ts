@@ -17,9 +17,9 @@ export function freshStore(): Store {
     largeText: false,
   };
 }
-export function loadStore(): Store {
+export function loadStore(phone?: "ewa" | "kacper"): Store {
   try {
-    const raw = JSON.parse(localStorage.getItem(KEY) || "null");
+    const raw = JSON.parse((phone ? sessionStorage.getItem(KEY + ":" + phone) : localStorage.getItem(KEY)) || "null");
     if (
       raw?.version === 1 &&
       profiles.some((p) => p.id === raw.profile) &&
@@ -34,7 +34,7 @@ export function loadStore(): Store {
     ) {
       let profile = raw.profile;
       try {
-        const selected = sessionStorage.getItem(PROFILE_KEY);
+        const selected = phone ?? sessionStorage.getItem(PROFILE_KEY);
         if (profiles.some((candidate) => candidate.id === selected)) profile = selected;
       } catch {
         // Local storage still provides a starting profile.
@@ -46,7 +46,11 @@ export function loadStore(): Store {
   }
   return freshStore();
 }
-export function saveStore(s: Store): boolean {
+export function saveStore(s: Store, phone?: "ewa" | "kacper"): boolean {
+  if (phone) {
+    try { sessionStorage.setItem(KEY + ":" + phone, JSON.stringify(s)); return true; }
+    catch { return false; }
+  }
   try { sessionStorage.setItem(PROFILE_KEY, s.profile); }
   catch { /* Store the selection with the rest of the profile data. */ }
   try {

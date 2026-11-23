@@ -16,6 +16,25 @@ const referralFixture = {
   place: "Poradnia rodzinna Nad Bystrzycą · demo",
   detail: "Skierowanie do poradni okulistycznej. Na pierwszą wizytę przygotuj dokument tożsamości i dane skierowania DEMO-OK-01.",
 };
+const sampleTests = [
+  ["mocz", "Badanie ogólne moczu", "Laboratorium Nad Bystrzycą"],
+  ["lipidy", "Lipidogram", "Centrum Diagnostyki Parkowa"],
+  ["glukoza", "Glukoza na czczo", "Laboratorium Nad Bystrzycą"],
+  ["tsh", "TSH", "Centrum Diagnostyki Parkowa"],
+  ["ekg", "EKG spoczynkowe", "Poradnia Rodzinna"],
+  ["usg", "USG jamy brzusznej", "Pracownia Obrazowa"],
+  ["wzrok", "Badanie ostrości wzroku", "Poradnia Okulistyczna"],
+];
+
+function addSampleTests(room) {
+  for (const [index, [key, title, place]] of sampleTests.entries()) {
+    const id = "sample-test-" + key;
+    if (room.records.some((record) => record.id === id)) continue;
+    room.records.push({ id, title, kind: "test", date: iso(room.start - (8 + 12 * index) * day),
+      place: place + " · demo", detail: "Badanie z przykładowej historii leczenia.",
+      document: title + "\nDANE DEMONSTRACYJNE\nPrzykładowy dokument bez wartości klinicznych." });
+  }
+}
 
 export function createWellnessHandler(now = Date.now, { rooms = new Set(), sessions = new Map() } = {}) {
 
@@ -65,6 +84,7 @@ export function createWellnessHandler(now = Date.now, { rooms = new Set(), sessi
     } else if (room.profile === "aleksandra") {
       room.records.push({ id: "checkup", title: "Wizyta profilaktyczna", date: iso(at - 20 * day), place: "Przychodnia Parkowa · demo", detail: "Zakończona wizyta demonstracyjna.", kind: "visit" });
     }
+    addSampleTests(room);
   }
   function slots(room) {
     return [
@@ -74,6 +94,7 @@ export function createWellnessHandler(now = Date.now, { rooms = new Set(), sessi
     ].filter((slot) => !room.upcoming.some((visit) => visit.slot === slot.id));
   }
   function sync(room, at) {
+    addSampleTests(room);
     for (const grant of room.grants) {
       if (!["active", "waiting"].includes(grant.status) || Date.parse(grant.expires) > at) continue;
       grant.status = "expired";

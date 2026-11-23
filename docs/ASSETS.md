@@ -12,8 +12,8 @@ Wspólny kierunek promptów: fotorealistyczny portret do fikcyjnego dokumentu de
 
 Oryginały PNG pozostają w lokalnym katalogu `.codex/generated_images/01a1ea7a-264e-7213-bbd2-fbfe73d5e091`. Kopie używane przez aplikację znajdują się w powyższych ścieżkach. Kadrowanie jest wyłącznie CSS (`object-fit`), bez modyfikowania plików.
 
-Samochód w `src/VehicleArt.tsx` to własna ilustracja bez znaków producenta. Ikony pochodzą z Lucide. Inter Variable jest dostarczany lokalnie z pakietu Fontsource. Znak mostu w `public/icon.svg`, jego wersje PNG i rozeta dokumentu w `public/document-lines.svg` powstały na potrzeby projektu.
+Samochód w `src/VehicleArt.tsx` to własna ilustracja bez znaków producenta. Ikony pochodzą z Lucide. Inter Variable jest dostarczany lokalnie z pakietu Fontsource. Rozeta dokumentu w `public/document-lines.svg` powstała na potrzeby projektu.
 
 Zrzuty `reference-*` służą porównaniu w lokalnej dokumentacji, nie są elementami interfejsu ani zasobami publikowanej PWA. Wyłączenia licencyjne referencji opisuje jej README: kod MIT nie obejmuje automatycznie zdjęć, oznaczeń i wyglądu dokumentów.
 
-Wydanie konkursowe zastępuje wcześniejszy znak z ZIP-a referencji i wyprowadzony z niego kontur godła własnymi zasobami MOST. Licencje bibliotek dostarczanych w aplikacji są dostępne w `public/THIRD_PARTY_NOTICES.txt`.
+Ikona `public/icon.svg` wykorzystuje wizerunek orła z dostarczonego ZIP-a referencji (`mockup/assets/icon-mobywatel.svg`) z niebieskim tłem. Pliki PNG ikon PWA są eksportami tego wariantu. Licencje bibliotek dostarczanych w aplikacji są dostępne w `public/THIRD_PARTY_NOTICES.txt`.

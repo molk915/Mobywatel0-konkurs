@@ -2,16 +2,16 @@ import { test, expect, type Locator, type Page } from "@playwright/test";
 
 const button = (page: Page, name: string) => page.getByRole("button", { name, exact: true });
 const shot = (page: Page, name: string, width: number) =>
-  page.screenshot({ path: `docs/screenshots/night-${name}-${width}.png`, animations: "disabled" });
+  page.screenshot({ path: test.info().outputPath(`night-${name}-${width}.png`), animations: "disabled" });
 
-async function checkNav(nav: Locator, selected: string) {
+async function checkNav(nav: Locator, selected: string, count = 5) {
   await expect(nav).toBeInViewport({ ratio: 1 });
-  await expect(nav.getByRole("button")).toHaveCount(4);
+  await expect(nav.getByRole("button")).toHaveCount(count);
   await expect(nav.getByRole("button", { name: selected, exact: true })).toHaveAttribute("aria-current", "page");
 }
 
 for (const [width, height] of [[320, 740], [375, 812], [390, 844]]) {
-  test(`night design at ${width}×${height} keeps the four destinations and stays within the screen`, async ({ page }) => {
+  test(`product design at ${width}×${height} keeps the navigation within the screen`, async ({ page }) => {
     await page.setViewportSize({ width, height });
     const errors: string[] = [];
     page.on("pageerror", (err) => errors.push(err.message));
@@ -33,13 +33,20 @@ for (const [width, height] of [[320, 740], [375, 812], [390, 844]]) {
     await expect(button(page, "Moje")).toHaveAttribute("aria-pressed", "true");
     await shot(page, "cases", width);
     await button(page, "Pomagam").click();
-    await expect(page.getByRole("heading", { name: "Sprawy, w których pomagasz" })).toBeVisible();
-    await expect(page.getByText(/Otwórz link od bliskiej osoby/)).toBeVisible();
+    await expect(button(page, "Pomagam")).toHaveAttribute("aria-pressed", "true");
+    await expect(page.getByRole("tabpanel", { name: "Do zrobienia" })
+      .getByText("Brak przekazanych spraw na tym etapie.")).toBeVisible();
     if (width === 390) await shot(page, "shared", width);
     await button(page, "Usługi").click();
+    const search = page.getByRole("searchbox", { name: "Szukaj usługi" });
+    await search.fill("paszport");
+    await expect(page.getByRole("button", { name: /^Rodzina/ })).toBeVisible();
+    await expect(page.getByRole("button", { name: /^Zdrowie/ })).toHaveCount(0);
+    await button(page, "Wyczyść wyszukiwanie").click();
+    await expect(page.getByRole("button", { name: /^Zdrowie/ })).toBeVisible();
     await page.getByRole("button", { name: /^Otwórz asystenta/ }).click();
     const assistant = page.getByRole("dialog", { name: "Asystent demonstracyjny" });
-    await checkNav(assistant.getByRole("navigation"), "Usługi");
+    await checkNav(assistant.getByRole("navigation"), "Usługi", 4);
     await expect(assistant.getByRole("textbox", { name: "Wiadomość do asystenta" })).toBeInViewport({ ratio: 1 });
     await shot(page, "assistant", width);
     await assistant.getByRole("button", { name: "Dane", exact: true }).click();

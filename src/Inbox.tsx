@@ -18,6 +18,7 @@ export function Inbox({ items, busy, filter = false, onOpen }: {
   const [opening, setOpening] = useState<string | null>(null);
   const [error, setError] = useState(false);
   const mounted = useRef(true);
+  const requesting = useRef(false);
   useEffect(() => {
     mounted.current = true;
     return () => { mounted.current = false; };
@@ -25,6 +26,8 @@ export function Inbox({ items, busy, filter = false, onOpen }: {
   const unread = items.filter((item) => !item.read);
   const visible = (onlyNew ? unread : [...items]).sort((a, b) => Date.parse(b.at) - Date.parse(a.at));
   async function open(item: InboxItem) {
+    if (requesting.current) return;
+    requesting.current = true;
     setOpening(item.key);
     setError(false);
     try {
@@ -39,6 +42,7 @@ export function Inbox({ items, busy, filter = false, onOpen }: {
     } catch {
       if (mounted.current) setError(true);
     } finally {
+      requesting.current = false;
       if (mounted.current) setOpening(null);
     }
   }
@@ -48,7 +52,9 @@ export function Inbox({ items, busy, filter = false, onOpen }: {
       <button type="button" aria-pressed={onlyNew} onClick={() => { setOnlyNew(true); setError(false); }}>Nowe <span>{unread.length}</span></button>
     </div>}
     {error && <p className="most-notice warning" role="alert">Sprawdź połączenie i spróbuj ponownie otworzyć powiadomienie.</p>}
-    {!visible.length ? <p className="most-lead">{onlyNew ? "Nie masz nowych powiadomień." : "Brak powiadomień."}</p>
+    {!visible.length ? <div className="inbox-empty"><Bell size={24} aria-hidden="true" />
+      <p>{onlyNew ? "Nie masz nowych powiadomień." : "Brak powiadomień."}</p>
+      </div>
       : <ul className="most-inbox">{visible.map((item) => (
         <li key={item.key} data-unread={!item.read}><button type="button" disabled={!!opening || (busy && !item.read)} onClick={() => void open(item)}>
           <span className="most-icon"><Bell size={17} aria-hidden="true" /></span>

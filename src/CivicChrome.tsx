@@ -1,4 +1,4 @@
-import { ArrowLeft, Bell, FileText, Grid2X2, Layers3, UserRound } from "lucide-react";
+import { ArrowLeft, Bell, FolderOpen, Grid2X2, ShieldCheck, UsersRound, WalletCards } from "lucide-react";
 import type { Profile, Tab } from "./domain";
 
 export function CivicBrand() {
@@ -32,19 +32,20 @@ export function CivicHeader({ profile, onHome, onBack, onNotifications, onProfil
 }
 
 const navigation = [
-  { name: "Dokumenty", tab: "home", Icon: FileText },
-  { name: "Sprawy", tab: "cases", Icon: Layers3 },
+  { name: "Dokumenty", tab: "home", Icon: WalletCards },
+  { name: "Sprawy", tab: "cases", Icon: FolderOpen },
   { name: "Usługi", tab: "services", Icon: Grid2X2 },
-  { name: "Dane", tab: "privacy", Icon: UserRound },
+  { name: "Dane", tab: "privacy", Icon: ShieldCheck },
 ] as const;
 
-export function CivicNav({ tab, onGo }: {
-  tab: Tab | "assistant";
+export function CivicNav({ tab, onGo, onMost }: {
+  tab: Tab | "assistant" | "most";
   onGo: (tab: Tab) => void;
   onAssistant: () => void;
+  onMost?: () => void;
 }) {
   return (
-    <nav className="bottom-nav approved-nav" aria-label="Nawigacja główna">
+    <nav className={"bottom-nav approved-nav" + (onMost ? " with-most" : "")} aria-label="Nawigacja główna">
       {navigation.map(({ name, tab: target, Icon }) => {
         const selected = target === tab || (target === "home" && tab === "documents") || (target === "services" && tab === "assistant");
         return (
@@ -54,10 +55,13 @@ export function CivicNav({ tab, onGo }: {
             aria-current={selected ? "page" : undefined}
             onClick={() => onGo(target)}
           >
-            <span className="civic-nav-icon"><Icon size={21} /></span><span>{name}</span>
+            <span className="civic-nav-icon"><Icon size={20} strokeWidth={selected ? 2.25 : 1.75} aria-hidden="true" /></span><span>{name}</span>
           </button>
         );
       })}
+      {onMost && <button onClick={onMost} className={tab === "most" ? "selected" : undefined} aria-current={tab === "most" ? "page" : undefined}>
+        <span className="civic-nav-icon"><UsersRound size={20} strokeWidth={tab === "most" ? 2.25 : 1.75} aria-hidden="true" /></span><span>MOST</span>
+      </button>}
     </nav>
   );
 }

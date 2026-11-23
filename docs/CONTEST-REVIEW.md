@@ -1,5 +1,32 @@
 # Powtórna ocena kierunku konkursowego
 
+## Aktualny wybór na pokaz
+
+Pokaz zaczyna się w zakładce MOST Ewy. Juror może udostępnić Kacprowi mandat, przełączyć profil w tej samej karcie, zapisać szkic i potwierdzić płatność demo. Po powrocie do Ewy może sprawdzić wynik i historię działań. Pokaz dwóch telefonów obejmuje też pismo urzędowe, które Kacper przygotowuje do zatwierdzenia przez Ewę.
+
+Porównanie obejmuje pliki z załączonego ZIP-a, uruchomioną lokalnie wersję skryptową bez kluczy i ścieżki objęte testami MOST. Stanowi ocenę produktu na potrzeby pokazu, bez punktacji jury.
+
+| Obszar | Prototyp organizatorów | MOST i decyzja na pokaz |
+| --- | --- | --- |
+| Wygląd | Karty dokumentów są dobrze rozpoznawalne, a pulpit łączy dokumenty i rozmowę. | Portfel zachowuje własne karty. W profilu Ewy skrót pod mDowodem prowadzi do konkretnego pisma. |
+| UX | Skrzynka uruchamia rozmowę, która rozwija przygotowaną ścieżkę z kartami. | Prowadzimy bezpośrednio do zadania. Każda rola widzi swoje obowiązki i decyzje. |
+| Funkcje | Skrypty pokazują szeroki zakres, m.in. utratę portfela, pismo i narodziny dziecka. | Złożona sprawa ma edytowalne dane, osobny pakiet, wersje i zsynchronizowane powiadomienia. |
+| Wyróżnik | Asystent objaśnia i proponuje działanie do potwierdzenia. | Pomocnik zbiera dane i prosi o dokument w osobnej sesji. Właściciel poprawia lub zatwierdza jedną wersję pakietu. |
+| Dostępność | Archiwum zawiera tłumaczenia i opcjonalną obsługę głosu. | Czytelne nazwy działań, większy tekst, obsługa klawiatury i ograniczenie animacji. Brakuje porównawczych badań z użytkownikami. |
+| Pokaz | Jeden ekran pokazuje rozmowę i jej wynik. | Jedna karta pozwala przełączyć profil. Dodatkowy widok dwóch telefonów pokazuje skutki zatwierdzenia i cofnięcia dostępu po obu stronach. |
+| Niezawodność | Z lokalnego pokazu da się korzystać bez płatnego modelu w trybie skryptowym. | Kluczowa ścieżka również działa bez modelu. Testy zawierają odświeżenie sesji, reguły dostępu i odtworzenie zapisu MOST po restarcie. |
+
+Pięć sprawdzalnych różnic w pokazie to zakres jednego zaproszenia, niezależne sesje, prośba o kopię umowy i odpowiedź drugiej osoby, porównanie wersji po poprawkach oraz cofnięcie dostępu widoczne u pomocnika. Żadna z nich sama nie rozstrzyga, który produkt jest lepszy dla wszystkich obywateli.
+
+| Pomysł | Wartość i oryginalność w tym scenariuszu | Pokaz, koszt i ryzyko | Decyzja |
+| --- | --- | --- | --- |
+| Porównanie wersji przy zatwierdzeniu | Pomaga sprawdzić każdą poprawkę bez przeszukiwania historii. | Jeden ekran, ograniczony zakres API, dane dostępne tylko Ewie. | Wdrożone. |
+| Lista obowiązków według zakresu | Pomocnik widzi, za które pozycje odpowiada, a Ewa dostaje komunikat, kiedy potrzebny jest jej ruch. | Widoczne na obu ekranach, korzysta z istniejących uprawnień. | Wdrożone. |
+| Tryb krok po kroku dla seniora | Może ograniczyć liczbę decyzji widocznych naraz. | Wymaga badań użyteczności i osobnej regresji nawigacji. | Do oceny z użytkownikami. |
+| Jeden ekran upoważnień | Ułatwi zarządzanie dostępem do wielu rodzajów spraw. | Wymaga uzgodnienia różnic między uprawnieniami i przetestowania cofnięć w każdym module. | Po dopracowaniu kluczowego pokazu. |
+
+### Archiwum wcześniejszej oceny
+
 Stan źródeł i projektu: 17 listopada 2026.
 
 ## Co podaje organizator

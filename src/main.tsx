@@ -2,6 +2,7 @@ import React, { lazy, Suspense } from "react";
 import { MotionConfig } from "motion/react";
 import { createRoot } from "react-dom/client";
 import App from "./App";
+import { DelegatedWorkflow } from "./workflows/Workspace";
 import { ErrorBoundary } from "./ErrorBoundary";
 import "./styles.css";
 import "./redesign.css";
@@ -14,11 +15,16 @@ import "./approved-design.css";
 import "./most/most.css";
 import "./civic-system.css";
 import "./health/health.css";
+import "./product-system.css";
 
 const MostRoutes = lazy(() => import("./most/MostRoutes"));
+const MostDashboardShowcase = lazy(() => import("./most/MostDashboardShowcase"));
 
 function Prototype() {
+  const grant = location.hash.match(/^#workflow=([a-zA-Z0-9_-]{32})$/)?.[1];
+  if (grant) return <DelegatedWorkflow token={grant} />;
   const params = new URLSearchParams(location.search);
+  if (params.get("pokaz") === "most3") return <Suspense fallback={<p className="most-loading" role="status">Otwieramy pokaz MOST…</p>}><MostDashboardShowcase /></Suspense>;
   const mode = params.get("pokaz") === "most" ? "stage" : params.get("ramka") === "1" && parent !== window ? params.get("most") : null;
   if (mode !== "stage" && mode !== "ewa" && mode !== "pomoc" && mode !== "czeka") return <App />;
   return (

@@ -6,23 +6,43 @@ mObywatel MOST — bliska osoba pomaga, decyzja należy do Ciebie
 
 ## Opis zgłoszenia
 
-Gdy urząd prosi o uzupełnienie dokumentów, bliska osoba często pomaga przy jednym ekranie albo prosi o przesłanie całego pisma. mObywatel MOST jest dla osób, które chcą przyjąć taką pomoc i zachować kontrolę nad swoją sprawą. Przykładem jest Ewa, która musi odpowiedzieć na pismo dotyczące lokalu i prosi o wsparcie wnuka.
+Kiedy Ewa potrzebuje pomocy przy sprawie urzędowej, mObywatel MOST pozwala jej przekazać wnukowi Kacprowi wybraną sprawę. Ustala, które czynności może wykonać i jak długo ma dostęp. W zakładce **Moje** Ewa widzi swoje sprawy, przyznane upoważnienia i historię działań. Może też cofnąć dostęp.
 
-Ewa udostępnia Kacprowi jedną sprawę i wybiera, czy może on poprosić o dokument oraz komentować. Kacper otwiera zaproszenie na drugim telefonie lub w drugiej karcie. Widzi treść zadania, uzupełnia odpowiedź i przekazuje pakiet do sprawdzenia. Ewa ma podgląd adresu, uzasadnienia i załącznika. Może zatwierdzić pakiet, poprosić o poprawki albo go odrzucić. Historia pokazuje, kto wykonał poszczególne czynności. Ewa może cofnąć dostęp w trakcie współpracy.
+Kacper widzi przekazane sprawy i udostępnione terminy w zakładce **Pomagam**. Przy mandacie zapisuje szkic i może potwierdzić płatność, jeśli Ewa przyznała mu takie uprawnienie. Przy piśmie Kacper może przygotować odpowiedź do decyzji Ewy. Ewa przegląda treść i załącznik, zatwierdza pakiet albo prosi o poprawki.
 
-Asystent pomaga zrozumieć pismo, a MOST prowadzi obie osoby przez przygotowanie jednej odpowiedzi w zsynchronizowanej sprawie. Prototyp działa bez logowania i korzysta z fikcyjnych danych. Zatwierdzony pakiet zapisuje się w prototypie.
+Prototyp działa bez logowania i korzysta z fikcyjnych danych. W jednej karcie można przełączyć się między profilami, sprawdzić zakres Kacpra i zobaczyć wynik po stronie Ewy.
 
 ## Próba dla jurora
 
-Główny link prowadzi do `/?start=most` na publicznej domenie.
+Główny link prowadzi do `/?start=most-hub` na publicznej domenie. Cały scenariusz można przejść w jednej karcie.
 
-1. W sprawie Ewy wybierz **Poproś o pomoc**, sprawdź zakres i wybierz **Utwórz zaproszenie**.
-2. Wybierz **Otwórz zadanie Kacpra**. W karcie Ewy wybierz **Przejdź do współpracy**.
-3. Jako Kacper wstaw i zapisz adres oraz uzasadnienie demo, dołącz kopię demonstracyjną i wybierz **Przekaż do zatwierdzenia**.
-4. W karcie Ewy wybierz **Sprawdź przygotowaną sprawę**. Sprawdź pakiet i wybierz **Zatwierdź pakiet**. Status zmieni się również u Kacpra.
-5. Aby pokazać kontrolę dostępu, wybierz u Ewy **Zakończ współpracę → Cofnij dostęp** i wróć do Kacpra. Historia pozostaje u Ewy.
+1. W **MOST → Moje** u Ewy wybierz **Przekaż sprawę Mandat drogowy**. Sprawdź zakres, przejdź do potwierdzenia i wybierz **Potwierdź dostęp w demo**.
+2. Kliknij nazwę profilu nad panelem MOST i wybierz Kacpra. W **Pomagam** otwórz udostępniony mandat na 150 zł.
+3. Wybierz **Opłać mandat**, zaznacz BLIK, zapisz szkic i potwierdź płatność demo.
+4. Wróć do listy spraw, przełącz profil na Ewę i otwórz **Moje**. Mandat ma status **Zakończona**. W historii sprawy widać działania Kacpra.
 
-Podczas prezentacji na wspólnym ekranie można otworzyć `/?pokaz=most` i wybrać **Rozpocznij demonstrację**. Pojawią się dwa zsynchronizowane telefony obsługujące te same operacje i API.
+Pod `/?pokaz=most3` oba telefony mają własne Dokumenty, Sprawy, Usługi, Dane i MOST. Wejdź w MOST Ewy i wybierz **Przygotuj zaproszenie**, a następnie **Wyślij zaproszenie do Kacpra**. Drugi telefon wyświetli zaproszenie na aktualnym ekranie. Scenariusz pisma urzędowego opisany poniżej jest również dostępny pod `/?pokaz=most`.
+
+### Pokaz w 60 sekund
+
+1. Otwórz `/?pokaz=most` i uruchom demonstrację. U Ewy wybierz **Poproś o pomoc** i pokaż, że zaproszenie dotyczy konkretnego pisma oraz wybranych czynności.
+2. Utwórz zaproszenie. U Kacpra otwórz sprawę i przygotuj trzy pozycje z listy **Twoje zadania**, korzystając z adresu, uzasadnienia i kopii demo.
+3. Przekaż pakiet Ewie. Pokaż komunikat **Teraz Twoja kolej**, sprawdź zawartość i zatwierdź. W drugim oknie status zmieni się automatycznie.
+
+### Pokaz w 3 minuty
+
+1. Zamiast dołączać kopię demo u Kacpra, wybierz **Poproś Ewę o dokument**. U Ewy udostępnij kopię umowy z ekranu sprawy. U Kacpra dołącz kopię i przekaż całość.
+2. U Ewy wybierz **Poproś o poprawki**. Wpisz uwagę do uzasadnienia. U Kacpra zapisz zmienione uzasadnienie i odeślij pakiet.
+3. U Ewy pokaż poprzednie i aktualne uzasadnienie w sekcji **Pakiet po poprawkach**. Zatwierdź, przejdź do historii i cofnij dostęp. U Kacpra pojawi się informacja o zakończeniu dostępu.
+
+### Co można pokazać i zweryfikować
+
+| Element | Zachowanie prototypu |
+| --- | --- |
+| Jedna sprawa dla dwóch osób | Serwer synchronizuje konkretne zadania, prośby o dokument i decyzje w dwóch niezależnych sesjach. |
+| Dostęp dobrany do sprawy | Link przekazuje wyłącznie rolę i zakres dla jednej sprawy. Wygaśnięcie i cofnięcie są egzekwowane przez serwer. |
+| Decyzja właściciela | Ewa widzi zawartość i wcześniejsze wartości po poprawkach. Jej decyzja dotyczy konkretnie sprawdzonej wersji pakietu. |
+| Dane i wynik | Pismo, osoby i kopie umowy są fikcyjne. Zatwierdzenie zapisuje stan pokazu. Doręczenie i podpis urzędowy pozostają poza zakresem. |
 
 ## Uruchomienie i publikacja
 
@@ -35,4 +55,4 @@ docker run -d --name mobywatel-most --restart unless-stopped -p 127.0.0.1:4197:8
 
 Publiczne wdrożenie wymaga jednej instancji kontenera z trwałym wolumenem `/var/lib/most`. Ustaw `APP_ORIGIN` na dokładny publiczny adres HTTPS bez końcowego ukośnika i skieruj ruch HTTPS na port kontenera 8080. Endpoint `GET /api/health` sprawdza dostępność procesu. Sesje MOST właściciela wygasają po 14 dniach, a zaproszenia Kacpra po 10 minutach. Nowe wejście bez zapisanej sesji tworzy nową sprawę na danych demonstracyjnych.
 
-Po wdrożeniu przejdź cały scenariusz na publicznym adresie w nowym oknie prywatnym i sprawdź też zeskanowanie QR drugim urządzeniem. Formularz wymaga linku HTTPS działającego bez logowania do czasu ogłoszenia wyników. Termin podany przez organizatora to 30 listopada 2026, do końca dnia w Polsce. [Oficjalne warunki konkursu](https://mobywatel.ai/)
+Po wdrożeniu przejdź cały scenariusz na publicznym adresie w nowym oknie prywatnym i sprawdź, czy status oraz historia pozostają po odświeżeniu. Formularz wymaga linku HTTPS działającego bez logowania do czasu ogłoszenia wyników. Termin podany przez organizatora to 30 listopada 2026, do końca dnia w Polsce. [Oficjalne warunki konkursu](https://mobywatel.ai/)

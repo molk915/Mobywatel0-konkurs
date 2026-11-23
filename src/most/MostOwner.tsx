@@ -3,7 +3,7 @@ import { ArrowRight, Check, ClipboardCheck, FileText, History, KeyRound, Link2, 
 import { CivicNav, WavePattern } from "../CivicChrome";
 import type { Tab } from "../domain";
 import {
-  MostComments, MostConnection, MostDeadline, MostInvite, MostLayout, MostLetter, MostNotice, MostRow, Portrait, ScopeSummary,
+  MostComments, MostConnection, MostDeadline, MostInvite, MostLayout, MostLetter, MostNotice, MostProgress, MostRow, Portrait, ScopeSummary,
 } from "./components";
 import {
   eventLabels, initialScope, formatMostDeadline, mostSummary, mostTitle, scopeLabels, statusLabels,
@@ -49,7 +49,11 @@ function MostHistory({ entries }: { entries: MostEvent[] }) {
 function AccessEditor({ scope, onChange }: { scope: MostScope; onChange: (scope: MostScope) => void }) {
   return (
     <>
-      <p className="most-lead">Wybierz, co Kacper może zobaczyć i zrobić. Dostęp wygaśnie po 10 minutach. Możesz go wcześniej zakończyć.</p>
+      <div className="most-author">
+        <Portrait person="kacper" />
+        <span><strong>Kacper</strong><small>{mostTitle} · dostęp na 10 minut</small></span>
+      </div>
+      <p className="most-lead">Wybierz, co pomocnik może zobaczyć i zrobić. Dostęp możesz cofnąć w każdej chwili.</p>
       <fieldset className="most-checks">
         <legend>Dane i uprawnienia</legend>
         {(Object.keys(scopeLabels) as (keyof MostScope)[]).map((key) => <label key={key}>
@@ -62,7 +66,7 @@ function AccessEditor({ scope, onChange }: { scope: MostScope; onChange: (scope:
           <span>{scopeLabels[key]}</span>
         </label>)}
       </fieldset>
-      <MostNotice>PESEL, pozostałe dokumenty i sprawy zostają u Ciebie. Tylko Ty decydujesz o przyjęciu zmian.</MostNotice>
+      <MostNotice>PESEL, pozostałe dokumenty i sprawy zostają u Ciebie.</MostNotice>
     </>
   );
 }
@@ -87,10 +91,11 @@ type OwnerProps = {
   onGo?: (tab: Tab) => void;
   activeTab?: Tab;
   onAssistant?: () => void;
+  trustedToken?: string | null;
   onInbox?: () => void;
   notifications?: number;
   session?: MostSession;
-  initialPane?: "work" | "review" | "end";
+  initialPane?: "work" | "review" | "end" | "access" | "tasks";
 };
 export function MostOwner(props: OwnerProps) {
   return props.session ? <OwnerPanel {...props} session={props.session} /> : <StandaloneOwner {...props} />;
@@ -99,7 +104,7 @@ function StandaloneOwner(props: OwnerProps) {
   const session = useMostSession("owner", props.context ?? "app", true);
   return <OwnerPanel {...props} session={session} />;
 }
-function OwnerPanel({ context = "app", onClose, onGo, activeTab = "cases", onAssistant, onInbox, notifications, session, initialPane }: OwnerProps & { session: MostSession }) {
+function OwnerPanel({ context = "app", onClose, onGo, activeTab = "cases", onAssistant, onInbox, notifications, session, initialPane, trustedToken }: OwnerProps & { session: MostSession }) {
   const inApp = !!onClose;
   const [pane, setPane] = useState<Pane>(() => initialPane ?? (inApp && panes.includes(history.state?.mostPane) ? history.state.mostPane : "work"));
   const [historyReturn, setHistoryReturn] = useState<"review" | "work">(() =>
@@ -170,9 +175,15 @@ function OwnerPanel({ context = "app", onClose, onGo, activeTab = "cases", onAss
     if (ended || (!busy && !hasSession)) action = <button className="most-button most-primary" onClick={() => void session.start()}>Otwórz sprawę <ArrowRight size={17} /></button>;
   } else if (pane === "access") {
     body = <AccessEditor scope={scope} onChange={setScope} />;
-    action = <button className="most-button most-primary" disabled={locked || hasAccess} onClick={async () => {
+    action = <><button className="most-button most-primary" disabled={locked || hasAccess} onClick={async () => {
       if (await act({ type: "invite", scope })) go(context === "stage" ? "work" : "invite", true);
-    }}>Utwórz zaproszenie <ArrowRight size={17} /></button>;
+    }}>Utwórz zaproszenie <ArrowRight size={17} /></button>
+      {trustedToken && <button className="most-button most-secondary" disabled={locked || hasAccess ||
+        !scope.document || !scope.form || !scope.response || !scope.attachments} onClick={async () => {
+        if (await act({ type: "invite", scope, trustedOwnerToken: trustedToken, maySubmit: true })) go("work", true);
+      }}>Upoważnij osobę zaufaną do wysłania</button>}
+      {trustedToken && <p className="most-muted">Prawo wysłania pozwala osobie zaufanej samodzielnie zatwierdzić i wysłać odpowiedź w systemie demo.</p>}
+    </>;
   } else if (pane === "invite") {
     body = invitation ? <><Participant invitation={invitation} /><MostInvite key={inviteToken} invitation={invitation} /></> : <MostNotice>Utwórz nowe zaproszenie, aby udostępnić sprawę.</MostNotice>;
     action = <button className="most-button most-primary" onClick={() => go("work", true)}>Przejdź do współpracy <ArrowRight size={17} /></button>;
@@ -182,28 +193,32 @@ function OwnerPanel({ context = "app", onClose, onGo, activeTab = "cases", onAss
   } else if (pane === "review" && ready && view.work.reviewId !== undefined) {
     const reviewId = view.work.reviewId;
     body = <>
-      <p className="most-lead">Sprawdź dane, uzasadnienie i kopię umowy. Zatwierdzenie zapisze pakiet w aplikacji. Dane nie trafią do urzędu.</p>
-      <PackageSummary view={view} />
+      <PackageSummary view={view} compare />
       <div className="most-review-links">
         <button className="most-inline" onClick={() => go("history")}>Sprawdź wykonane czynności</button>
-        {!reviewAction && <button className="most-inline" onClick={() => setReviewAction("reject")}>Odrzuć pakiet</button>}
+        {!reviewAction && <button className="most-inline most-danger" onClick={() => setReviewAction("reject")}>Odrzuć pakiet</button>}
       </div>
       {reviewAction === "reject" && <MostNotice tone="warning">Odrzucenie kończy przegląd tego pakietu. Historia sprawy pozostanie dostępna.</MostNotice>}
-      {invitation && reviewAction === "correct" && <form id="most-correction" className="most-editor" onSubmit={async (e) => {
+      {reviewAction === "correct" && <form id="most-correction" className="most-editor" onSubmit={async (e) => {
         e.preventDefault();
         if (await act({ type: "correction", reviewId, text: feedback })) { setFeedback(""); setReviewAction(null); go("work", true); }
       }}>
         <label>Co trzeba poprawić?<textarea id="most-feedback" rows={2} value={feedback} onChange={(e) => setFeedback(e.target.value)} maxLength={500} /></label>
       </form>}
     </>;
-    action = <div className="most-actions">
+    action = <><p className="most-decision-effect">{view.complete ? "Zatwierdzenie zapisuje pakiet w pokazie. Bez wysyłki do urzędu."
+      : "Kacper przekazał szkic. Uzupełnij pakiet albo prześlij uwagi."}</p><div className="most-actions">
       {reviewAction ? <button className="most-button most-secondary" onClick={() => setReviewAction(null)}>Anuluj</button>
-        : invitation && <button className="most-button most-secondary" onClick={() => setReviewAction("correct")}>Poproś o poprawki</button>}
+        : <button className="most-button most-secondary" onClick={() => setReviewAction("correct")}>{hasAccess ? "Poproś o poprawki" : "Wróć do poprawek"}</button>}
       {reviewAction === "correct" ? <button form="most-correction" type="submit" className="most-button most-primary" disabled={locked || feedback.trim().length < 5}>Przekaż uwagi</button>
         : <button className="most-button most-primary" disabled={locked} onClick={async () => {
+          if (!view.complete && !reviewAction) {
+            if (await act({ type: "resumeDraft", reviewId })) go("tasks", true);
+            return;
+          }
           if (await act({ type: reviewAction === "reject" ? "reject" : "accept", reviewId })) { setReviewAction(null); go("work", true); }
-        }}><Check size={17} /> {reviewAction === "reject" ? "Potwierdź odrzucenie" : "Zatwierdź pakiet"}</button>}
-    </div>;
+        }}><Check size={17} /> {reviewAction === "reject" ? "Potwierdź odrzucenie" : view.complete ? "Zatwierdź pakiet" : "Uzupełnij pakiet"}</button>}
+    </div></>;
   } else if (pane === "tasks" && !ready && !["finished", "rejected"].includes(view.status)) {
     body = <MostTasks key={view.work.reviewId ?? 0} session={session} />;
     action = <button className="most-button most-primary" disabled={locked || !view.canReview} onClick={async () => {
@@ -251,11 +266,7 @@ function OwnerPanel({ context = "app", onClose, onGo, activeTab = "cases", onAss
           <section className="most-brief civic-pattern-card">
             <WavePattern />
             <Participant invitation={invitation} />
-            <div className="most-case-progress" aria-hidden="true">
-              {[true, active || invitation.status !== "waiting", ready || view.status === "finished", view.status === "finished"].map((complete, i) => (
-                <span key={i} data-complete={!!complete} />
-              ))}
-            </div>
+            <MostProgress status={view.status} waiting={invitation.status === "waiting"} />
           </section>
         ) : <>
           <p className="most-lead">Urząd prosi Cię o kopię dokumentu potwierdzającego prawo do lokalu.</p>
@@ -269,15 +280,36 @@ function OwnerPanel({ context = "app", onClose, onGo, activeTab = "cases", onAss
           </section>}
         </>}
         <MostNotice live tone={view.status === "finished" ? "success" : "info"}>{statusLabels[view.status]}</MostNotice>
-        {view.status === "finished" && <p className="most-lead">Pakiet jest gotowy i zapisany w aplikacji. Żadne dane nie trafiły do urzędu.</p>}
+        {view.status === "finished" && (view.sentAt
+          ? <section className="most-proposal">
+            <MostNotice live tone="success">Odpowiedź przyjęta przez system demonstracyjny.</MostNotice>
+            {view.receipt && <>
+              <p>Numer potwierdzenia <strong>{view.receipt.number}</strong></p>
+              <p>{timelineDate.format(new Date(view.receipt.at))} · Urząd Miasta Lublin (demo)</p>
+              <a className="most-inline" download={view.receipt.number + ".txt"}
+                href={"data:text/plain;charset=utf-8," + encodeURIComponent("Potwierdzenie demonstracyjne\n" + view.receipt.number +
+                  "\n" + view.receipt.at + "\nUrząd Miasta Lublin (demo)\nZałącznik: " +
+                  (view.work.upload?.name ?? (view.work.attachment && view.files[view.work.attachment]?.name) ?? "—"))}>
+                Pobierz potwierdzenie
+              </a>
+            </>}
+            {!invitation && <button className="most-inline" onClick={() => go("history")}>Historia wysyłki</button>}
+          </section>
+          : <section className="most-proposal">
+            <p>Adresat: Urząd Miasta Lublin. Wysyłka zapisze potwierdzenie demonstracyjne.</p>
+            <button className="most-button most-primary" disabled={locked} onClick={() => void act({ type: "send", reviewId: view.work.reviewId })}>Wyślij odpowiedź (demo) <ArrowRight size={17} /></button>
+          </section>)}
         {ready && (
           <section className="most-proposal" aria-label="Sprawa gotowa">
-            <p role="status"><Sparkles size={18} /> Pakiet jest kompletny</p>
+            <p role="status"><Sparkles size={18} /> {view.complete ? "Teraz Twoja kolej. Pakiet jest kompletny." : "Kacper przekazał Ci szkic do sprawdzenia."}</p>
             <button className="most-button most-primary" onClick={() => go("review")}>Sprawdź przygotowaną sprawę <ArrowRight size={17} /></button>
           </section>
         )}
         {active && view.work.documentRequest === "pending" && (
-          <button className="most-button most-primary" disabled={locked} onClick={() => void act({ type: "share" })}>Udostępnij kopię umowy Kacprowi</button>
+          <section className="most-proposal" aria-label="Prośba Kacpra">
+            <p>Kacper potrzebuje kopii umowy najmu, żeby dokończyć pakiet.</p>
+            <button className="most-button most-primary" disabled={locked} onClick={() => void act({ type: "share" })}>Udostępnij kopię umowy Kacprowi</button>
+          </section>
         )}
         {!invitation && view.document && <MostLetter document={view.document} />}
         {invitation && <div className="most-rows">
@@ -288,7 +320,8 @@ function OwnerPanel({ context = "app", onClose, onGo, activeTab = "cases", onAss
           <MostRow icon={<History size={18} />} title="Historia współpracy" onClick={() => go("history")} />
         </div>}
         <button className="most-inline" onClick={() => go("explain")}>Wyjaśnij pismo <ArrowRight size={16} /></button>
-        {!ready && !["finished", "rejected"].includes(view.status) && <button className="most-inline" onClick={() => go("tasks")}>Przygotuj samodzielnie <ArrowRight size={16} /></button>}
+        {onAssistant && <button className="most-inline" onClick={onAssistant}><Sparkles size={16} /> Zapytaj asystenta o pismo</button>}
+        {!ready && !["finished", "rejected"].includes(view.status) && <button className="most-inline" onClick={() => go("tasks")}>Uzupełnij dokumenty <ArrowRight size={16} /></button>}
         {!invitation && view.status === "finished" && <PackageSummary view={view} />}
         {hasAccess && invitation && <ScopeSummary scope={invitation.scope} />}
       </>
@@ -311,7 +344,7 @@ function OwnerPanel({ context = "app", onClose, onGo, activeTab = "cases", onAss
         {showConnection ? <MostConnection connected={connected} retry={retry} error={error} /> : error && <p className="most-error" role="alert">{error}</p>}
         {action}
       </>}
-      nav={onGo && onAssistant && <CivicNav tab={activeTab} onGo={onGo} onAssistant={() => go("explain")} />}
+      nav={onGo && onAssistant && <CivicNav tab={activeTab} onGo={onGo} onAssistant={onAssistant} />}
     >{body}</MostLayout>
   );
 }

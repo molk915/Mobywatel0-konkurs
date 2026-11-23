@@ -2,6 +2,7 @@ export type CaseKind = "move" | "wallet" | "letter";
 export type Tab = "home" | "documents" | "cases" | "services" | "privacy";
 export type FormData = Record<string, string>;
 export type Draft = { kind: CaseKind; step: number; data: FormData };
+export const demoTax = { title: "Podatek od nieruchomości", amount: "210,00 zł", recipient: "Urząd Miasta Warszawy", reference: "DEMO-PN-2026-0184" };
 export type Receipt = {
   id: string;
   kind: CaseKind;
@@ -16,7 +17,7 @@ export type Operation = {
   title: string;
   recipient: string;
   scope: string;
-  status: "accepted" | "needs-document" | "manual" | "manual-done";
+  status: "accepted" | "needs-document" | "ready-to-send" | "manual" | "manual-done";
   reference: string;
   attachmentKey?: string;
   attachmentName?: string;
@@ -87,35 +88,40 @@ export function supplyMovingDocument(
                 ? o
                 : {
                     ...o,
-                    status: "accepted",
+                    status: "ready-to-send",
                     attachmentKey: key,
                     attachmentName: name,
                   },
             ),
           },
     ),
-    access: [
-      {
-        id: receiptId + "-document",
-        who: op.recipient,
-        purpose: "Uzupełnienie zameldowania · symulacja",
-        scope: "Nazwa lokalnego załącznika: " + name,
-        at: new Date().toISOString(),
-        active: true,
-        revocable: false,
-      },
-      ...c.access,
-    ],
+  };
+}
+export function sendMovingDocument(c: CitizenState, receiptId: string): CitizenState {
+  const receipt = c.receipts.find((r) => r.id === receiptId);
+  const op = receipt?.operations?.find((operation) => operation.id === "meldunek");
+  if (!receipt || op?.status !== "ready-to-send" || !op.attachmentKey || !op.attachmentName) return c;
+  const at = new Date().toISOString();
+  return {
+    ...c,
+    receipts: c.receipts.map((r) => r !== receipt ? r : {
+      ...r,
+      operations: r.operations?.map((o) => o === op ? { ...o, status: "accepted" } : o),
+      events: [...(r.events ?? []), { at, label: "Wysłano zgłoszenie zameldowania w symulacji" }],
+    }),
+    access: [{ id: receiptId + "-document", who: op.recipient, purpose: "Zgłoszenie zameldowania · symulacja",
+      scope: "Nazwa lokalnego załącznika: " + op.attachmentName, at, active: true, revocable: false }, ...c.access],
   };
 }
 export function receiptNeedsAction(r: Receipt): boolean {
   return !!r.operations?.some(
-    (o) => o.status === "needs-document" || o.status === "manual",
+    (o) => o.status === "needs-document" || o.status === "ready-to-send" || o.status === "manual",
   );
 }
 export function receiptNextStep(r: Receipt): string {
   return r.operations?.some((o) => o.status === "needs-document")
     ? "Czeka na dokument"
+    : r.operations?.some((o) => o.status === "ready-to-send") ? "Wyślij zgłoszenie zameldowania"
     : r.operations?.some((o) => o.status === "manual")
       ? "Krok do wykonania samodzielnie"
       : "Pakiet gotowy";
@@ -173,20 +179,25 @@ export type Access = {
   scope: string;
   at: string;
   expiresAt?: string;
+  inactiveReason?: "expired";
   revocable: boolean;
   active: boolean;
 };
 export type Message = {
   role: "user" | "assistant";
   text: string;
+  conversation?: string;
   action?: CaseKind;
   suggestedData?: FormData;
   caseId?: string;
   documentId?: number;
   shareDocumentId?: number;
   showPrivacy?: boolean;
+  workflowAction?: import("./workflows/model.ts").WorkflowAction;
+  fallback?: boolean;
 };
 export type CitizenState = {
+  demoTaxPaidAt?: string;
   drafts: Partial<Record<CaseKind, Draft>>;
   receipts: Receipt[];
   access: Access[];
@@ -380,6 +391,8 @@ export function validateStep(d: Draft): Record<string, string> {
     e.text = "Wklej co najmniej 40 znaków pisma lub użyj przykładu.";
   if (d.kind === "letter" && d.step === 2 && d.data.response.trim().length < 20)
     e.response = "Napisz odpowiedź zawierającą co najmniej 20 znaków.";
+  if (d.kind === "letter" && d.step === 2 && d.data.directReply === "true" && (!d.data.attachmentKey || !d.data.attachmentName))
+    e.attachment = "Dołącz kopię dokumentu przed wysłaniem odpowiedzi.";
   if (d.step === caseMeta[d.kind].steps.length - 1 && d.data.consent !== "true")
     e.consent = "Potwierdź, że rozumiesz zakres symulacji.";
   return e;
@@ -394,6 +407,7 @@ export function completeCase(c: CitizenState, d: Draft): CitizenState {
   const id = "DEMO-" + Date.now().toString(36).toUpperCase();
   const operations =
     d.kind === "move" ? movingOperations(d.data, id) : undefined;
+  const sentLetter = d.kind === "letter" && d.data.directReply === "true";
   const followups =
     d.kind === "move"
       ? [
@@ -410,7 +424,7 @@ export function completeCase(c: CitizenState, d: Draft): CitizenState {
               : []),
             "Przejrzyj aktywność na swoich kontach.",
           ]
-        : [
+        : sentLetter ? [] : [
             "Dołącz właściwy dokument i przekaż odpowiedź urzędowi oficjalnym kanałem.",
             "Sprawdź termin w oryginalnym piśmie.",
           ];
@@ -431,7 +445,7 @@ export function completeCase(c: CitizenState, d: Draft): CitizenState {
           {
             at,
             label:
-              "Zatwierdzono zakres symulacji i zapisano " +
+              sentLetter ? "Wysłano odpowiedź w symulacji" : "Zatwierdzono zakres symulacji i zapisano " +
               caseMeta[d.kind].short.toLowerCase(),
           },
         ],
@@ -464,7 +478,7 @@ export function completeCase(c: CitizenState, d: Draft): CitizenState {
                 ? "Urząd miasta · symulacja"
                 : d.kind === "wallet"
                   ? "Rejestr ochrony · symulacja"
-                  : "Szkic odpowiedzi · lokalnie",
+                  : sentLetter ? "Urząd Miasta Warszawy · symulacja" : "Szkic odpowiedzi · lokalnie",
             purpose: caseMeta[d.kind].short,
             scope:
               d.kind === "move"

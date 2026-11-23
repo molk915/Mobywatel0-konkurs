@@ -3,12 +3,14 @@ import { MostRow } from "./most/components";
 import { Inbox, type InboxItem } from "./Inbox";
 import { healthCaption, type HealthTarget } from "./health/model";
 import { hasWellnessInvite, healthInbox, useWellnessSession } from "./health/session";
-import { hasMostInvite, useMostSession } from "./most/session";
+import { delegationToken, demoHelperToken, hasMostInvite, helperDashboardUrl, routeForMost, storedTrustedHelperToken, useMostSession } from "./most/session";
+import { useControl } from "./most/control-session";
 import { DocumentSelection, ApprovedDocument } from "./ApprovedDocuments";
 import { CivicHeader, CivicNav, WavePattern } from "./CivicChrome";
 import { FamilyEntry, FamilyWorkspace } from "./family/FamilyWorkspace";
 import { isFamilyInvite, useFamilySession } from "./family/session";
 import { MostEntry } from "./most/MostEntry";
+import { delegationTitles, type DelegationContext } from "./most/model";
 import {
   lazy,
   Suspense,
@@ -68,6 +70,7 @@ import {
   analyzeLetter,
   caseMeta,
   completeCase,
+  demoTax,
   DemoAssistant,
   ServerAssistant,
   freshDraft,
@@ -87,17 +90,21 @@ import { freshStore, loadStore, saveStore } from "./storage";
 import { Wallet } from "./DeckWallet";
 import { DigitalCard, documentTitles } from "./DigitalCard";
 import { PrivacyHub } from "./PrivacyHub";
+import { ServiceDirectory } from "./ServiceDirectory";
 import { ProcessRoute } from "./ProcessRoute";
 import { Cases, type CaseCard } from "./CaseHub";
+import { MovePicker, WorkflowCard, WorkflowWorkspace } from "./workflows/Workspace";
+import { useWorkflows, type WorkflowReply } from "./workflows/session";
+import { workflowDetails, workflowStatus, type WorkflowAction, type WorkflowCase, type WorkflowKind } from "./workflows/model";
 import { VehicleArt } from "./VehicleArt";
 import { MovePlan, MoveOutcomes } from "./MoveOutcomes";
-import { supplyMovingDocument } from "./domain";
+import { sendMovingDocument, supplyMovingDocument } from "./domain";
 import {
-  receiptNeedsAction,
   receiptNextStep,
   confirmManualOperation,
 } from "./domain";
-import { restoreNavigation, searchDocuments, type Layer } from "./navigation";
+import { conversationFor, openConversation, restoreNavigation, searchDocuments, type Layer } from "./navigation";
+import { MostTasks, type MostSession } from "./most/MostWork";
 import {
   clearAttachments,
   downloadAttachment,
@@ -105,7 +112,9 @@ import {
 } from "./attachments";
 
 const serverAI = import.meta.env.VITE_ASSISTANT_MODE === "server";
-const assistant = serverAI ? new ServerAssistant() : new DemoAssistant();
+const previewScale = () => window.innerWidth <= 600 ? 1 : Math.min(1, (window.innerHeight - 112) / 862);
+const demoAssistant = new DemoAssistant();
+const assistant = serverAI ? new ServerAssistant() : demoAssistant;
 const iconFor = (k: CaseKind) =>
   k === "move" ? House : k === "wallet" ? ShieldCheck : FileText;
 const dateLabel = (s: string) =>
@@ -203,28 +212,41 @@ function IdentityCard({
 const MostOwner = lazy(() => import("./most/MostOwner").then(({ MostOwner }) => ({ default: MostOwner })));
 const HealthWorkspace = lazy(() => import("./health/HealthWorkspace"));
 const MostHelperWorkspace = lazy(() => import("./most/MostHelper").then(({ MostHelperWorkspace }) => ({ default: MostHelperWorkspace })));
+const DelegationOwner = lazy(() => import("./most/DelegationPanel").then(({ DelegationOwner }) => ({ default: DelegationOwner })));
+const MostHub = lazy(() => import("./most/MostHub"));
 
 export default function App() {
+  const [showcasePhone] = useState<"ewa" | "kacper" | undefined>(() => {
+    const role = new URLSearchParams(location.search).get("telefon-most");
+    return window.parent !== window && (role === "ewa" || role === "kacper") ? role : undefined;
+  });
   const [contestEntry] = useState(() => !history.state?.prototype &&
-    new URLSearchParams(location.search).get("start") === "most" &&
+    ["most", "centrum", "most-hub"].includes(new URLSearchParams(location.search).get("start") ?? "") &&
     !hasMostInvite() && !hasWellnessInvite() && !isFamilyInvite());
   const [store, setStore] = useState(() => {
-    const saved = loadStore();
+    const saved = loadStore(showcasePhone);
+    if (showcasePhone) return { ...saved, profile: showcasePhone };
     return contestEntry ? { ...saved, profile: "ewa" } : saved;
   });
   const [healthHelpEnabled, setHealthHelpEnabled] = useState(() =>
     hasWellnessInvite() || new URLSearchParams(location.search).get("zdrowie") === "pomoc");
   const [mostHelpEnabled, setMostHelpEnabled] = useState(() =>
     hasMostInvite() || new URLSearchParams(location.search).get("most") === "pomoc");
+  const [showcaseInvite, setShowcaseInvite] = useState<string>();
   const [initialNavigation] = useState<{ tab: Tab; layer: Layer | null }>(() => {
     if (isFamilyInvite()) return { tab: "cases", layer: { type: "family" } };
-    if (hasMostInvite() || (mostHelpEnabled && !history.state?.prototype))
+    if (hasMostInvite() || (mostHelpEnabled && (showcasePhone === "kacper" || !history.state?.prototype)))
       return { tab: "cases", layer: { type: "most-help" } };
+    if (showcasePhone) return history.state?.prototype ? restoreNavigation(history.state, store) : { tab: "cases", layer: null };
     if (hasWellnessInvite() || (healthHelpEnabled && !history.state?.prototype))
       return { tab: "cases", layer: { type: "health", helper: true, target: { section: "referrals" } } };
     if (new URLSearchParams(location.search).get("pokaz") === "zdrowie" && !history.state?.prototype)
       return { tab: "cases", layer: { type: "health", target: { section: "home" } } };
-    if (contestEntry) return { tab: "cases", layer: { type: "most" } };
+    if (contestEntry && new URLSearchParams(location.search).get("start") === "most-hub")
+      return { tab: "cases", layer: { type: "most-hub" } };
+    if (contestEntry) return new URLSearchParams(location.search).get("start") === "centrum"
+      ? { tab: "privacy", layer: { type: "delegation", kind: "trusted" } }
+      : { tab: "cases", layer: { type: "most" } };
     return restoreNavigation(history.state, store);
   });
   const [tab, setTab] = useState<Tab>(initialNavigation.tab);
@@ -241,9 +263,7 @@ export default function App() {
   const [toast, setToast] = useState("");
   const [online, setOnline] = useState(navigator.onLine);
   const [saveFailed, setSaveFailed] = useState(false);
-  const [deviceScale, setDeviceScale] = useState(() =>
-    window.innerWidth > 600 ? Math.min(1, (window.innerHeight - 145) / 862) : 1,
-  );
+  const [deviceScale, setDeviceScale] = useState(previewScale);
   const fitPreview = fitPreference ?? deviceScale < .98;
   const historyReady = useRef(false);
   const historyPop = useRef(false);
@@ -252,12 +272,32 @@ export default function App() {
   const p = profiles.find((p) => p.id === store.profile)!;
   const c = store.citizens[p.id];
   const isEwa = p.id === "ewa";
+  const workflows = useWorkflows(p.id);
   const ownHealthOpen = layer?.type === "health" && !layer.helper;
   const healthEwa = useWellnessSession("ewa", isEwa && (!healthHelpEnabled || ownHealthOpen));
   const healthAleksandra = useWellnessSession("aleksandra", p.id === "aleksandra" && ownHealthOpen);
   const healthKacper = useWellnessSession("kacper", p.id === "kacper" && ownHealthOpen);
   const healthHelper = useWellnessSession(null, healthHelpEnabled);
-  const mostHelper = useMostSession("helper", "app", false, mostHelpEnabled);
+  const mostHelper = useMostSession("helper", showcasePhone === "kacper" ? "delegation-showcase-help" : "app",
+    false, mostHelpEnabled || showcasePhone === "kacper", undefined, showcaseInvite);
+  useEffect(() => {
+    if (showcasePhone !== "kacper") return;
+    function receive(event: MessageEvent) {
+      if (event.source !== window.parent || event.origin !== location.origin || event.data?.type !== "most-showcase-invitation" ||
+          typeof event.data.token !== "string" || !/^[A-Za-z0-9_-]{32}$/.test(event.data.token)) return;
+      setShowcaseInvite(event.data.token);
+      setMostHelpEnabled(true);
+    }
+    window.addEventListener("message", receive);
+    window.parent.postMessage({ type: "most-showcase-ready" }, location.origin);
+    return () => window.removeEventListener("message", receive);
+  }, [showcasePhone]);
+  const [controlTab, setControlTab] = useState<"access" | "inbox">("access");
+  const [requestedMostCase, setRequestedMostCase] = useState<string>();
+  const trustOwnerKey = delegationToken(p.id + "-trusted");
+  const ownerControl = useControl(trustOwnerKey, !!trustOwnerKey);
+  const trustedHelper = mostHelpEnabled && mostHelper.view?.delegation?.kind === "trusted" && mostHelper.view.invitation?.status === "active";
+  const helperControl = useControl(mostHelper.token, !!trustedHelper);
   const health = isEwa ? healthEwa : p.id === "aleksandra" ? healthAleksandra : healthKacper;
   const familySession = useFamilySession();
   const familyVisible = p.id === "aleksandra" || familySession.data?.view.role === "tomasz" || familySession.data?.view.role === "zosia";
@@ -286,17 +326,34 @@ export default function App() {
     history.replaceState(history.state, "", url);
   }
   const mostSession = useMostSession("owner", "app", isEwa, isEwa);
-  const [mostTarget, setMostTarget] = useState<"work" | "review" | "end">();
+  const [mostTarget, setMostTarget] = useState<"work" | "review" | "end" | "access" | "tasks">();
   const mostView = isEwa ? mostSession.view : null;
   const mostStatus = mostView?.status ?? "new";
-  function openMost(target: "work" | "review" | "end" = "work") {
+  function openMost(target: "work" | "review" | "end" | "access" | "tasks" = "work") {
     setMostTarget(target);
     if (target !== "end" || tab !== "privacy") setTab("cases");
     setLayer({ type: "most" });
   }
-  function openMostHelp() {
+  function openMostHelp(href?: string) {
+    setRequestedMostCase(href);
+    if (href) setControlTab("access");
     setTab("cases");
     setLayer({ type: "most-help" });
+  }
+  function openWorkflow(kind: WorkflowKind, city?: string) {
+    setLayer({ type: "workflow", kind, city });
+    setTab("cases");
+  }
+  function openWorkflowAction(action: WorkflowAction, data?: Record<string, string>) {
+    if (action === "fine" || action === "tax") openWorkflow(action);
+    else if (action === "move") { setTab("cases"); setLayer({ type: "moving", city: data?.city }); }
+    else if (isEwa && action === "letter") openMost(mostStatus === "review" ? "review" : "work");
+    else if (isEwa && action === "help") openMost(!mostView?.invitation && mostStatus !== "finished" ? "access" : "work");
+    else go("cases");
+  }
+  function openDelegation(kind: DelegationContext["kind"], receiptId?: string) {
+    if (kind === "trusted") setControlTab("access");
+    setLayer({ type: "delegation", kind, receiptId });
   }
   const screenRef = useRef<HTMLDivElement>(null);
   const previousFocus = useRef<HTMLElement | null>(null);
@@ -311,7 +368,20 @@ export default function App() {
   }, [tab]);
   const closeLayer = () => setClosing(true);
   function dismissWorkspace() {
+    if (layer?.type === "profile" && layer.returnToMost) {
+      setLayer({ type: "most-hub", mode: layer.returnToMost });
+      return;
+    }
+    if (layer?.type === "delegation") {
+      const receipt = c.receipts.find((item) => item.id === layer.receiptId && item.kind === layer.kind);
+      if (receipt) { setLayer({ type: "receipt", receipt }); return; }
+      if (["move", "wallet", "letter"].includes(layer.kind) && c.drafts[layer.kind as CaseKind]) {
+        setLayer({ type: "flow", kind: layer.kind as CaseKind }); return;
+      }
+    }
     if (layer?.type === "assistant") {
+      if (layer.returnWorkflow) { openWorkflow(layer.returnWorkflow); return; }
+      if (isEwa && (layer.workflow === "letter" || layer.workflow === "help")) { openMost(); return; }
       const receipt = c.receipts.find((item) => item.id === layer.caseId);
       if (receipt) { setLayer({ type: "receipt", receipt }); return; }
       if (layer.documentId !== undefined) { setLayer({ type: "document", id: layer.documentId }); return; }
@@ -353,16 +423,25 @@ export default function App() {
       ...s,
       citizens: { ...s.citizens, [p.id]: fn(s.citizens[p.id]) },
     }));
+  function announceWorkflow(item: WorkflowCase, conversation = "workflow:" + item.kind) {
+    const workflowAction = item.kind === "registration" || item.kind === "tax-address" ? "move" : item.kind;
+    const receipt = item.receipt;
+    if (!receipt) return;
+    update((citizen) => {
+      const history = citizen.messages.filter((message) => (message.conversation ?? "general") === conversation);
+      const previous = history.filter(({ role }) => role === "assistant").at(-1);
+      if (previous?.workflowAction !== workflowAction || history.some(({ text }) => text.includes(receipt.number)))
+        return citizen;
+      const text = workflowDetails[item.kind].title + ". " + workflowStatus[item.status] +
+        ". Potwierdzenie demonstracyjne " + receipt.number + " znajdziesz w Sprawach.";
+      return { ...citizen, messages: [...citizen.messages, { role: "assistant", text, workflowAction, conversation }] };
+    });
+  }
   useEffect(() => {
-    setSaveFailed(!saveStore(store));
-  }, [store]);
+    setSaveFailed(!saveStore(store, showcasePhone));
+  }, [store, showcasePhone]);
   useEffect(() => {
-    const resize = () =>
-      setDeviceScale(
-        window.innerWidth > 600
-          ? Math.min(1, (window.innerHeight - 145) / 862)
-          : 1,
-      );
+    const resize = () => setDeviceScale(previewScale());
     window.addEventListener("resize", resize);
     return () => window.removeEventListener("resize", resize);
   }, []);
@@ -383,7 +462,7 @@ export default function App() {
                     Date.parse(a.expiresAt) <= Date.now()
                   ) {
                     changed = true;
-                    return { ...a, active: false };
+                    return { ...a, active: false, inactiveReason: "expired" as const };
                   }
                   return a;
                 }),
@@ -498,6 +577,16 @@ export default function App() {
     return () => window.removeEventListener("keydown", key);
   }, [layer, inboxOpen, c.receipts]);
   const start = (kind: CaseKind, suggestedData?: Record<string, string>) => {
+    if (kind === "move") {
+      setTab("cases");
+      setLayer({ type: "moving", city: suggestedData?.city });
+      return;
+    }
+    if (kind === "letter") {
+      if (isEwa) openMost(mostStatus === "review" ? "review" : "work");
+      else setLayer({ type: "profile" });
+      return;
+    }
     if (!c.drafts[kind] || suggestedData)
       update((c) => {
         const draft = c.drafts[kind] || freshDraft(kind);
@@ -519,9 +608,39 @@ export default function App() {
     setTab(t);
     if (layer) closeLayer();
   };
+  function openMostTab() {
+    if (showcasePhone === "kacper" && mostHelper.hasSession) {
+      if (layer?.type === "most-help") return;
+      setControlTab("access");
+      openMostHelp();
+    } else if (layer?.type !== "most-hub") setLayer({ type: "most-hub" });
+  }
+  const mostNav = showcasePhone ? <CivicNav tab="most" onGo={go} onMost={openMostTab}
+    onAssistant={() => setLayer({ type: "assistant", screen: tab })} /> : undefined;
   const drafts = Object.values(c.drafts) as Draft[];
   const draft = drafts[0];
   const inbox: InboxItem[] = [
+    ...[ownerControl, helperControl].flatMap((control, index) => (control.view?.notifications ?? []).map((item): InboxItem => ({
+      ...item, key: "control-" + item.id, context: "Centrum kontroli MOST",
+      markRead: async () => Boolean(await control.send({ type: "read", id: item.id })),
+      open: () => {
+        setControlTab("inbox");
+        if (index === 0) { setTab("privacy"); setLayer({ type: "delegation", kind: "trusted" }); }
+        else openMostHelp();
+      },
+    }))),
+    ...workflows.items.flatMap((item): InboxItem[] => {
+      const { title } = workflowDetails[item.kind];
+      const notifications = item.history.flatMap(({ status, at }, index) =>
+        status === "prepared" ? [] : [{ index, at, text: title + " · " + workflowStatus[status] }]);
+      if (item.kind === "fine") notifications.unshift({ index: -1, at: item.createdAt, text: "Mandat drogowy · " + (item.paymentAmount ?? workflowDetails.fine.amount) });
+      return notifications.map(({ index, at, text }) => ({
+        key: "workflow-" + item.id + "-" + index, title: text, at, context: "Sprawy · demo",
+        read: item.read.includes(index),
+        markRead: async () => !!await workflows.act({ type: "read", id: item.kind, index }),
+        open: () => openWorkflow(item.kind),
+      }));
+    }),
     ...healthInbox(health, openHealth),
     ...(healthHelpEnabled ? healthInbox(healthHelper, openHealthHelp) : []),
     ...(mostHelpEnabled ? mostHelper.view?.notifications ?? [] : []).map((item) => ({
@@ -540,31 +659,24 @@ export default function App() {
       open: () => openFamily(true),
     })),
   ];
-  if (!isEwa) {
-    inbox.push({
-      key: "letter-intro", title: "Przykładowe pismo z urzędu", at: "2026-11-13T09:12:00+01:00", context: "Sprawy",
-      read: c.tasks.includes("inbox:letter-intro"),
-      markRead: () => {
-        update((citizen) => citizen.tasks.includes("inbox:letter-intro") ? citizen : { ...citizen, tasks: [...citizen.tasks, "inbox:letter-intro"] });
-        return true;
-      },
-      open: () => start("letter"),
-    });
-  }
   const inboxCount = inbox.filter((item) => !item.read).length;
   const mostCard = <MostEntry isEwa={isEwa} view={mostView} onOpen={() => openMost(mostStatus === "review" ? "review" : "work")} />;
-  const collaboration: CaseCard[] = (health.view?.cases ?? []).map(({ referral, status }) => ({
+  const collaboration: CaseCard[] = workflows.items.map((item): CaseCard => ({
+    id: "workflow-" + item.id, shared: false, section: item.receipt ? "done" : item.status === "prepared" ? "active" : "todo",
+    content: <WorkflowCard item={item} open={() => openWorkflow(item.kind)} />,
+  }));
+  collaboration.push(...(health.view?.cases ?? []).map(({ referral, status }): CaseCard => ({
     id: referral.id, shared: false,
     section: status === "confirmed" || status === "declined" ? "done" : status === "new" || status === "review" ? "todo" : "active",
     content: <Row icon={<Heart size={20} />} title={referral.title} subtitle={"Zdrowie · " + healthCaption[status]}
       onClick={() => openHealth({ section: status === "review" ? "review" : "referrals", id: referral.id })} />,
-  }));
+  })));
   if (healthHelpEnabled && healthHelper.hasToken) {
     const assignment = healthHelper.view?.cases[0];
     const sharedDocument = healthHelper.view?.sharedRecord ?? healthHelper.view?.sharedVisit;
     const status = assignment?.status;
     const detail = healthHelper.ended || (status === "review" ? "Czeka na decyzję Ewy"
-      : status === "preparing" ? "Przygotuj plan wizyty" : status ? healthCaption[status] : "Sprawdź zaproszenie");
+      : status === "preparing" ? "Uzupełnij propozycję terminu" : status ? healthCaption[status] : "Sprawdź zaproszenie");
     collaboration.unshift({
       id: "health-help", shared: true,
       section: healthHelper.ended || status === "confirmed" || status === "declined" ? "done" : status === "review" ? "active" : "todo",
@@ -572,19 +684,34 @@ export default function App() {
         subtitle={sharedDocument?.title ?? (assignment ? assignment.referral.title + " · " + detail : detail)} onClick={() => openHealthHelp()} />,
     });
   }
-  if (mostHelpEnabled && mostHelper.hasSession) {
+  if (mostHelpEnabled && mostHelper.hasSession && (!mostHelper.view?.delegation || mostHelper.view.delegation.kind === "trusted")) {
     const status = mostHelper.view?.status;
     collaboration.unshift({
       id: "most-help", shared: true,
       section: mostHelper.ended || status === "finished" || status === "rejected" ? "done" : status === "review" ? "active" : "todo",
-      content: <Row icon={<FileText size={20} />} title="Pismo Ewy z urzędu"
-        subtitle={mostHelper.ended ? "Dostęp zakończony" : status === "review" ? "Czeka na decyzję Ewy" : status ? mostCaption[status] : "Sprawdź zaproszenie"}
-        onClick={openMostHelp} />,
+      content: <Row icon={<FileText size={20} />} title={helperControl.view ? "Sprawy · " + helperControl.view.owner : mostHelper.view?.delegation ? delegationTitles[mostHelper.view.delegation.kind] : "Pismo Ewy z urzędu"}
+        subtitle={mostHelper.ended ? "Dostęp zakończony" : mostHelper.view?.delegation ? "Sprawdź przekazaną sprawę" : status === "review" ? "Czeka na decyzję Ewy" : status ? mostCaption[status] : "Sprawdź zaproszenie"}
+        onClick={() => { setControlTab("access"); openMostHelp(); }} />,
     });
+    for (const assignment of mostHelper.view?.assignments ?? []) {
+      if (assignment.legacy) continue;
+      const href = assignment.workflow ? "/#workflow=" + assignment.token : routeForMost("helper", "app", assignment.token);
+      collaboration.unshift({
+        id: assignment.token, shared: true, section: "todo",
+        content: <button className="inbox-item" onClick={() => openMostHelp(href)}><strong>{assignment.title}</strong><ArrowRight size={17} /></button>,
+      });
+    }
+    for (const grant of helperControl.view?.grants ?? []) {
+      const href = grant.href;
+      if (!href) continue;
+      collaboration.unshift({ id: grant.id, shared: true, section: "todo",
+        content: <button className="inbox-item" onClick={() => openMostHelp(href)}><strong>{grant.title}</strong><ArrowRight size={17} /></button> });
+    }
   }
   if (isEwa) collaboration.unshift({
     id: "most-letter", shared: false,
-    section: ["finished", "rejected"].includes(mostStatus) ? "done" : ["new", "review", "document"].includes(mostStatus) ? "todo" : "active",
+    section: mostStatus === "rejected" || mostView?.sentAt ? "done"
+      : ["new", "review", "document", "finished"].includes(mostStatus) ? "todo" : "active",
     content: mostCard,
   });
   if (familyCase) collaboration.push({
@@ -593,8 +720,6 @@ export default function App() {
       familyCase.status === "pending" && familySession.data?.view.role === "aleksandra" ? "active" : "todo",
     content: <FamilyEntry status={familyCase.status} onOpen={() => openFamily(true)} />,
   });
-  const pendingReceipts = c.receipts.filter(receiptNeedsAction);
-  const finishedReceipts = c.receipts.filter((r) => !receiptNeedsAction(r));
   const toggleTask = (id: string) =>
     update((c) => ({
       ...c,
@@ -604,6 +729,7 @@ export default function App() {
     }));
   const extra = p.extra;
   const visibleDocuments = searchDocuments(documentQuery, extra);
+  const access = layer?.type === "access" ? c.access.find(({ id }) => id === layer.access.id) ?? layer.access : undefined;
   return (
     <div className={"presentation " + (store.largeText ? "large-text" : "")}>
       <header className="presentation-header" inert={!!layer || inboxOpen}>
@@ -639,7 +765,7 @@ export default function App() {
         <span className="hardware-button volume-one" />
         <span className="hardware-button volume-two" />
         <span className="hardware-button power" />
-        <div className="phone" data-testid="phone">
+        <div className="phone" data-testid="phone" data-showcase-phone={showcasePhone}>
           <div className="status-bar" aria-hidden="true">
             <b>9:41</b>
             <span className="dynamic-island" />
@@ -664,6 +790,8 @@ export default function App() {
                   : "Jesteś offline. Prototyp nadal działa lokalnie."}
               </div>
             )}
+            {showcasePhone === "kacper" && mostHelper.view?.delegation?.kind === "trusted" && mostHelper.view.invitation?.status === "waiting" &&
+              <button className="showcase-invitation" onClick={openMostTab}>Odbierz zaproszenie od Ewy w MOST <ArrowRight size={17} /></button>}
             <main className="screen-content" ref={screenRef} id="main-content">
               <div
                 className={"view view-" + tab}
@@ -671,7 +799,15 @@ export default function App() {
                 data-direction={tabDirection}
               >
                 {tab === "home" && (
-                  <DocumentSelection p={p} ids={c.documentIds} onOpen={openDoc} onSave={documentIds=>update(c=>({...c,documentIds}))} />
+                  <DocumentSelection
+                    p={p}
+                    ids={c.documentIds}
+                    onOpen={openDoc}
+                    onSave={(documentIds) => update((citizen) => ({ ...citizen, documentIds }))}
+                    overview={isEwa && !["finished", "rejected"].includes(mostStatus) ? (
+                      <MostEntry isEwa view={mostView} compact onOpen={() => openMost(mostStatus === "review" ? "review" : "work")} />
+                    ) : undefined}
+                  />
 
                 )}
                 {tab === "documents" && (
@@ -783,33 +919,26 @@ export default function App() {
                   </>
                 )}
                 {tab === "services" && (
-                  <section className="service-directory" aria-label="Katalog usług">
-                    <header><h1>Usługi</h1><p>Zdrowie, bliscy i codzienne formalności</p></header>
-                    <h2>Zdrowie i rodzina</h2>
-                    <MostRow icon={<HeartPulse size={21} />} title="Zdrowie" detail="Skierowania, wizyty i dokumentacja" onClick={() => openHealth()} />
-                    <MostRow icon={<UsersRound size={21} />} title="Rodzina" detail="Sprawy bliskich i zgody opiekunów" onClick={() => openFamily()} />
-                    <h2>Codzienne sprawy</h2>
-                    <MostRow icon={<House size={21} />} title="Przeprowadzka" detail="Plan zmiany adresu" onClick={() => start("move")} />
-                    <button className="service-assistant civic-pattern-card" onClick={() => setLayer({ type: "assistant", screen: "services" })}>
-                      <WavePattern />
-                      <span className="most-icon"><Sparkles size={20} aria-hidden="true" /></span>
-                      <span><strong>Otwórz asystenta</strong><small>Zapytaj, co zrobić w sprawie lub jak udostępnić dokument</small></span>
-                      <ChevronRight size={17} aria-hidden="true" />
-                    </button>
-                  </section>
+                  <ServiceDirectory
+                    open={(id) => id === "health" ? openHealth() : id === "family" ? openFamily() : start("move")}
+                    onAssistant={() => setLayer({ type: "assistant", screen: "services" })}
+                  />
                 )}
                 {tab === "cases" && (
                   <Cases
                     key={p.id}
-                    p={p}
-                    c={c}
-                    onStart={start}
-                    onReceipt={(receipt) =>
-                      setLayer({ type: "receipt", receipt })
-                    }
-                    onDocument={openDoc}
+                    onMove={() => start("move")}
                     collaboration={collaboration}
-                    initialShared={healthHelpEnabled || mostHelpEnabled}
+                    initialShared={healthHelpEnabled || (mostHelpEnabled && !showcasePhone)}
+                    offline={Boolean(workflows.error)}
+                    onMost={(shared) => {
+                      if (!shared) setLayer({ type: "most-hub", mode: "own" });
+                      else if (!showcasePhone && demoHelperToken(p.id)) setLayer({ type: "most-hub", mode: "help" });
+                      else if (mostHelpEnabled && mostHelper.hasSession) { setControlTab("access"); openMostHelp(); }
+                      else if (!showcasePhone && storedTrustedHelperToken()) location.assign(helperDashboardUrl);
+                      else setLayer({ type: "most-hub", mode: "help" });
+                    }}
+                    onAssistant={() => setLayer({ type: "assistant", screen: "cases" })}
                   />
                 )}
                 {tab === "privacy" && (
@@ -821,8 +950,9 @@ export default function App() {
                     }
                     onAccess={(access) => setLayer({ type: "access", access })}
                     onProtect={() => start("wallet")}
+                    onTrusted={() => openDelegation("trusted")}
                     collaboration={isEwa && (mostView?.invitation?.token || health.view?.grants.some((grant) => grant.token)) ? <>
-                      {mostView?.invitation?.token && <MostRow icon={<ShieldCheck size={20} />} title="Dostęp do pisma" detail="Kacper · sprawdź lub zakończ współpracę" onClick={() => openMost("end")} />}
+                      {mostView?.invitation?.token && <MostRow icon={<ShieldCheck size={20} />} title="Dostęp do pisma" detail={"Kacper · ważny do " + new Date(mostView.invitation.expiresAt).toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" })} onClick={() => openMost("end")} />}
                       {health.view?.grants.some((grant) => grant.token) && <MostRow icon={<HeartPulse size={20} />} title="Upoważnienia zdrowotne" detail="Sprawdź zakres i odbiorców" onClick={() => openHealth({ section: "access" })} />}
                     </> : undefined}
                   />
@@ -832,7 +962,7 @@ export default function App() {
                 </div>
               </div>
             </main>
-            <CivicNav tab={tab} onGo={go} onAssistant={()=>setLayer({type:'assistant',screen:tab})}/>
+            <CivicNav tab={tab} onGo={go} onMost={openMostTab} onAssistant={() => setLayer({ type: "assistant", screen: tab })} />
 
           </div>
           {layer && (
@@ -849,6 +979,11 @@ export default function App() {
                 layer.type === "health" ||
                 layer.type === "most" ||
                 layer.type === "most-help" ||
+                layer.type === "most-hub" ||
+                layer.type === "delegation" ||
+                layer.type === "tax-payment" ||
+                layer.type === "workflow" ||
+                layer.type === "moving" ||
                 layer.type === "services" ||
                 layer.type === "receipt"
                   ? "full-layer"
@@ -863,29 +998,91 @@ export default function App() {
                   : layer.type === "assistant"
                     ? "Asystent demonstracyjny"
                     : layer.type === "family" ? "mObywatel Rodzina"
-                      : layer.type === "most" ? "mObywatel MOST" : layer.type === "most-help" ? "Pismo Ewy z urzędu"
+                      : layer.type === "most" || layer.type === "most-hub" ? "mObywatel MOST" : layer.type === "most-help" ? mostHelper.view?.delegation ? delegationTitles[mostHelper.view.delegation.kind] : "Pismo Ewy z urzędu"
+                        : layer.type === "delegation" ? delegationTitles[layer.kind]
+                        : layer.type === "tax-payment" ? demoTax.title
+                        : layer.type === "workflow" ? workflowDetails[layer.kind].title
+                        : layer.type === "moving" ? "Przeprowadzam się"
                         : layer.type === "services" ? "Usługi" : layer.type === "health" ? layer.helper ? "Pomoc dla Ewy" : "Zdrowie"
                           : layer.type === "notifications" ? "Powiadomienia" : "Szczegóły"
               }
             >
+              {layer.type === "most-hub" && <Suspense fallback={<p role="status">Otwieramy MOST…</p>}>
+                <MostHub key={p.id} profile={p} onBack={closeLayer} workflowKey={workflows.token} letterKey={isEwa ? mostSession.token : undefined}
+                  initialMode={layer.mode} nav={mostNav} onOpenShared={showcasePhone === "kacper" && mostHelper.hasSession ? openMostTab : undefined}
+                  onSwitchProfile={(mode) => setLayer({ type: "profile", returnToMost: mode })} />
+              </Suspense>}
+              {layer.type === "workflow" && <>
+                <LayerHeader title={workflowDetails[layer.kind].title} subtitle="Sprawy" onClose={closeLayer} />
+                <WorkflowWorkspace key={p.id + layer.kind} kind={layer.kind} applicant={p.name} city={layer.city} session={workflows}
+                  trustedToken={delegationToken(p.id + "-trusted")} onTrust={() => openDelegation("trusted")}
+                  onBack={closeLayer} onResult={announceWorkflow} onAssistant={() => setLayer({ type: "assistant", screen: "cases",
+                    workflow: layer.kind === "registration" || layer.kind === "tax-address" ? "move" : layer.kind,
+                    returnWorkflow: layer.kind,
+                  })} />
+              </>}
+              {layer.type === "moving" && <>
+                <LayerHeader title="Przeprowadzka" subtitle="Sprawy" onClose={closeLayer} />
+                <MovePicker items={workflows.items} open={(kind) => openWorkflow(kind, layer.city)} />
+              </>}
+              {layer.type === "tax-payment" && <>
+                <LayerHeader title={demoTax.title} subtitle="Ćwiczenie lokalne" onClose={closeLayer} />
+                <div className="layer-body flow-body">
+                  <h1>{c.demoTaxPaidAt ? "Opłacono w pokazie" : "Zapłać podatek"}</h1>
+                  <dl className="data-list">
+                    <div><dt>Kwota</dt><dd>{demoTax.amount}</dd></div>
+                    <div><dt>Odbiorca</dt><dd>{demoTax.recipient}</dd></div>
+                    <div><dt>Numer sprawy</dt><dd>{demoTax.reference}</dd></div>
+                    {c.demoTaxPaidAt && <div><dt>Kiedy</dt><dd>{dateLabel(c.demoTaxPaidAt)}</dd></div>}
+                  </dl>
+                  <p className="lead">{c.demoTaxPaidAt ? "Potwierdzenie jest zapisane w Zakończonych." : "Płatność zapisze wynik pokazu. Żadne pieniądze nie zostaną pobrane."}</p>
+                </div>
+                <div className="flow-footer">
+                  {c.demoTaxPaidAt ? <button className="primary" onClick={closeLayer}>Wróć do spraw</button>
+                    : <button className="primary" onClick={() => {
+                      const at = new Date().toISOString();
+                      update((citizen) => citizen.demoTaxPaidAt ? citizen : { ...citizen, demoTaxPaidAt: at });
+                    }}>Zapłać {demoTax.amount} (demo)</button>}
+                </div>
+              </>}
+              {layer.type === "delegation" && <Suspense fallback={<p role="status">Otwieramy pomoc…</p>}>
+                <DelegationOwner key={p.id + "-" + (layer.receiptId ?? layer.kind) + "-" + controlTab} profile={p.id} initialTab={controlTab}
+                  workflowKey={workflows.token} letterKey={isEwa ? mostSession.token : undefined}
+                  storageId={p.id + "-" + (layer.receiptId ?? layer.kind)} context={{ kind: layer.kind,
+                    step: layer.receiptId ? undefined : c.drafts[layer.kind as CaseKind]?.step }} onBack={dismissWorkspace}
+                  onStarted={!["move", "wallet", "letter", "trusted"].includes(layer.kind) ? () => {
+                    const id = "example-active:" + layer.kind;
+                    update((citizen) => citizen.tasks.includes(id) ? citizen : { ...citizen, tasks: [...citizen.tasks, id] });
+                  } : undefined}
+                  onApproved={!["move", "wallet", "letter", "trusted"].includes(layer.kind) ? () => {
+                    const id = "example-done:" + layer.kind;
+                    update((citizen) => citizen.tasks.includes(id) ? citizen : { ...citizen, tasks: [...citizen.tasks, id] });
+                  } : undefined} />
+              </Suspense>}
               {layer.type === "most" && (
                 <Suspense fallback={<p className="most-loading" role="status">Otwieramy sprawę…</p>}>
                   <MostOwner
                     session={mostSession}
+                    trustedToken={delegationToken(p.id + "-trusted")}
                     activeTab={tab}
                     initialPane={mostTarget}
                     onClose={closeLayer}
                     onGo={go}
                     onInbox={openInbox}
                     notifications={inboxCount}
-                    onAssistant={() => setLayer({ type: "assistant", screen: "cases" })}
+                    onAssistant={() => setLayer({ type: "assistant", screen: "cases", workflow: "letter" })}
                   />
                 </Suspense>
               )}
               {layer.type === "most-help" && <Suspense fallback={<p className="most-loading" role="status">Otwieramy zadanie…</p>}>
-                <MostHelperWorkspace session={mostHelper} close={closeLayer} notifications={inboxCount}
+                <MostHelperWorkspace key={controlTab + (requestedMostCase ?? "")} session={mostHelper} notifications={inboxCount} controlTab={controlTab}
+                  requestedCaseHref={requestedMostCase} close={() => {
+                    if (mostHelper.view?.document && storedTrustedHelperToken()) location.assign(helperDashboardUrl);
+                    else closeLayer();
+                  }}
+                  personal={showcasePhone === "kacper" ? { profile: p.id, items: workflows.items, ready: workflows.ready, error: workflows.error } : undefined}
                   onInbox={openInbox}
-                  nav={<CivicNav tab="cases" onGo={go} onAssistant={() => setLayer({ type: "assistant", screen: "cases" })} />} />
+                  nav={mostNav ?? <CivicNav tab="cases" onGo={go} onAssistant={() => setLayer({ type: "assistant", screen: "cases" })} />} />
               </Suspense>}
               {layer.type === "family" && (
                 <FamilyWorkspace
@@ -931,8 +1128,12 @@ export default function App() {
               {layer.type === "assistant" && (
                 <>
                 <Assistant
+                  key={p.id + ":" + conversationFor(layer)}
                   p={p}
                   c={c}
+                  conversation={conversationFor(layer)}
+                  onNew={() => setLayer(openConversation("chat-" + (crypto.randomUUID?.() ?? Date.now().toString(36)), c, layer.screen || tab))}
+                  onConversation={(id) => setLayer(openConversation(id, c, layer.screen || tab))}
                   update={update}
                   onClose={dismissWorkspace}
                   onStart={start}
@@ -942,6 +1143,19 @@ export default function App() {
                   onDocument={openDoc}
                   onShare={(id) => setLayer({ type: "share", id, returnTo: layer.documentId })}
                   onPrivacy={() => go("privacy")}
+                  workflow={layer.workflow}
+                  workflowKind={layer.returnWorkflow}
+                  workflowSession={workflows}
+                  onWorkflowResult={announceWorkflow}
+                  onTrust={() => openDelegation("trusted")}
+                  workflowOnline={workflows.ready}
+                  waitingForContext={Boolean(layer.workflow) && (workflows.loading ||
+                    (layer.workflow === "letter" && isEwa && !mostSession.view && !mostSession.ended && !mostSession.error))}
+                  letterSession={isEwa ? mostSession : undefined}
+                  onReviewLetter={() => openMost("review")}
+                  askWorkflows={(text, context, signal) =>
+                    workflows.ask(text, context, isEwa ? mostSession.token ?? undefined : undefined, signal)}
+                  onWorkflow={openWorkflowAction}
                   onReceipt={(receipt) =>
                     setLayer({ type: "receipt", receipt })
                   }
@@ -969,7 +1183,6 @@ export default function App() {
                     })
                   }
                   onWallet={() => start("wallet")}
-                  onMove={()=>start('move',{car:'true',vehicle:'WX DEMO'})}
                   onAssistant={() =>
                     setLayer({
                       type: "assistant",
@@ -981,6 +1194,7 @@ export default function App() {
               )}
               {layer.type === "receipt" && (
                 <ReceiptView
+                  onSend={() => update((citizen) => sendMovingDocument(citizen, layer.receipt.id))}
                   receipt={
                     c.receipts.find((r) => r.id === layer.receipt.id) ||
                     layer.receipt
@@ -1061,8 +1275,11 @@ export default function App() {
                 />
               ) : null}
               {layer.type === "profile" && (
-                <Sheet title={layer.service === "family" ? "Wybierz profil do Rodziny" : "Po Twojej stronie"} onClose={() => closeLayer()}>
-                  {layer.service === "family" ? <p className="sheet-lead">Sprawy rodzinne w tym prototypie są dostępne na profilu Aleksandry Nowak.</p> : <>
+                <Sheet title={layer.service === "family" ? "Wybierz profil do Rodziny" : layer.returnToMost ? "Zmień profil w MOST" : "Po Twojej stronie"} onClose={dismissWorkspace}>
+                  {layer.service === "family" ? <>
+                    <p className="sheet-lead">Sprawy rodzinne w tym prototypie są dostępne na profilu Aleksandry Nowak.</p>
+                    {showcasePhone && <a className="secondary" href="/" target="_top">Otwórz wybór profilu w aplikacji</a>}
+                  </> : <>
                   <div className="profile-intro">
                     <span className="avatar large">
                       <img src={"/portraits/" + p.id + ".png"} alt="" />
@@ -1070,9 +1287,9 @@ export default function App() {
                     <strong>{p.name}</strong>
                     <Badge>Profil demonstracyjny</Badge>
                   </div>
-                  <SectionTitle title="Wypróbuj inną perspektywę" />
+                  {!showcasePhone && <SectionTitle title="Wypróbuj inną perspektywę" />}
                   </>}
-                  {profiles.filter((pr) => !layer.service || pr.id === "aleksandra").map((pr) => (
+                  {profiles.filter((pr) => !showcasePhone && (!layer.service || pr.id === "aleksandra")).map((pr) => (
                     <button
                       className={
                         "profile-option " + (pr.id === p.id ? "chosen" : "")
@@ -1082,6 +1299,8 @@ export default function App() {
                         if (pr.id !== p.id && pr.id !== "kacper") leaveHealthHelp();
                         setStore((s) => ({ ...s, profile: pr.id }));
                         if (layer.service === "family") setLayer({ type: "family" });
+                        else if (layer.returnToMost || demoHelperToken(pr.id))
+                          setLayer({ type: "most-hub", mode: pr.id === p.id ? layer.returnToMost : undefined });
                         else {
                           closeLayer();
                           if (pr.id !== p.id) setToast("Zmieniono profil. Każdy ma osobny postęp.");
@@ -1233,7 +1452,8 @@ export default function App() {
                     onClick={() => {
                       clearAttachments().catch(() => {});
                       leaveHealthHelp();
-                      setStore(freshStore());
+                      const resetStore = freshStore();
+                      setStore(showcasePhone ? { ...resetStore, profile: showcasePhone } : resetStore);
                       go("home");
                       setToast("Przywrócono początek pokazu");
                     }}
@@ -1248,41 +1468,42 @@ export default function App() {
                   </button>
                 </Sheet>
               )}
-              {layer.type === "access" && (
+              {access && (
                 <Sheet title="Ślad użycia danych" onClose={() => closeLayer()}>
-                  <Badge tone={layer.access.active ? "green" : "neutral"}>
-                    {layer.access.active
+                  <Badge tone={access.active ? "green" : "neutral"}>
+                    {access.active
                       ? "Zdarzenie demonstracyjne"
-                      : "Zgoda wycofana"}
+                      : access.inactiveReason === "expired" ? "Dostęp wygasł" : "Zgoda wycofana"}
                   </Badge>
-                  <h3>{layer.access.who}</h3>
+                  <h3>{access.who}</h3>
                   <dl className="data-list">
                     <div>
                       <dt>Cel dostępu</dt>
-                      <dd>{layer.access.purpose}</dd>
+                      <dd>{access.purpose}</dd>
                     </div>
                     <div>
                       <dt>Zakres danych</dt>
-                      <dd>{layer.access.scope}</dd>
+                      <dd>{access.scope}</dd>
                     </div>
                     <div>
                       <dt>Kiedy</dt>
-                      <dd>{dateLabel(layer.access.at)}</dd>
+                      <dd>{dateLabel(access.at)}</dd>
                     </div>
+                    {access.expiresAt && <div><dt>Ważność kodu</dt><dd>{dateLabel(access.expiresAt)}</dd></div>}
                     <div>
                       <dt>Podstawa w pokazie</dt>
                       <dd>
-                        {layer.access.revocable
+                        {access.revocable
                           ? "Twoja zgoda demonstracyjna"
                           : "Symulowane działanie lub przykładowy odczyt"}
                       </dd>
                     </div>
                   </dl>
-                  {layer.access.revocable && layer.access.active ? (
+                  {access.revocable && access.active ? (
                     <button
                       className="primary"
                       onClick={() => {
-                        const id = layer.access.id;
+                        const id = access.id;
                         update((c) => ({
                           ...c,
                           access: c.access.map((a) =>
@@ -1593,6 +1814,8 @@ function Flow({
   const ref = useRef<HTMLDivElement>(null);
   const meta = caseMeta[d.kind];
   const last = d.step === meta.steps.length - 1;
+  const directReply = d.kind === "letter" && d.data.directReply === "true";
+  const canSendDirectly = directReply && d.step === 2;
   const analysis = analyzeLetter(d.data.text || "");
   const lastStep = useRef(d.step);
   const direction = d.step < lastStep.current ? "back" : "forward";
@@ -1622,13 +1845,15 @@ function Flow({
       );
       return;
     }
-    if (last) onComplete(d);
+    if (canSendDirectly) onComplete({ ...d, step: meta.steps.length - 1, data: { ...d.data, consent: "true" } });
+    else if (last) onComplete(d);
     else {
       onSave({ ...d, step: d.step + 1 });
       ref.current?.scrollTo({ top: 0 });
     }
   };
   const back = () => {
+    if (canSendDirectly) { onClose(); return; }
     if (d.step > 0) {
       onSave({ ...d, step: d.step - 1, data: { ...d.data, consent: "false" } });
       setErrors({});
@@ -1638,31 +1863,31 @@ function Flow({
   return (
     <>
       <LayerHeader
-        title={meta.short}
+        title={directReply ? "Odpowiedz na wezwanie" : meta.short}
         subtitle="Sprawa demonstracyjna"
         onClose={onClose}
         onBack={back}
       />
-      <div
+      {!directReply && <div
         className="flow-progress"
         aria-label={`Krok ${d.step + 1} z ${meta.steps.length}`}
       >
         {meta.steps.map((_, i) => (
           <span key={i} className={i <= d.step ? "filled" : ""} />
         ))}
-      </div>
+      </div>}
       <div
         className="layer-body flow-body"
         data-direction={direction}
         ref={ref}
         key={d.kind + "-" + d.step}
       >
-        <div className="eyebrow">
+        {!directReply && <div className="eyebrow">
           KROK {d.step + 1} Z {meta.steps.length} ·{" "}
           {meta.steps[d.step].toUpperCase()}
-        </div>
+        </div>}
         <h1 tabIndex={-1}>
-          {last
+          {canSendDirectly ? "Dołącz dokument i wyślij" : last
             ? "Ty decydujesz."
             : d.step === 0
               ? meta.title
@@ -1969,11 +2194,12 @@ function Flow({
         {d.kind === "letter" && d.step === 2 && (
           <>
             <p className="lead">
-              {d.data.reply === "question"
+              {canSendDirectly ? "Urząd Miasta Warszawy prosi o kopię umowy najmu do sprawy UM/2026/184." : d.data.reply === "question"
                 ? "Sformułuj pytanie, które chcesz zadać urzędowi."
                 : "Sprawdź i popraw szkic odpowiedzi."}{" "}
-              Nic nie wyślemy.
+              {!canSendDirectly && "Nic nie wyślemy."}
             </p>
+            {canSendDirectly && <details className="reply-details"><summary>Zobacz treść wezwania</summary><p>{d.data.text}</p></details>}
             <label className="field">
               <span>Szkic odpowiedzi</span>
               <textarea
@@ -2003,6 +2229,7 @@ function Flow({
             {d.data.reply === "document" && (
               <AttachmentEditor draft={d} onSave={onSave} />
             )}
+            {errors.attachment && <p className="error">{errors.attachment}</p>}
             <div className="info-note">
               <Eye size={18} />
               <p>
@@ -2209,7 +2436,7 @@ function Flow({
         )}
         {Object.keys(errors).length > 0 && (
           <div className="error-summary" role="alert" tabIndex={-1}>
-            {errors.selection ||
+            {errors.attachment || errors.selection ||
               errors.consent ||
               "Sprawdź zaznaczone pola i popraw dane."}
           </div>
@@ -2218,10 +2445,10 @@ function Flow({
       <div className="flow-footer">
         <span>
           <LockKeyhole size={12} />
-          Zapis lokalny · bez wysyłania do urzędu
+          {canSendDirectly ? "Wysyłka jest symulowana. Plik zostaje na urządzeniu." : "Zapis lokalny · bez wysyłania do urzędu"}
         </span>
         <button className="primary" onClick={advance}>
-          {last ? "Zatwierdź symulację" : d.step === 0 ? "Zaczynamy" : "Dalej"}
+          {canSendDirectly ? "Wyślij odpowiedź (demo)" : last ? "Zatwierdź symulację" : d.step === 0 ? "Zaczynamy" : "Dalej"}
           {last ? <Check size={19} /> : <ArrowRight size={19} />}
         </button>
       </div>
@@ -2232,6 +2459,9 @@ function Flow({
 function Assistant({
   p,
   c,
+  conversation,
+  onNew,
+  onConversation,
   update,
   onClose,
   onStart,
@@ -2242,9 +2472,23 @@ function Assistant({
   onDocument,
   onShare,
   onPrivacy,
+  workflow,
+  workflowKind,
+  workflowOnline,
+  workflowSession,
+  onWorkflowResult,
+  onTrust,
+  waitingForContext,
+  letterSession,
+  onReviewLetter,
+  askWorkflows,
+  onWorkflow,
 }: {
   p: Profile;
   c: CitizenState;
+  conversation: string;
+  onNew: () => void;
+  onConversation: (id: string) => void;
   update: (fn: (c: CitizenState) => CitizenState) => void;
   onClose: () => void;
   onStart: (k: CaseKind, data?: Record<string, string>) => void;
@@ -2255,22 +2499,63 @@ function Assistant({
   onDocument: (id: number) => void;
   onShare: (id: number) => void;
   onPrivacy: () => void;
+  workflow?: WorkflowAction;
+  workflowKind?: WorkflowKind;
+  workflowOnline: boolean;
+  workflowSession: ReturnType<typeof useWorkflows>;
+  onWorkflowResult: (item: WorkflowCase, conversation: string) => void;
+  onTrust: () => void;
+  waitingForContext: boolean;
+  letterSession?: MostSession;
+  onReviewLetter: () => void;
+  askWorkflows: (text: string, context: WorkflowAction | undefined, signal: AbortSignal) =>
+    Promise<WorkflowReply | null>;
+  onWorkflow: (action: WorkflowAction, data?: Record<string, string>) => void;
 }) {
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const bottom = useRef<HTMLDivElement>(null);
+  const [showHistory, setShowHistory] = useState(false);
+  const [dismissed, setDismissed] = useState<number>();
+  const [embedded, setEmbedded] = useState<{ kind: WorkflowKind; city?: string } | { kind: "letter" }>();
+  const [attachmentQuestion, setAttachmentQuestion] = useState(false);
   const chatRef = useRef<HTMLDivElement>(null);
+  const embeddedRef = useRef<HTMLElement>(null);
   const requestRef = useRef<AbortController | null>(null);
-  const chatContext = documentId !== undefined ? documentTitles(p)[documentId]
+  const workflowLabels: Record<WorkflowAction, string> = {
+    fine: "Otwórz mandat", tax: "Otwórz płatność podatku", move: "Załatw formalności po przeprowadzce",
+    letter: "Otwórz pismo i dokumenty", help: "Poproś o pomoc przez MOST", cases: "Sprawdź swoje sprawy",
+  };
+  const chatContext = workflowKind ? workflowDetails[workflowKind].title
+    : workflow === "letter" ? "Pismo z urzędu" : workflow ? workflowLabels[workflow] : documentId !== undefined ? documentTitles(p)[documentId]
     : screen === "privacy" ? "Zakres danych i zgody"
       : screen === "cases" ? "Twoje zapisane sprawy" : null;
-  const prompts = process ? ["Co mam zrobić dalej?"]
+  const prompts = workflow || process ? ["Co mam zrobić dalej?"]
     : documentId !== undefined ? ["Pokaż ten dokument", "Udostępnij ten dokument"]
-      : ["Przeprowadzam się do Warszawy", "Zgubiłam portfel", "Nie rozumiem pisma z urzędu"];
+      : [p.id === "kacper" && workflowOnline ? "Mam jakiś mandat do zapłacenia?" : "Przeprowadzam się do Warszawy",
+        "Jakie sprawy mogę załatwić?", "Nie rozumiem pisma z urzędu"];
+  const messages = c.messages.filter((message) => (message.conversation ?? "general") === conversation);
+  const threads = new Map<string, string>();
+  for (const message of c.messages) {
+    const id = message.conversation ?? "general";
+    if (!threads.has(id)) threads.set(id, message.text);
+  }
+  const lastReply = messages.at(-1);
+  const starter = workflow === "fine" ? "Czy muszę opłacić ten mandat?"
+    : workflow === "tax" ? "Co mam zrobić z tą płatnością podatku?"
+    : workflow === "letter" ? "Co jest w tym piśmie z urzędu?"
+    : workflow === "move" ? "Co mam zrobić w tej sprawie po przeprowadzce?"
+    : process ? "Co mam zrobić dalej?"
+    : documentId !== undefined ? "Pokaż ten dokument" : undefined;
+  const followUps = !serverAI && !busy && lastReply?.role === "assistant" &&
+    !lastReply.action && !lastReply.caseId && !lastReply.showPrivacy && !lastReply.workflowAction &&
+    lastReply.documentId === undefined && lastReply.shareDocumentId === undefined;
   useEffect(() => () => requestRef.current?.abort(), []);
+  useLayoutEffect(() => {
+    if (embedded) embeddedRef.current?.scrollIntoView({ block: "start" });
+  }, [embedded]);
   useEffect(() => {
-    if (!c.messages.length && !busy) {
+    if (!messages.length && !busy) {
       chatRef.current?.scrollTo({ top: 0 });
       return;
     }
@@ -2280,21 +2565,37 @@ function Assistant({
         ? "auto"
         : "smooth",
     });
-  }, [c.messages.length, busy]);
-  async function send(value = text) {
-    if (!value.trim() || busy) return;
+  }, [messages.length, busy]);
+  useEffect(() => {
+    if (busy || waitingForContext) return;
+    const question = attachmentQuestion ? "Czy załącznik jest dodany i co mam teraz zrobić?"
+      : !messages.length ? starter : undefined;
+    if (!question) return;
+    const task = window.setTimeout(() => {
+      if (attachmentQuestion) setAttachmentQuestion(false);
+      void send(question);
+    }, 0);
+    return () => clearTimeout(task);
+  }, [starter, messages.length, waitingForContext, attachmentQuestion, busy]);
+  async function send(value = text, record = true) {
+    if (!value.trim() || requestRef.current) return;
     const input = value.trim();
     setText("");
     setBusy(true);
     setError("");
     const controller = new AbortController();
     requestRef.current = controller;
-    update((c) => ({
+    if (record) update((c) => ({
       ...c,
-      messages: [...c.messages, { role: "user", text: input }],
+      messages: [...c.messages, { role: "user", text: input, conversation }],
     }));
     try {
-      const message = await assistant.reply(
+      const operational = workflowOnline && !process && documentId === undefined
+        ? await askWorkflows(input, workflow ?? messages.filter((m) => m.role === "assistant").at(-1)?.workflowAction, controller.signal)
+        : null;
+      const provider = documentId !== undefined && (input === "Pokaż ten dokument" || input === "Udostępnij ten dokument")
+        ? demoAssistant : assistant;
+      const message: Message = operational ? { role: "assistant", ...operational } : await provider.reply(
         input,
         {
           profileName: p.first,
@@ -2327,11 +2628,12 @@ function Assistant({
         controller.signal,
       );
       if (!controller.signal.aborted)
-        update((c) => ({ ...c, messages: [...c.messages, message] }));
+        update((c) => ({ ...c, messages: [...c.messages, { ...message, conversation }] }));
     } catch {
       if (!controller.signal.aborted)
         setError("Nie udało się przygotować odpowiedzi. Spróbuj ponownie.");
     } finally {
+      if (requestRef.current === controller) requestRef.current = null;
       setBusy(false);
     }
   }
@@ -2340,12 +2642,22 @@ function Assistant({
       <LayerHeader
         title="Twój asystent"
         subtitle={
-          serverAI
+          workflowOnline ? "Sprawy i odpowiedzi · środowisko demo" : serverAI
             ? "Backend asystenta · środowisko demo"
             : "Tryb demo · bez połączenia z AI"
         }
         onClose={onClose}
       />
+      <div className="chat-toolbar">
+        <button type="button" className="text-button" onClick={onNew}><Plus size={16} /> Nowa rozmowa</button>
+        {!!threads.size && <button type="button" className="text-button" aria-expanded={showHistory}
+          onClick={() => setShowHistory(!showHistory)}>Rozmowy</button>}
+      </div>
+      {showHistory && <section className="chat-history" aria-label="Zapisane rozmowy">
+          {[...threads].reverse().map(([id, title]) => <button key={id} className="chat-action"
+            aria-current={id === conversation ? "true" : undefined}
+            onClick={() => { setShowHistory(false); onConversation(id); }}><span>{title}</span><ArrowRight size={16} /></button>)}
+      </section>}
       <div className="layer-body chat-body" ref={chatRef}>
         {!process && chatContext && (
           <div className="chat-context">
@@ -2366,13 +2678,14 @@ function Assistant({
             <ArrowRight size={18} />
           </button>
         )}
-        {!c.messages.length ? (
+        {!messages.length ? (
           <div className="chat-welcome">
             <div className="large-spark">
               <Sparkles size={37} strokeWidth={1.4} />
             </div>
             <h1 tabIndex={-1}>W czym mogę pomóc?</h1>
-            <p>Wybierz pytanie albo napisz własne.</p>
+            <p>Opisz sprawę po swojemu lub zacznij od przykładu.</p>
+            {starter ? <p role="status">Otwieram rozmowę o sprawie…</p> : <><h2>Przykładowe pytania</h2>
             <div className="prompt-options">
               {prompts.map((prompt) => (
                 <button key={prompt} onClick={() => send(prompt)}>
@@ -2380,7 +2693,7 @@ function Assistant({
                   <ArrowUpRight size={17} />
                 </button>
               ))}
-            </div>
+            </div></>}
           </div>
         ) : (
           <>
@@ -2388,7 +2701,7 @@ function Assistant({
               <ShieldCheck size={14} />
               Dane tylko z profilu: {p.first} · demo
             </div>
-            {c.messages.map((m, i) => (
+            {messages.map((m, i) => (
               <div className={"chat-message " + m.role} key={i}>
                 {m.role === "assistant" && (
                   <span className="message-avatar">
@@ -2397,6 +2710,34 @@ function Assistant({
                 )}
                 <div>
                   <p>{m.text}</p>
+                  {m.fallback && <small>Odpowiedź z trybu regułowego.</small>}
+                  {m.workflowAction && <button className="chat-action" onClick={() => onWorkflow(m.workflowAction!, m.suggestedData)}>
+                    <span><strong>{workflowLabels[m.workflowAction]}</strong><small>Otwórz formularz lub podgląd sprawy</small></span>
+                    <ArrowRight size={20} />
+                  </button>}
+                  {i === messages.length - 1 && dismissed !== i && m.workflowAction && <div className="chat-quick-actions">
+                    {(m.workflowAction === "fine" || m.workflowAction === "tax") && workflowSession.items.some((item) => item.kind === m.workflowAction) &&
+                      <button disabled={busy} onClick={() => setEmbedded({ kind: m.workflowAction as "fine" | "tax" })}>
+                        {workflowSession.items.some((item) => item.kind === m.workflowAction && item.receipt)
+                          ? "Pokaż potwierdzenie w czacie" : m.workflowAction === "fine" ? "Opłać mandat w czacie" : "Opłać podatek w czacie"}
+                      </button>}
+                    {m.workflowAction === "move" && <>
+                      <button disabled={busy} onClick={() => setEmbedded({ kind: "registration", city: m.suggestedData?.city })}>Zgłoś zameldowanie</button>
+                      <button disabled={busy} onClick={() => setEmbedded({ kind: "tax-address", city: m.suggestedData?.city })}>Zaktualizuj adres</button>
+                    </>}
+                    {m.workflowAction === "letter" && letterSession?.view && <>
+                      {letterSession.view.document && <details className="chat-letter-preview">
+                        <summary>{letterSession.view.document.title}</summary>
+                        <p>{letterSession.view.document.body}</p>
+                        <small>{letterSession.view.document.office}</small>
+                      </details>}
+                      {["new", "preparing", "document", "correction"].includes(letterSession.view.status) &&
+                        <button disabled={busy} onClick={() => setEmbedded({ kind: "letter" })}>Przygotuj odpowiedź</button>}
+                      {!letterSession.view.invitation && !["review", "finished", "rejected"].includes(letterSession.view.status) &&
+                        <button disabled={busy} onClick={() => onWorkflow("help")}>Poproś o pomoc</button>}
+                    </>}
+                    {m.workflowAction !== "cases" && <button onClick={() => { setDismissed(i); setEmbedded(undefined); }}>Później</button>}
+                  </div>}
                   {(m.documentId !== undefined ||
                     m.shareDocumentId !== undefined) && (
                     <button
@@ -2455,7 +2796,7 @@ function Assistant({
                     >
                       <span>
                         <strong>{caseMeta[m.action].short}</strong>
-                        <small>Otwórz plan · {caseMeta[m.action].time}</small>
+                        <small>{m.action === "move" ? "Otwórz formularze" : m.action === "letter" ? "Otwórz pismo demonstracyjne" : "Otwórz ochronę dokumentów"}</small>
                       </span>
                       <ArrowRight size={20} />
                     </button>
@@ -2463,18 +2804,17 @@ function Assistant({
                 </div>
               </div>
             ))}
-            <button
-              className="text-button clear-chat"
-              onClick={() => update((c) => ({ ...c, messages: [] }))}
-            >
-              <Plus size={15} />
-              Nowa rozmowa
-            </button>
+            {followUps && <div className="chat-follow-ups" role="group" aria-label="Możliwe dalsze pytania">
+              {prompts.map((prompt) => <button key={prompt} onClick={() => void send(prompt)}>{prompt}<ArrowUpRight size={15} /></button>)}
+            </div>}
+            {documentId !== undefined && !busy && lastReply?.shareDocumentId === undefined && <div className="chat-quick-actions">
+              <button onClick={() => void send("Udostępnij ten dokument")}>Udostępnij ten dokument</button>
+            </div>}
           </>
         )}
         {busy && (
           <div className="typing" role="status">
-            Przygotowuję plan…
+            Sprawdzam informacje…
           </div>
         )}
         {error && (
@@ -2482,7 +2822,22 @@ function Assistant({
             {error}
           </p>
         )}
-        <div ref={bottom} />
+        {!busy && lastReply?.role === "user" && <button className="text-button" onClick={() => void send(lastReply.text, false)}>Ponów pytanie</button>}
+        {embedded && <section ref={embeddedRef} className="chat-case-panel" aria-label={embedded.kind === "letter" ? "Odpowiedź na pismo w czacie" : "Formularz sprawy w czacie"}>
+          <button className="text-button" onClick={() => setEmbedded(undefined)}>Schowaj formularz</button>
+          {embedded.kind === "letter" ? letterSession?.view && <>
+            {["new", "preparing", "document", "correction"].includes(letterSession.view.status) && <>
+              <MostTasks session={letterSession} onAttachment={() => setAttachmentQuestion(true)} />
+              {letterSession.error && <p role="alert">{letterSession.error}</p>}
+              <button className="primary" disabled={!letterSession.view.canReview || letterSession.busy} onClick={async () => {
+                if (await letterSession.act({ type: "review" })) onReviewLetter();
+              }}>Sprawdź i wyślij</button>
+            </>}
+            {letterSession.view.status === "review" && <button className="primary" onClick={onReviewLetter}>Sprawdź przygotowaną odpowiedź</button>}
+          </> : <WorkflowWorkspace key={embedded.kind} inline kind={embedded.kind} applicant={p.name} city={embedded.city}
+            trustedToken={delegationToken(p.id + "-trusted")} onTrust={onTrust}
+            session={workflowSession} onBack={onNew} onResult={(item) => onWorkflowResult(item, conversation)} />}
+        </section>}
       </div>
       <form
         className="chat-composer"
@@ -2497,6 +2852,7 @@ function Assistant({
             value={text}
             onChange={(e) => setText(e.target.value)}
             placeholder="Napisz po swojemu…"
+            enterKeyHint="send"
             maxLength={1500}
           />
         </label>
@@ -2511,7 +2867,7 @@ function Assistant({
       </form>
       <div className="chat-disclaimer">
         <LockKeyhole size={11} />
-        Rozmowa pozostaje na tym urządzeniu.
+        {serverAI || workflowOnline ? "W rozmowie używaj wyłącznie danych przykładowych." : "Rozmowa pozostaje na tym urządzeniu."}
       </div>
     </>
   );
@@ -2525,7 +2881,6 @@ function Document({
   onClose,
   onShare,
   onWallet,
-  onMove,
   onAssistant,
 }: {
   p: Profile;
@@ -2535,7 +2890,6 @@ function Document({
   onClose: () => void;
   onShare: () => void;
   onWallet: () => void;
-  onMove:()=>void;
   onAssistant: () => void;
 }) {
   const [visible, setVisible] = useState(false);
@@ -2587,7 +2941,6 @@ function Document({
           </span>
           <ArrowRight size={17} />
         </button>
-        {id===2&&<button className="process-assistant" onClick={onMove}><Car size={21}/><span><strong>Zmień adres właściciela</strong><small>WX DEMO · dodaj pojazd do planu przeprowadzki</small></span><ArrowRight size={17}/></button>}
         <SectionTitle title="Dane dokumentu" />
         <dl className="data-list document-data">
           <div>
@@ -2933,6 +3286,7 @@ function ReceiptView({
   onCopy,
   onSupply,
   onManual,
+  onSend,
   onAssistant,
 }: {
   receipt: Receipt;
@@ -2943,6 +3297,7 @@ function ReceiptView({
   onCopy: () => void;
   onSupply: (key: string, name: string) => void;
   onManual: (id: string) => void;
+  onSend: () => void;
   onAssistant: () => void;
 }) {
   return (
@@ -2962,24 +3317,25 @@ function ReceiptView({
             ? "Twój pakiet przeprowadzki"
             : r.kind === "wallet"
               ? "Plan ochrony jest gotowy."
-              : "Odpowiedź przygotowana."}
+              : r.data.directReply === "true" ? "Wysłano odpowiedź w pokazie." : "Odpowiedź przygotowana."}
         </h1>
         <p className="lead">
           {r.kind === "move"
             ? "Twój adres w profilu demo został zaktualizowany."
             : r.kind === "wallet"
               ? "Wybrane działania zapisaliśmy w profilu demonstracyjnym."
-              : "Szkic został zapisany lokalnie."}{" "}
+              : r.data.directReply === "true" ? "Zapisano potwierdzenie odpowiedzi na wezwanie." : "Szkic został zapisany lokalnie."}{" "}
           Żadna operacja nie trafiła do urzędu ani banku.
         </p>
-        {r.operations && <ProcessRoute receipt={r} />}
         {r.operations && (
           <MoveOutcomes
             operations={r.operations}
             onSupply={onSupply}
             onManual={onManual}
+            onSend={onSend}
           />
         )}
+        {r.operations && <ProcessRoute receipt={r} />}
         <button className="process-assistant" onClick={onAssistant}>
           <Sparkles size={22} />
           <span>
@@ -3042,13 +3398,13 @@ function ReceiptView({
         {r.kind === "letter" && (
           <details className="reply-details">
             <summary>
-              Zobacz zapisany szkic
+              {r.data.directReply === "true" ? "Zobacz wysłaną odpowiedź demo" : "Zobacz zapisany szkic"}
               <ChevronDown size={17} />
             </summary>
             <p>{r.data.response}</p>
           </details>
         )}
-        <SectionTitle title="Co jeszcze przed Tobą" />
+        {r.followups.length > 0 && <SectionTitle title="Co jeszcze przed Tobą" />}
         {r.followups.map((t, i) => (
           <CheckOption
             key={i}

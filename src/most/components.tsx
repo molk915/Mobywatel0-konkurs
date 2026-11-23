@@ -1,16 +1,17 @@
 import { useEffect, useLayoutEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { ArrowLeft, ArrowUpRight, Bell, Check, ChevronRight, CircleAlert, Clock3, FileText, Link2, LockKeyhole, MessageSquare, Radio, ShieldCheck } from "lucide-react";
 import { CivicBrand, WavePattern } from "../CivicChrome";
-import { formatMostDeadline, mostTitle, scopeLabels, type MostComment, type MostDocument, type MostInvitation, type MostRole, type MostScope } from "./model";
+import { formatMostDeadline, mostTitle, scopeLabels, type MostComment, type MostDocument, type MostInvitation, type MostRole, type MostScope, type MostStatus } from "./model";
 import { routeForMost } from "./session";
 
 export function Portrait({ person }: { person: "ewa" | "kacper" }) {
   return <img className="most-avatar" src={"/portraits/" + person + ".png"} alt="" />;
 }
 
-export function MostLayout({ role, identity, title, eyebrow, screen, children, footer, onBack, nav, contextTitle, notifications = 0, onInbox, busy = false }: {
+export function MostLayout({ role, identity, roleLabel, title, eyebrow, screen, children, footer, onBack, nav, contextTitle, notifications = 0, onInbox, busy = false }: {
   role: MostRole;
   identity?: { id: string; first: string };
+  roleLabel?: string;
   title: string;
   eyebrow?: string;
   screen: string;
@@ -35,9 +36,9 @@ export function MostLayout({ role, identity, title, eyebrow, screen, children, f
         {onBack && <button className="civic-icon-button most-back" onClick={onBack} aria-label="Wstecz"><ArrowLeft size={20} /></button>}
         {contextTitle ? <span className="most-context-title">{contextTitle}</span>
           : <span className="civic-brand most-wordmark"><CivicBrand /></span>}
-        <span className="most-identity">{identity
+        <span className="most-identity">{roleLabel ?? (identity
           ? <><img className="most-avatar" src={"/portraits/" + identity.id + ".png"} alt="" />{identity.first}</>
-          : <><Portrait person={role === "owner" ? "ewa" : "kacper"} />{role === "owner" ? "Ewa" : "Kacper"}</>}</span>
+          : <><Portrait person={role === "owner" ? "ewa" : "kacper"} />{role === "owner" ? "Ewa" : "Kacper"}</>)}</span>
         {onInbox && <button className="civic-icon-button most-bell" onClick={onInbox} aria-label="Powiadomienia"><Bell size={18} />{notifications > 0 && <b className="notification-count">{notifications}</b>}</button>}
       </header>
       <section className="most-scroll" ref={content} aria-busy={busy}>
@@ -63,6 +64,19 @@ export function MostRow({ icon, title, detail, onClick }: { icon: ReactNode; tit
       <ChevronRight size={18} />
     </button>
   );
+}
+
+export function MostProgress({ status, waiting }: { status: MostStatus; waiting?: boolean }) {
+  const decisionMade = status === "finished" || status === "rejected";
+  const current = decisionMade || status === "review" ? 2 : waiting ? 0 : 1;
+  return <ol className="most-stages" aria-label="Etap współpracy">
+    {["Zaproszenie", "Przygotowanie", "Decyzja"].map((label, index) => (
+      <li key={label} aria-current={index === current && !decisionMade ? "step" : undefined} data-done={index < current || decisionMade}>
+        <span aria-hidden="true">{index < current || decisionMade ? <Check size={13} /> : index + 1}</span>
+        {label}
+      </li>
+    ))}
+  </ol>;
 }
 
 export function MostNotice({ children, tone = "info", live = false }: { children: ReactNode; tone?: "info" | "success" | "warning"; live?: boolean }) {
@@ -111,7 +125,7 @@ export function ScopeSummary({ scope }: { scope: MostScope }) {
   );
 }
 
-export function MostInvite({ invitation }: { invitation: MostInvitation }) {
+export function MostInvite({ invitation, generic = false }: { invitation: MostInvitation; generic?: boolean }) {
   const link = invitation.token ? routeForMost("helper", "app", invitation.token) : "";
   const [qr, setQr] = useState("");
   const [qrError, setQrError] = useState(false);
@@ -145,9 +159,9 @@ export function MostInvite({ invitation }: { invitation: MostInvitation }) {
   if (!link) return <MostNotice tone="warning">To zaproszenie straciło ważność.</MostNotice>;
   return (
     <>
-      <p className="most-lead">Wyślij link lub pokaż Kacprowi kod QR. Na jednym komputerze otwórz jego zadanie w drugiej karcie.</p>
+      <p className="most-lead">{generic ? "Pokaż kod QR wybranej osobie albo przekaż jej link." : "Wyślij link lub pokaż Kacprowi kod QR. Na jednym komputerze otwórz jego zadanie w drugiej karcie."}</p>
       <div className="most-invite-paper">
-        {qr ? <img src={qr} alt="Kod QR zaproszenia dla Kacpra" width={164} height={164} />
+        {qr ? <img src={qr} alt={generic ? "Kod QR zaproszenia dla bliskiej osoby" : "Kod QR zaproszenia dla Kacpra"} width={164} height={164} />
           : <p className="most-muted">{qrError ? "Kod QR jest niedostępny. Użyj linku." : "Tworzenie kodu QR…"}</p>}
         <p><Clock3 size={16} /> Ważność <strong>{clock}</strong></p>
       </div>
@@ -161,7 +175,7 @@ export function MostInvite({ invitation }: { invitation: MostInvitation }) {
             input.current?.focus();
           }
         }}><Link2 size={16} /> Kopiuj link</button>
-        <a className="most-button most-secondary" href={link} target="_blank" rel="noopener noreferrer">Otwórz zadanie Kacpra <ArrowUpRight size={17} aria-hidden="true" /></a>
+        <a className="most-button most-secondary" href={link} target="_blank" rel="noopener noreferrer">{generic ? "Otwórz zaproszenie w nowej karcie" : "Otwórz zadanie Kacpra"} <ArrowUpRight size={17} aria-hidden="true" /></a>
       </div>
       {copy === "manual" && <label className="most-link-field">Link zaproszenia<input ref={input} value={link} readOnly onFocus={(e) => e.currentTarget.select()} /></label>}
       {copy && <p className="most-muted" role="status">{copy === "copied" ? "Link został skopiowany." : "Skopiuj zaznaczony link."}</p>}

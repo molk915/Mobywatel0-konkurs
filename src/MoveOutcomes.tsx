@@ -31,10 +31,12 @@ export function MoveOutcomes({
   operations,
   onSupply,
   onManual,
+  onSend,
 }: {
   operations: Operation[];
   onSupply: (key: string, name: string) => void;
   onManual: (id: string) => void;
+  onSend: () => void;
 }) {
   const [error, setError] = useState(""),
     [busy, setBusy] = useState(false);
@@ -91,7 +93,7 @@ export function MoveOutcomes({
                 ? "Potwierdzone przez Ciebie"
                 : o.status === "needs-document"
                   ? "Czeka na dokument"
-                  : "Do samodzielnego wykonania"}
+                  : o.status === "ready-to-send" ? "Dokument dołączony" : "Do samodzielnego wykonania"}
           </b>
           <p>
             {o.status === "needs-document"
@@ -100,7 +102,8 @@ export function MoveOutcomes({
                 ? "Oznaczyłeś ten krok jako wykonany poza aplikacją. To Twoje potwierdzenie, nie odpowiedź urzędu."
                 : o.status === "manual"
                   ? "Sprawdź wymagania właściwego wydziału. Ten krok pozostaje poza zakresem symulacji."
-                  : "Zapisaliśmy osobne potwierdzenie tej formalności. Nie wysłano danych do urzędu."}
+                  : o.status === "ready-to-send" ? "Wyślij zgłoszenie, aby zapisać potwierdzenie demonstracyjne."
+                    : "Zapisaliśmy osobne potwierdzenie tej formalności. Nie wysłano danych do urzędu."}
           </p>
           <details>
             <summary>Zakres danych i potwierdzenie</summary>
@@ -159,6 +162,7 @@ export function MoveOutcomes({
               {o.attachmentName}
             </button>
           )}
+          {o.status === "ready-to-send" && <button className="primary" onClick={onSend}>Wyślij zgłoszenie (demo)</button>}
         </article>
       ))}
       {busy && <p role="status">Zapisuję załącznik na urządzeniu…</p>}

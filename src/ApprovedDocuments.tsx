@@ -98,29 +98,30 @@ export function DocumentSelection({ p, ids = defaultDocs, onOpen, onSave, overvi
   return (
     <section className="approved-selection" ref={root}>
       <header className="approved-heading">
-        <div><h1>Dokumenty</h1><p>{p.name}</p></div>
+        <div>{!ids.includes(0) && <p>{p.name}</p>}<h1>Dokumenty</h1></div>
         <button className="civic-icon-button" aria-label="Zarządzaj" title="Zarządzaj dokumentami" onClick={() => setCatalog(true)}><Grid2X2 size={18} /></button>
       </header>
       <div className="approved-selection-scroll" data-testid="document-scroll">
-        {overview}
         <div className="approved-document-list">
-          {ids.includes(0) && <motion.button className="approved-hero civic-pattern-card" onClick={() => onOpen(0)}
+          {ids.includes(0) && <motion.button className="approved-hero civic-pattern-card" aria-label="mDowód" onClick={() => onOpen(0)}
             whileTap={reduced ? undefined : { scale: .988 }}>
             <WavePattern />
             <img className="approved-hero-watermark" src="/document-lines.svg" alt="" />
-            <img className="approved-hero-mark" src="/icon.svg" alt="" />
+            <span className="wallet-hero-label"><i className="polish-flag" /> Dokument tożsamości</span>
             <strong>mDowód</strong>
-            <span>{descriptions[0]}</span>
-            <span className="approved-hero-bottom"><i className="polish-flag" /><span className="civic-icon-button"><ChevronRight size={21} /></span></span>
+            <span className="wallet-hero-person">{p.name}</span>
+            <span className="approved-hero-bottom"><span>Otwórz dokument</span><span className="civic-icon-button"><ArrowRight size={20} /></span></span>
           </motion.button>}
-          {ids.filter((id) => id !== 0).map((id) => (
+          {overview}
+          {ids.some((id) => id !== 0) && <h2 className="wallet-section-label">{ids.includes(0) ? "Pozostałe dokumenty" : "Twoje dokumenty"}</h2>}
+          <div className="wallet-list">{ids.filter((id) => id !== 0).map((id) => (
             <motion.button key={id} className="approved-document-row civic-row-card" onClick={() => onOpen(id)}
               whileTap={reduced ? undefined : { scale: .99 }}>
               <span className="approved-doc-icon"><DocumentIcon id={id} profile={p} /></span>
               <span><strong>{names[id]}</strong><small>{descriptions[id]}</small></span>
               <ChevronRight size={19} />
             </motion.button>
-          ))}
+          ))}</div>
           {!ids.length && <p className="approved-empty">W tym profilu nie ma dokumentów. Wybierz „Dodaj”, aby otworzyć katalog.</p>}
         </div>
         {recent}
@@ -152,9 +153,9 @@ function ApprovedIdentity({ p }: { p: Profile }) {
   );
 }
 
-export function ApprovedDocument({ p, id, address, protectedPesel, onClose, onShare, onWallet, onMove, onAssistant, onGo, onProfile, onNotifications, unreadCount }: {
+export function ApprovedDocument({ p, id, address, protectedPesel, onClose, onShare, onWallet, onAssistant, onGo, onProfile, onNotifications, unreadCount }: {
   p: Profile; id: number; address: string; protectedPesel: boolean;
-  onClose: () => void; onShare: () => void; onWallet: () => void; onMove: () => void;
+  onClose: () => void; onShare: () => void; onWallet: () => void;
   onAssistant: () => void; onGo: (tab: Tab) => void; onProfile: () => void; onNotifications: () => void;
   unreadCount?: number;
 }) {
@@ -178,7 +179,6 @@ export function ApprovedDocument({ p, id, address, protectedPesel, onClose, onSh
         {details && <section className="approved-extra civic-row-card">
           <h2>Dane dokumentu</h2><p>{detailsText}</p>
           <button onClick={onWallet}>Ochrona danych · {protectedPesel ? "włączona w demo" : "sprawdź plan"}</button>
-          {id === 2 && <button onClick={onMove}>Zmień adres właściciela WX DEMO</button>}
         </section>}
         <button className="approved-context civic-row-card" onClick={onAssistant}>
           <span className="approved-doc-icon"><Sparkles size={20} /></span>

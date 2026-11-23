@@ -1,10 +1,26 @@
 import { useEffect, useRef, useState } from "react";
-import type { MostCommand, MostRole, MostView } from "./model";
+import type { DelegationContext, MostCommand, MostRole, MostView } from "./model";
 
-export type MostContext = "app" | "stage";
+export type MostContext = "app" | "stage" | `delegation-${string}`;
+export function delegationToken(key: string) {
+  try { return sessionStorage.getItem(storageKey("owner", `delegation-${key}`)); }
+  catch { return null; }
+}
 const invitePattern = /^#most=([A-Za-z0-9_-]{32})$/;
 export const hasMostInvite = () => invitePattern.test(location.hash);
 const storageKey = (role: MostRole, context: MostContext) => "mobywatel-most-" + context + "-" + role;
+const trustedHelperKey = "most-trusted-helper-return";
+export const helperDashboardUrl = "/?most=pomoc&powrot=most";
+export function storedTrustedHelperToken() {
+  try { return sessionStorage.getItem(trustedHelperKey); }
+  catch { return null; }
+}
+export function demoHelperToken(profile: string) {
+  try { return sessionStorage.getItem("most-demo-helper:" + profile); } catch { return null; }
+}
+export function rememberDemoHelper(profile: string, token: string) {
+  sessionStorage.setItem("most-demo-helper:" + profile, token);
+}
 
 export function routeForMost(role: MostRole, context: MostContext, token?: string) {
   const url = new URL("/", location.origin);
@@ -18,6 +34,8 @@ function storedToken(role: MostRole, context: MostContext) {
   if (role === "helper" && location.hash.startsWith("#most="))
     return location.hash.match(invitePattern)?.[1] ?? null;
   try {
+    if (role === "helper" && new URLSearchParams(location.search).get("powrot") === "most")
+      return sessionStorage.getItem(trustedHelperKey);
     return sessionStorage.getItem(storageKey(role, context));
   } catch {
     return null;
@@ -30,7 +48,7 @@ class MostApiError extends Error {
   }
 }
 
-async function request(token: string | null, body?: object, signal?: AbortSignal): Promise<{ view: MostView; token?: string }> {
+async function request(token: string | null, body?: object, signal?: AbortSignal): Promise<{ view: MostView; token?: string; challenge?: string }> {
   const deadline = AbortSignal.timeout(4500);
   const response = await fetch(token ? "/api/most/case" : "/api/most/session", {
     method: body ? "POST" : "GET",
@@ -49,8 +67,8 @@ async function request(token: string | null, body?: object, signal?: AbortSignal
   return payload;
 }
 
-export function useMostSession(role: MostRole, context: MostContext, autoStart = false, enabled = true) {
-  const [token, setToken] = useState(() => storedToken(role, context));
+export function useMostSession(role: MostRole, context: MostContext, autoStart = false, enabled = true, delegation?: DelegationContext, initialToken?: string) {
+  const [token, setToken] = useState(() => initialToken ?? storedToken(role, context));
   const [view, setView] = useState<MostView | null>(null);
   const [connected, setConnected] = useState(false);
   const [attempted, setAttempted] = useState(false);
@@ -64,10 +82,16 @@ export function useMostSession(role: MostRole, context: MostContext, autoStart =
 
   const update = (next: MostView) => {
     if (blocked.current || next.role !== role) return;
+    if (role === "helper" && context !== "delegation-profile-help" && context !== "delegation-showcase-help" &&
+        token && next.delegation?.kind === "trusted" && next.invitation?.status === "active") {
+      try { sessionStorage.setItem(trustedHelperKey, token); } catch { /* Optional session storage. */ }
+    }
     setView((previous) => {
       if (!previous) return next;
       if (previous.revision > next.revision) return previous;
-      if (previous.revision === next.revision && previous.invitation?.online === next.invitation?.online)
+      if (previous.revision === next.revision && previous.invitation?.online === next.invitation?.online &&
+          previous.invitation?.maySubmit === next.invitation?.maySubmit &&
+          previous.assignments?.map(({ token }) => token).join() === next.assignments?.map(({ token }) => token).join())
         return previous;
       return next;
     });
@@ -95,7 +119,7 @@ export function useMostSession(role: MostRole, context: MostContext, autoStart =
     setBusy(true);
     setError("");
     try {
-      const result = await request(null, {});
+      const result = await request(null, delegation ? { delegation } : {});
       if (!result.token) throw new Error("Brak sesji właścicielki.");
       try {
         sessionStorage.setItem(storageKey(role, context), result.token);
@@ -121,6 +145,17 @@ export function useMostSession(role: MostRole, context: MostContext, autoStart =
       void start();
     }
   }, [autoStart, enabled, role, token]);
+
+  useEffect(() => {
+    if (!initialToken || initialToken === token || context !== "delegation-showcase-help") return;
+    blocked.current = false;
+    setView(null);
+    setConnected(false);
+    setAttempted(false);
+    setEnded(null);
+    setError("");
+    setToken(initialToken);
+  }, [initialToken, token, context]);
 
   useEffect(() => {
     if (role !== "helper" || !token || !enabled) return;
@@ -163,7 +198,7 @@ export function useMostSession(role: MostRole, context: MostContext, autoStart =
     };
   }, [token, retryNumber, enabled]);
 
-  async function act(command: MostCommand) {
+  async function commandResult(command: MostCommand) {
     if (working.current || !token || !connected || blocked.current) return false;
     working.current = true;
     setBusy(true);
@@ -172,7 +207,7 @@ export function useMostSession(role: MostRole, context: MostContext, autoStart =
       const result = await request(token, command);
       if (blocked.current) return false;
       update(result.view);
-      return true;
+      return result;
     } catch (cause) {
       fail(cause, true);
       return false;
@@ -181,16 +216,20 @@ export function useMostSession(role: MostRole, context: MostContext, autoStart =
       setBusy(false);
     }
   }
+  async function act(command: MostCommand) { return Boolean(await commandResult(command)); }
 
   return {
-    view, connected, attempted, busy, error, ended, hasSession: !!token, start, act,
+    view, connected, attempted, busy, error, ended, hasSession: !!token, token, start, act, commandResult,
     leave: () => {
       if (role !== "helper") return;
       blocked.current = true;
       setView(null);
       setToken(null);
       setConnected(false);
-      try { sessionStorage.removeItem(storageKey(role, context)); } catch { /* The current view is cleared. */ }
+      try {
+        sessionStorage.removeItem(storageKey(role, context));
+        if (sessionStorage.getItem(trustedHelperKey) === token) sessionStorage.removeItem(trustedHelperKey);
+      } catch { /* The current view is cleared. */ }
     },
     retry: () => {
       setError("");

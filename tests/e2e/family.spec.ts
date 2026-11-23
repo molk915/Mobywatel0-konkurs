@@ -2,7 +2,7 @@ import { test, expect, type Page, type Locator } from "@playwright/test";
 
 const family = (page: Page) => page.getByRole("dialog", { name: "mObywatel Rodzina" });
 const screenshot = (page: Page, name: string) =>
-  page.screenshot({ path: "docs/screenshots/night-family-" + name + ".png", animations: "disabled" });
+  page.screenshot({ path: test.info().outputPath("night-family-" + name + ".png"), animations: "disabled" });
 
 async function assertFits(page: Page, primary: Locator) {
   await expect(primary).toBeInViewport({ ratio: 1 });
@@ -160,8 +160,8 @@ for (const [width, height] of [[390, 844], [375, 812], [320, 740]]) {
     const nav = page.getByRole("navigation", { name: "Nawigacja główna" });
     const anchored = [heading, add, nav];
     for (const locator of anchored) await expect(locator).toBeInViewport({ ratio: 1 });
-    await expect(nav.getByRole("button")).toHaveCount(4);
-    await page.screenshot({ path: `docs/screenshots/night-documents-${width}.png` });
+    await expect(nav.getByRole("button")).toHaveCount(5);
+    await page.screenshot({ path: test.info().outputPath(`night-documents-${width}.png`) });
     await add.click();
     const catalog = page.getByRole("dialog", { name: "Katalog dokumentów" });
     await expect(catalog).toBeInViewport({ ratio: 1 });

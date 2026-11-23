@@ -11,6 +11,7 @@ import {
   sampleLetter,
   validateStep,
   supplyMovingDocument,
+  sendMovingDocument,
   receiptNeedsAction,
   receiptNextStep,
   confirmManualOperation,
@@ -32,9 +33,10 @@ test("package remains active until both document and manual step are resolved", 
   const supplied = supplyMovingDocument(c, id, "file", "demo.txt");
   assert.equal(
     receiptNextStep(supplied.receipts[0]),
-    "Krok do wykonania samodzielnie",
+    "Wyślij zgłoszenie zameldowania",
   );
-  const done = confirmManualOperation(supplied, id, "car");
+  const sent = sendMovingDocument(supplied, id);
+  const done = confirmManualOperation(sent, id, "car");
   assert.equal(receiptNeedsAction(done.receipts[0]), false);
   assert.equal(done.receipts[0].operations![2].status, "manual-done");
   assert.equal(done.access[0].who, "Ty · lokalne potwierdzenie");
@@ -59,7 +61,12 @@ test("moving package preserves per-recipient outcomes and safely accepts a local
   );
   assert.equal(c.access.length, 5);
   const next = supplyMovingDocument(c, r.id, "file-1", "demo.txt");
-  assert.equal(next.receipts[0].operations![0].status, "accepted");
+  assert.equal(next.receipts[0].operations![0].status, "ready-to-send");
+  assert.equal(next.access.length, c.access.length);
+  assert.equal(sendMovingDocument(c, r.id), c);
+  const sent = sendMovingDocument(next, r.id);
+  assert.equal(sent.receipts[0].operations![0].status, "accepted");
+  assert.equal(sendMovingDocument(sent, r.id), sent);
   assert.equal(next.receipts[0].operations![2].status, "manual");
   assert.equal(c.receipts[0].operations![0].status, "needs-document");
   assert.throws(() => supplyMovingDocument(next, r.id, "file-2", "other.txt"));

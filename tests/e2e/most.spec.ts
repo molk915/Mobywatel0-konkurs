@@ -1,7 +1,7 @@
 import { test, expect, type Locator, type Page } from "@playwright/test";
-const production = "http://127.0.0.1:4184";
+import { previewOrigin as production } from "./urls";
 const ownerDialog = (page: Page) => page.getByRole("dialog", { name: "mObywatel MOST" });
-const shot = (page: Page, name: string) => page.screenshot({ path: "docs/screenshots/delegation-" + name + ".png", animations: "disabled" });
+const shot = (page: Page, name: string) => page.screenshot({ path: test.info().outputPath("delegation-" + name + ".png"), animations: "disabled" });
 type View = Page | Locator | ReturnType<Page["frameLocator"]>;
 const button = (view: View, name: string | RegExp) => view.getByRole("button", { name, exact: typeof name === "string" });
 
@@ -70,7 +70,7 @@ test("Ewa routes from inbox, Kacper prepares a package in an independent session
   test.setTimeout(75_000);
   await page.setViewportSize({ width: 390, height: 844 });
   await selectEwa(page);
-  await expect(page.locator(".base .notification-count")).toHaveText("4");
+  await expect(page.locator(".base .notification-count")).toHaveText("5");
   await button(page, "Powiadomienia").click();
   await button(page.getByRole("dialog"), /Masz nowe pismo z urzędu/).click();
   const owner = ownerDialog(page);
@@ -125,12 +125,27 @@ test("Ewa routes from inbox, Kacper prepares a package in an independent session
     await expect(owner.getByRole("heading", { name: "Sprawdź przygotowaną sprawę" })).toBeVisible();
     await expect(owner.getByText("ul. Lipowa 12/4, 20-020 Lublin")).toBeVisible();
     await expect(owner.getByRole("link", { name: /Umowa najmu z dokumentów Ewy/ })).toBeVisible();
+    await button(owner, "Poproś o poprawki").click();
+    await owner.getByRole("textbox", { name: "Co trzeba poprawić?" }).fill("Dopisz, że adres został sprawdzony.");
+    await button(owner, "Przekaż uwagi").click();
+    await expect(task.getByText("Dopisz, że adres został sprawdzony.", { exact: false })).toBeVisible();
+    const reason = task.getByRole("textbox", { name: "Uzasadnienie" });
+    await reason.fill((await reason.inputValue()) + " Adres został sprawdzony.");
+    await button(task, "Zapisz uzasadnienie").click();
+    await button(task, "Przekaż do zatwierdzenia").click();
+    await button(owner, "Sprawdź przygotowaną sprawę").click();
+    await expect(owner.getByRole("heading", { name: "Pakiet po poprawkach" })).toBeVisible();
+    await expect(owner.getByText(/^Poprzednio:/)).toHaveCount(1);
+    await expect(owner.getByText(/^Poprzednio:/)).toBeVisible();
     await shot(page, "review-390");
     await button(owner, "Zatwierdź pakiet").click();
     await expect(task.getByText("Pakiet zatwierdzony", { exact: true })).toBeVisible();
     await button(task, "Powiadomienia").click();
     await expect(button(helper.getByRole("dialog", { name: "Powiadomienia" }), /Ewa zatwierdziła pakiet dokumentów/)).toBeVisible();
     await button(helper.getByRole("dialog", { name: "Powiadomienia" }), /Ewa zatwierdziła pakiet dokumentów/).click();
+    await button(owner, "Wyślij odpowiedź (demo)").click();
+    await expect(owner.getByText("Odpowiedź przyjęta przez system demonstracyjny.")).toBeVisible();
+    await expect(task.getByText("Wysłano odpowiedź w pokazie.", { exact: true })).toBeVisible();
     await button(owner, "Zakończ współpracę").click();
     await button(owner, "Cofnij dostęp").click();
     await expect(helper.getByRole("heading", { name: "Dostęp do sprawy został zakończony" })).toBeVisible();

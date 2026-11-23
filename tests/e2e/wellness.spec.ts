@@ -1,9 +1,9 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 
-const origin = "http://127.0.0.1:4184";
+import { previewOrigin as origin } from "./urls";
 const wellness = (page: Page) => page.getByRole("dialog", { name: "Zdrowie", exact: true });
 const button = (view: Page | Locator, name: string | RegExp) => view.getByRole("button", { name, exact: typeof name === "string" });
-const capture = (page: Page, name: string) => page.screenshot({ path: "docs/screenshots/wellness-" + name + ".png", animations: "disabled" });
+const capture = (page: Page, name: string) => page.screenshot({ path: test.info().outputPath("wellness-" + name + ".png"), animations: "disabled" });
 async function ewa(page: Page) {
   await page.goto(origin);
   await button(page, "Profil i ustawienia").click();
@@ -30,7 +30,7 @@ async function invite(page: Page) {
 test("wellness prepares, approves and restores a visit across two browser sessions", async ({ page, browser, request }) => {
   test.setTimeout(70_000);
   await ewa(page);
-  await expect(page.locator(".base .notification-count")).toHaveText("4");
+  await expect(page.locator(".base .notification-count")).toHaveText("5");
   await button(page, "Powiadomienia").click();
   await button(page.getByRole("dialog"), /Nowe skierowanie.*Nowe/).click();
   const owner = wellness(page);

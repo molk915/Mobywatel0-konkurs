@@ -1,18 +1,21 @@
 import { test, expect } from "@playwright/test";
 test("notifications dismiss via Escape and open the actual letter flow", async ({ page }) => {
   await page.goto("/");
+  await page.getByRole("button", { name: "Profil i ustawienia" }).click();
+  await page.getByRole("button", { name: /^Ewa Wiśniewska/ }).click();
   const notifications = page.getByRole("button", { name: "Powiadomienia", exact: true });
   await notifications.click();
   const inbox = page.getByRole("dialog", { name: "Powiadomienia" });
   await expect(inbox.getByRole("heading", { name: "Powiadomienia" })).toBeFocused();
-  await inbox.getByRole("button", { name: /^Nowe / }).click();
-  await expect(inbox.getByRole("button", { name: /^Nowe / })).toHaveAttribute("aria-pressed", "true");
+  const filter = inbox.getByRole("button", { name: /^Nowe \d+$/ });
+  await filter.click();
+  await expect(filter).toHaveAttribute("aria-pressed", "true");
   await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(notifications).toBeFocused();
   await notifications.click();
-  await page.getByRole("dialog", { name: "Powiadomienia" }).getByRole("button", { name: /Przykładowe pismo z urzędu/ }).click();
-  await expect(page.getByRole("dialog")).toContainText("Zrozum pismo");
+  await page.getByRole("dialog", { name: "Powiadomienia" }).getByRole("button", { name: /Masz nowe pismo z urzędu/ }).click();
+  await expect(page.getByRole("dialog")).toContainText("Wezwanie do uzupełnienia wniosku");
   await page.goBack();
   await expect(page.getByRole("dialog")).toHaveCount(0);
 });
@@ -23,9 +26,11 @@ test("the assistant on a document uses its context and prepares the right share 
   await expect(document.getByRole("navigation").getByRole("button")).toHaveCount(4);
   await document.getByRole("button", { name: /Asystent/ }).click();
   await expect(page.getByRole("dialog")).toContainText("Kontekst: mPrawo jazdy");
+  await expect(page.locator(".chat-message.user")).toHaveText("Pokaż ten dokument");
   await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog").getByRole("heading", { name: "mPrawo jazdy" })).toBeVisible();
   await document.getByRole("button", { name: /Asystent/ }).click();
+  await expect(page.locator(".chat-message.user")).toHaveCount(1);
   await page.getByRole("button", { name: "Udostępnij ten dokument", exact: true }).click();
   await page
     .getByRole("button", { name: /mPrawo jazdy Wybierz minimalny zakres/ })
@@ -70,4 +75,32 @@ test("privacy selection is reflected in actual consent and its revocable audit e
   await expect(page.locator(".access-timeline")).toContainText(
     "Zgoda wycofana",
   );
+});
+
+test("an expired share is distinguished from a withdrawn consent", async ({ page }) => {
+  await page.clock.install();
+  await page.goto("/");
+  await page.getByRole("button", { name: "Dane", exact: true }).click();
+  await page.getByRole("button", { name: "Udostępnij wybrane dane" }).click();
+  await page.getByRole("checkbox", { name: "Zgadzam się na ten zakres w pokazie" }).check();
+  await page.getByRole("button", { name: "Utwórz kod demonstracyjny" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Zamknij", exact: true }).click();
+  await page.clock.fastForward(61_000);
+  const expired = page.locator(".access-timeline").getByRole("button", { name: /Dostęp wygasł/ });
+  await expect(expired).toBeVisible();
+  await expired.click();
+  await expect(page.getByRole("dialog")).toContainText("Dostęp wygasł");
+  await expect(page.getByRole("button", { name: "Wycofaj zgodę", exact: true })).toHaveCount(0);
+});
+
+test("an unsupported question offers a direct route to a supported process", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Usługi", exact: true }).click();
+  await page.getByRole("button", { name: /^Otwórz asystenta/ }).click();
+  const input = page.getByRole("textbox", { name: "Wiadomość do asystenta" });
+  await input.fill("Jaka będzie pogoda?");
+  await input.press("Enter");
+  const choices = page.getByRole("group", { name: "Możliwe dalsze pytania" });
+  await choices.getByRole("button", { name: "Przeprowadzam się do Warszawy" }).click();
+  await expect(page.getByRole("button", { name: /^Załatw formalności po przeprowadzce/ })).toBeVisible();
 });

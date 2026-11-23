@@ -1,35 +1,6 @@
-/* MOST night palette, shared by the mobile app and both demonstration roles. */
+/* Shared component layout. Product tokens are defined in product-system.css. */
 :root {
-  color-scheme: dark;
   --civic-font: "Inter Variable", Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --civic-bg: #0e141d;
-  --civic-ground: #0a1018;
-  --civic-surface: #171f2c;
-  --civic-raised: #202b3c;
-  --civic-line: #303c50;
-  --civic-line-strong: #566780;
-  --civic-text: #f3f6fc;
-  --civic-muted: #b7c3d5;
-  --civic-faint: #9daac1;
-  --civic-accent: #d63353;
-  --civic-accent-text: #ff9aad;
-  --civic-accent-surface: #442437;
-  --civic-green: #a3e4bd;
-  --civic-green-surface: #1c382f;
-  --civic-amber: #f7cd97;
-  --civic-amber-surface: #3b2d25;
-  --civic-paper: #f1f4fa;
-  --civic-paper-ink: #151d2b;
-  --civic-paper-muted: #4a586e;
-  --civic-icon-surface: linear-gradient(145deg, #354358, #1d2737 77%);
-  --civic-card-surface: linear-gradient(124deg, #27384f 0%, #1a273a 49%, #152031 100%);
-  --civic-row-surface: linear-gradient(155deg, #202b3b, #171f2c 74%);
-  --civic-action: linear-gradient(165deg, #c92d4e, #a61b3f);
-  --civic-radius: 17px;
-  --civic-panel-radius: 23px;
-  --civic-action-radius: 13px;
-  --civic-gutter: 18px;
-  --civic-title: 760 clamp(1.72rem, 8.7vw, 2.18rem)/1.09 var(--civic-font);
   --civic-motion: 230ms cubic-bezier(.2,.78,.25,1);
   --bg: var(--civic-bg);
   --ink: var(--civic-text);
@@ -111,6 +82,7 @@ body { color: var(--civic-text); font-family: var(--civic-font); }
   box-shadow: 0 -5px 18px #060a1044;
 }
 .phone .approved-nav > button { color: #d2dceb; min-height: 49px; font-size: .67rem; font-weight: 520; gap: 1px; }
+.phone .approved-nav.with-most { grid-template-columns: repeat(5, minmax(0, 1fr)); }
 .phone .approved-nav > button.selected { color: var(--civic-accent-text); font-weight: 690; }
 .phone .approved-nav > button.selected::before { content: none; }
 .civic-nav-icon { display: grid; place-items: center; width: 44px; height: 32px; border-radius: 13px; transition: background var(--civic-motion); }
@@ -385,7 +357,7 @@ body { color: var(--civic-text); font-family: var(--civic-font); }
 .service-assistant > svg:last-child { color: var(--civic-muted); }
 .app-inbox { z-index: 30; }
 .phone :is(.case-inbox .row, .approved-document-row, .service-directory .most-row) {
-  background: linear-gradient(145deg, #1b293c, #151f30 66%);
+  background: var(--civic-row-surface);
   transition: background-color 150ms ease, border-color 150ms ease, transform 150ms ease;
 }
 .phone :is(.case-inbox .row, .approved-document-row, .service-directory .most-row):active { transform: scale(.986); }

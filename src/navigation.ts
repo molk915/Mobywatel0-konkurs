@@ -1,17 +1,23 @@
 import type { Access, CaseKind, Receipt, Tab } from "./domain";
 import type { Store } from "./storage";
 import type { HealthTarget } from "./health/model";
+import { delegationTitles, type DelegationContext } from "./most/model.ts";
+import { workflowActions, workflowDetails, type WorkflowAction, type WorkflowKind } from "./workflows/model.ts";
 export type Layer =
   | {
-      type: "notifications" | "about" | "install" | "reset" | "most" | "most-help" | "services";
+      type: "notifications" | "about" | "install" | "reset" | "most" | "most-help" | "services" | "tax-payment";
     }
-  | { type: "profile"; service?: "family" }
+  | { type: "most-hub"; mode?: MostHubMode }
+  | { type: "profile"; service?: "family"; returnToMost?: MostHubMode }
   | { type: "family"; decision?: boolean }
   | { type: "health"; target: HealthTarget; helper?: boolean }
   | { type: "document"; id: number }
-  | { type: "assistant"; caseId?: string; screen?: Tab; documentId?: number }
+  | { type: "assistant"; caseId?: string; screen?: Tab; documentId?: number; workflow?: WorkflowAction; returnWorkflow?: WorkflowKind; conversation?: string }
+  | { type: "workflow"; kind: WorkflowKind; city?: string }
+  | { type: "moving"; city?: string }
   | { type: "flow"; kind: CaseKind }
   | { type: "receipt"; receipt: Receipt }
+  | { type: "delegation"; kind: DelegationContext["kind"]; receiptId?: string }
   | { type: "access"; access: Access }
   | {
       type: "share";
@@ -19,6 +25,7 @@ export type Layer =
       returnTo?: number;
       initialScope?: "adult" | "identity";
     };
+export type MostHubMode = "own" | "help";
 export function restoreNavigation(
   value: unknown,
   store: Store,
@@ -54,6 +61,11 @@ export function restoreNavigation(
         c.receipts.some((r) => r.id === l.caseId)
           ? { caseId: l.caseId }
           : {}),
+        ...(workflowActions.includes(l.workflow as WorkflowAction) ? { workflow: l.workflow as WorkflowAction } : {}),
+        ...(typeof l.returnWorkflow === "string" && Object.hasOwn(workflowDetails, l.returnWorkflow)
+          ? { returnWorkflow: l.returnWorkflow as WorkflowKind } : {}),
+        ...(typeof l.conversation === "string" && /^[a-z0-9:-]{1,100}$/i.test(l.conversation)
+          ? { conversation: l.conversation } : {}),
       },
     };
   if (l.type === "family" && (tab === "cases" || tab === "services")) return { tab, layer: { type: "family", decision: l.decision === true } };
@@ -66,8 +78,21 @@ export function restoreNavigation(
   if (l.type === "most" && (tab === "cases" || tab === "privacy") && store.profile === "ewa")
     return { tab, layer: { type: "most" } };
   if (l.type === "most-help" && tab === "cases") return { tab, layer: { type: "most-help" } };
+  if (l.type === "most-hub") return { tab, layer: { type: "most-hub", mode: l.mode === "own" || l.mode === "help" ? l.mode : undefined } };
   if (l.type === "services") return { tab: "services", layer: null };
-  if (l.type === "profile") return { tab, layer: { type: "profile", ...(l.service === "family" && { service: "family" }) } };
+  if (l.type === "tax-payment" && tab === "cases") return { tab, layer: { type: "tax-payment" } };
+  const city = typeof l.city === "string" && l.city.length <= 60 ? l.city : undefined;
+  if (l.type === "moving") return { tab, layer: { type: "moving", city } };
+  if (l.type === "workflow" && typeof l.kind === "string" && Object.hasOwn(workflowDetails, l.kind))
+    return { tab, layer: { type: "workflow", kind: l.kind as WorkflowKind, city } };
+  if (l.type === "delegation" && l.kind === "trusted") {
+    const kind = l.kind as DelegationContext["kind"];
+    if (l.receiptId !== undefined && !c.receipts.some((r) => r.id === l.receiptId && r.kind === kind)) return { tab, layer: null };
+    return { tab, layer: { type: "delegation", kind, receiptId: typeof l.receiptId === "string" ? l.receiptId : undefined } };
+  }
+  if (l.type === "profile") return { tab, layer: { type: "profile", ...(l.service === "family" && { service: "family" }),
+    ...(l.returnToMost === "own" || l.returnToMost === "help" ? { returnToMost: l.returnToMost }
+      : l.returnToMost === true ? { returnToMost: "own" } : {}) } };
   if (
     [
       "notifications",
@@ -107,9 +132,11 @@ export function restoreNavigation(
             : undefined,
       },
     };
+  if (l.type === "flow" && l.kind === "move") return { tab: "cases", layer: { type: "moving", city: c.drafts.move?.data.city } };
+  if (l.type === "flow" && l.kind === "letter") return { tab: "cases", layer: store.profile === "ewa" ? { type: "most" } : null };
   if (
     l.type === "flow" &&
-    ["move", "wallet", "letter"].includes(String(l.kind)) &&
+    l.kind === "wallet" &&
     c.drafts[l.kind as CaseKind]
   )
     return { tab, layer: { type: "flow", kind: l.kind as CaseKind } };
@@ -124,6 +151,29 @@ export function restoreNavigation(
     if (access) return { tab, layer: { type: "access", access } };
   }
   return { tab, layer: null };
+}
+
+type AssistantLayer = Extract<Layer, { type: "assistant" }>;
+export function conversationFor(layer: AssistantLayer): string {
+  if (layer.conversation) return layer.conversation;
+  if (layer.returnWorkflow) return "workflow:" + layer.returnWorkflow;
+  if (layer.workflow) return "topic:" + layer.workflow;
+  if (layer.caseId) return "receipt:" + layer.caseId;
+  if (layer.documentId !== undefined) return "document:" + layer.documentId;
+  return "general";
+}
+
+export function openConversation(conversation: string, c: Store["citizens"][string], screen: Tab): AssistantLayer {
+  const base: AssistantLayer = { type: "assistant", conversation, screen };
+  const [type, id] = conversation.split(":");
+  if (type === "workflow" && Object.hasOwn(workflowDetails, id)) {
+    const kind = id as WorkflowKind;
+    return { ...base, screen: "cases", returnWorkflow: kind, workflow: kind === "registration" || kind === "tax-address" ? "move" : kind };
+  }
+  if (type === "topic" && workflowActions.includes(id as WorkflowAction)) return { ...base, workflow: id as WorkflowAction };
+  if (type === "receipt" && c.receipts.some((r) => r.id === id)) return { ...base, caseId: id };
+  if (type === "document" && /^[0-4]$/.test(id)) return { ...base, screen: "documents", documentId: Number(id) };
+  return base;
 }
 export function searchDocuments(query: string, extra: string): number[] {
   const normalize = (value: string) =>

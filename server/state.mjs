@@ -16,6 +16,13 @@ export function collaborationState(directory, name) {
   }
   return {
     state,
+    restore() {
+      const saved = previous ? deserialize(previous) : { rooms: new Set(), sessions: new Map() };
+      state.rooms.clear();
+      state.sessions.clear();
+      for (const room of saved.rooms) state.rooms.add(room);
+      for (const [key, session] of saved.sessions) state.sessions.set(key, session);
+    },
     save() {
       const snapshot = serialize(state);
       if (previous?.equals(snapshot)) return;

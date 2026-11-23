@@ -2,8 +2,8 @@ import { ArrowRight, CalendarDays, FileText, UsersRound } from "lucide-react";
 import { WavePattern } from "../CivicChrome";
 import { formatMostDeadline, mostSummary, statusLabels, type MostView } from "./model";
 
-export function MostEntry({ isEwa, view, onOpen }: { isEwa: boolean; view?: MostView | null; onOpen: () => void }) {
-  if (isEwa) return <EwaEntry view={view} onOpen={onOpen} />;
+export function MostEntry({ isEwa, view, onOpen, compact = false }: { isEwa: boolean; view?: MostView | null; onOpen: () => void; compact?: boolean }) {
+  if (isEwa) return <EwaEntry view={view} onOpen={onOpen} compact={compact} />;
   return (
     <button className="most-entry most-entry-switch" onClick={onOpen}>
       <span className="most-icon"><UsersRound size={20} /></span>
@@ -13,8 +13,19 @@ export function MostEntry({ isEwa, view, onOpen }: { isEwa: boolean; view?: Most
   );
 }
 
-function EwaEntry({ onOpen, view }: { onOpen: () => void; view?: MostView | null }) {
-  const status = statusLabels[view?.status ?? "new"];
+function EwaEntry({ onOpen, view, compact }: { onOpen: () => void; view?: MostView | null; compact: boolean }) {
+  const status = view?.sentAt ? "Wysłano w pokazie" : view?.status === "finished"
+    ? "Czeka na wysłanie" : statusLabels[view?.status ?? "new"];
+  if (compact) return (
+    <button className="most-entry most-entry-switch most-wallet-entry" onClick={onOpen}>
+      <span className="most-icon"><FileText size={20} aria-hidden="true" /></span>
+      <span>
+        <strong>Pismo z urzędu</strong>
+        <small>{!view || view.status === "new" ? "Możesz poprosić bliską osobę o pomoc" : status}</small>
+      </span>
+      <ArrowRight size={19} aria-hidden="true" />
+    </button>
+  );
   return (
     <button className="most-entry most-entry-feature civic-pattern-card" onClick={onOpen}>
       <WavePattern />

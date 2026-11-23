@@ -13,7 +13,7 @@ npm ci
 npm run dev
 ```
 
-Otwórz `http://localhost:5173`. Desktop pokazuje ramkę smartfona; ekran do 600 px zajmuje całą szerokość i wysokość. Na niskich ekranach ramka skaluje się, zachowując proporcje.
+W drugim terminalu uruchom `npm run server`, aby włączyć współpracę w MOST, Zdrowiu i Rodzinie. Otwórz `http://localhost:5173/?start=most-hub`, aby udostępnić sprawę jako Ewa i przełączyć się na Kacpra w tej samej karcie. Pokaz dwóch telefonów działa pod `http://localhost:5173/?pokaz=most3`. Zwykłą aplikację otwiera `http://localhost:5173`. Desktop pokazuje ramkę smartfona. Na ekranach do 600 px interfejs zajmuje całą szerokość i wysokość.
 
 ```sh
 npm run build
@@ -21,7 +21,7 @@ npm test
 npm run preview
 ```
 
-Podgląd kompilacji działa pod `http://localhost:4173`. Build generuje `dist/`, manifest PWA, ikony 192/512 oraz service worker z listą aktualnych zasobów. Pełne wdrożenie z API, zapisem stanu i synchronizacją opisuje [pakiet konkursowy](docs/SUBMISSION.md). Wejście do sprawy Ewy to `/?start=most`.
+Podgląd kompilacji działa pod `http://localhost:4173`. Build generuje `dist/`, manifest PWA, ikony 192/512 oraz service worker z listą aktualnych zasobów. Wejście do zakładki MOST Ewy to `/?start=most-hub`. Pełne wdrożenie z API, zapisem stanu i synchronizacją opisuje [pakiet konkursowy](docs/SUBMISSION.md).
 
 ## Pokaz w 4 minuty
 
@@ -34,7 +34,7 @@ Profil w prawym górnym rogu pozwala przełączać Aleksandrę, Kacpra i Ewę, z
 
 ## Publikacja HTTPS
 
-Udostępnij **zawartość katalogu `dist` w katalogu głównym domeny** w dowolnym hostingu statycznym obsługującym HTTPS. Nie publikuj `node_modules`, plików `.env` ani katalogu `work`. Nie jest potrzebny backend dla obecnego pokazu. Konfiguracja Netlify jest dołączona jako `netlify.toml`; na Cloudflare Pages wybierz komendę `npm run build` i katalog `dist`.
+Publiczny pokaz MOST wymaga **jednej instancji Node z trwałym katalogiem danych**, która obsługuje interfejs i `/api/` pod wspólnym adresem HTTPS. Gotowa konfiguracja Docker i lista kroków do sprawdzenia są w [pakiecie konkursowym](docs/SUBMISSION.md). Hosting statyczny obsługuje lokalny portfel i procesy, które działają w przeglądarce.
 
 Po publikacji sprawdź link bez logowania w oknie prywatnym, zainstaluj na iOS/Android i przetestuj ponownie scenariusze oraz restart offline. Ta ostatnia próba na fizycznym urządzeniu pozostaje niepotwierdzona — ograniczenia narzędzia opisuje [raport testów](docs/QA.md).
 
