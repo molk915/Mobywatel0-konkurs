@@ -46,6 +46,10 @@ Pod `/?pokaz=most3` oba telefony mają własne Dokumenty, Sprawy, Usługi, Dane 
 
 ## Uruchomienie i publikacja
 
+Render może obsłużyć aplikację i API pod jednym publicznym adresem. Plik `render.yaml` definiuje jedną płatną usługę Node w regionie Frankfurt oraz trwały dysk 1 GB w `/var/data`. Po dodaniu tego pliku do repozytorium na GitHubie wybierz **New → Blueprint** w panelu Render, połącz repozytorium i sprawdź koszt przed utworzeniem usługi. Render ustawia publiczny adres aplikacji automatycznie. W razie użycia osobnego frontendu ustaw w środowisku backendu `APP_ORIGIN` na jego pełny adres HTTPS.
+
+Tryb demonstracyjny działa bez klucza. Aby włączyć własny model, dodaj w zakładce **Environment** usługi `ASSISTANT_PROVIDER=compatible`, `MODEL_BASE_URL`, `MODEL_NAME` i `MODEL_API_KEY`. Po wdrożeniu sprawdź publiczne ścieżki `/api/health` i `/?start=most-hub`.
+
 Przykład lokalnego uruchomienia tego samego obrazu, który można wdrożyć na serwerze z Dockerem.
 
 ```text
@@ -53,6 +57,6 @@ docker build -t mobywatel-most:contest .
 docker run -d --name mobywatel-most --restart unless-stopped -p 127.0.0.1:4197:8080 -e APP_ORIGIN=http://localhost:4197 --mount type=volume,source=mobywatel-most-data,target=/var/lib/most mobywatel-most:contest
 ```
 
-Publiczne wdrożenie wymaga jednej instancji kontenera z trwałym wolumenem `/var/lib/most`. Ustaw `APP_ORIGIN` na dokładny publiczny adres HTTPS bez końcowego ukośnika i skieruj ruch HTTPS na port kontenera 8080. Endpoint `GET /api/health` sprawdza dostępność procesu. Sesje MOST właściciela wygasają po 14 dniach, a zaproszenia Kacpra po 10 minutach. Nowe wejście bez zapisanej sesji tworzy nową sprawę na danych demonstracyjnych.
+W wariancie Docker użyj jednej instancji kontenera z trwałym wolumenem `/var/lib/most`. Ustaw `APP_ORIGIN` na dokładny publiczny adres HTTPS bez końcowego ukośnika i skieruj ruch HTTPS na port kontenera 8080. Endpoint `GET /api/health` sprawdza dostępność procesu. Sesje MOST właściciela wygasają po 14 dniach, a zaproszenia Kacpra po 10 minutach. Nowe wejście bez zapisanej sesji tworzy nową sprawę na danych demonstracyjnych.
 
 Po wdrożeniu przejdź cały scenariusz na publicznym adresie w nowym oknie prywatnym i sprawdź, czy status oraz historia pozostają po odświeżeniu. Formularz wymaga linku HTTPS działającego bez logowania do czasu ogłoszenia wyników. Termin podany przez organizatora to 30 listopada 2026, do końca dnia w Polsce. [Oficjalne warunki konkursu](https://mobywatel.ai/)

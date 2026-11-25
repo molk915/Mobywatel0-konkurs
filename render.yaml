@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: mobywatel-most
+    runtime: node
+    region: frankfurt
+    plan: 0.5c-512mb
+    numInstances: 1
+    buildCommand: npm ci --include=dev && npm run build
+    startCommand: node server/index.mjs
+    healthCheckPath: /api/health
+    disk:
+      name: most-data
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: NODE_VERSION
+        value: 24.22.1
+      - key: BIND_HOST
+        value: 0.0.0.0
+      - key: SERVE_DIST
+        value: "1"
+      - key: MOST_STATE_DIR
+        value: /var/data

@@ -12,6 +12,7 @@ import { collaborationState } from "./state.mjs";
 import { createWorkflows } from "./workflows.mjs";
 import { controlIntent, workflowReply } from "./workflow-assistant.mjs";
 export function createAssistantServer(env = process.env, { clock } = {}) {
+  const appOrigin = env.APP_ORIGIN || env.RENDER_EXTERNAL_URL;
   const limits = new Map();
   function persisted(name, create, storage = collaborationState(env.MOST_STATE_DIR, name), auditErrors = false) {
     const { state, save, restore } = storage;
@@ -33,7 +34,7 @@ export function createAssistantServer(env = process.env, { clock } = {}) {
   const mostApi = createMostHandler(clock, mostStorage.state, workflows.assignments, control);
   const most = persisted("most", () => mostApi, mostStorage, true);
   const controlHandler = persisted("most", () => control.handler, mostStorage, true);
-  control.wire({ workflows, authenticator: createMostPasskeys(env.APP_ORIGIN),
+  control.wire({ workflows, authenticator: createMostPasskeys(appOrigin),
     assistantIntent: env.ASSISTANT_PROVIDER === "compatible" ? (text, allowed) => controlIntent(text, allowed, env) : undefined,
     installLetter: (...args) => installControlledLetter(mostStorage.state.sessions, ...args, control),
     createPeer() {
@@ -89,7 +90,7 @@ export function createAssistantServer(env = process.env, { clock } = {}) {
         "http://127.0.0.1:4173",
         "http://127.0.0.1:4183",
         "http://127.0.0.1:4184",
-        env.APP_ORIGIN,
+        appOrigin,
         ...(env.APP_ORIGINS?.split(",").map((value) => value.trim()) ?? []),
       ]
         .filter(Boolean)
