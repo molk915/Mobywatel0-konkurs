@@ -46,9 +46,7 @@ Pod `/?pokaz=most3` oba telefony mają własne Dokumenty, Sprawy, Usługi, Dane 
 
 ## Uruchomienie i publikacja
 
-Zaimportuj repozytorium do Vercela jako projekt Vite. Utwórz projekt PostgreSQL na planie Free w Neon i dodaj jego adres połączenia z włączonym poolingiem jako `DATABASE_URL` w zmiennych środowiskowych Vercela. Zostaw `MOST_BACKEND_URL` puste, aby korzystać z API w Vercelu. Funkcja tworzy tabelę stanu przy pierwszym wywołaniu. Termin i ważność uprawnień są sprawdzane przy odczycie Centrum kontroli.
-
-Jeśli API działa na osobnym serwerze, zamiast `DATABASE_URL` ustaw `MOST_BACKEND_URL` na jego pełny adres HTTPS bez ścieżki. W środowisku tego serwera ustaw `APP_ORIGIN` na adres aplikacji w Vercelu.
+Zaimportuj główny katalog repozytorium do Vercela jako projekt Vite. Utwórz projekt PostgreSQL na planie Free w Neon i dodaj jego adres połączenia z włączonym poolingiem jako `DATABASE_URL` w zmiennych środowiskowych Vercela. Reguły w `vercel.json` kierują API do funkcji, która tworzy tabelę stanu przy pierwszym wywołaniu. Termin i ważność uprawnień są sprawdzane przy odczycie Centrum kontroli.
 
 Tryb demonstracyjny działa bez klucza. Aby włączyć własny model, dodaj w zakładce **Environment** usługi `ASSISTANT_PROVIDER=compatible`, `MODEL_BASE_URL`, `MODEL_NAME` i `MODEL_API_KEY`. Po wdrożeniu sprawdź publiczne ścieżki `/api/health` i `/?start=most-hub`.
 
