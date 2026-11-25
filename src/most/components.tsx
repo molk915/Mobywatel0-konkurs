@@ -1,8 +1,10 @@
-import { useEffect, useLayoutEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { ArrowLeft, ArrowUpRight, Bell, Check, ChevronRight, CircleAlert, Clock3, FileText, Link2, LockKeyhole, MessageSquare, Radio, ShieldCheck } from "lucide-react";
 import { CivicBrand, WavePattern } from "../CivicChrome";
 import { formatMostDeadline, mostTitle, scopeLabels, type MostComment, type MostDocument, type MostInvitation, type MostRole, type MostScope, type MostStatus } from "./model";
 import { routeForMost } from "./session";
+
+export const MostToolbarContext = createContext<ReactNode>(null);
 
 export function Portrait({ person }: { person: "ewa" | "kacper" }) {
   return <img className="most-avatar" src={"/portraits/" + person + ".png"} alt="" />;
@@ -24,6 +26,7 @@ export function MostLayout({ role, identity, roleLabel, title, eyebrow, screen, 
   onInbox?: () => void;
   busy?: boolean;
 }) {
+  const toolbar = useContext(MostToolbarContext);
   const content = useRef<HTMLElement>(null);
   const heading = useRef<HTMLHeadingElement>(null);
   useLayoutEffect(() => {
@@ -47,6 +50,7 @@ export function MostLayout({ role, identity, roleLabel, title, eyebrow, screen, 
             {eyebrow && <p className="most-eyebrow">{eyebrow}</p>}
             <h1 ref={heading} tabIndex={-1}>{title}</h1>
           </header>
+          {toolbar}
           {children}
         </div>
       </section>

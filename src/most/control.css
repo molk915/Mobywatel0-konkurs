@@ -1,12 +1,11 @@
 .control-center { display: grid; gap: 14px; padding-bottom: 12px; color: var(--civic-text); }
 .most-hub { display: flex; flex-direction: column; height: 100%; min-height: 0; background: var(--civic-bg); }
 .most-hub-content { flex: 1; min-height: 0; }
-.most-hub-header { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 7px 14px; border-bottom: 1px solid var(--civic-line); }
+.most-hub-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-block-end: 14px; }
 .most-hub-tabs { flex: 1; display: grid; grid-template-columns: repeat(2, minmax(max-content, 1fr)); gap: 3px; padding: 3px; border-radius: 12px; background: var(--civic-raised); }
 .most-hub-tabs button, .most-hub-profile { padding: 6px 8px; min-height: 44px; border: 0; border-radius: 9px; background: transparent; color: var(--civic-text); font: inherit; font-size: .83rem; font-weight: 700; }
 .most-hub-tabs button[aria-pressed="true"] { background: var(--civic-surface); color: var(--civic-accent-text); box-shadow: 0 1px 3px #153b5524; }
 .most-hub-profile { display: flex; align-items: center; gap: 5px; border: 1px solid var(--civic-line-strong); }
-.most-hub-header button:focus-visible { outline: 2px solid var(--civic-accent); outline-offset: 2px; }
 .control-center button, .control-center a { touch-action: manipulation; }
 .control-center :is(button, a, summary, input, select, textarea):focus-visible { outline: 3px solid #0870bb; outline-offset: 3px; }
 .control-tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; padding: 4px; border: 1px solid #d5e4ec; border-radius: 17px; background: #edf5fa; }
@@ -94,7 +93,7 @@
 }
 .control-center[data-showcase="true"] { gap: 9px; }
 .control-center[data-showcase="true"] .control-person { padding: 11px; }
-.large-text .most-hub-header button, .large-text .control-board-filters button,
+.large-text .most-hub-toolbar button, .large-text .control-board-filters button,
 .large-text .control-tabs button, .large-text .control-case-actions .most-inline { font-size: .95rem; }
 .large-text .control-board-list .control-card-head strong { font-size: 1.05rem; }
 .control-card-head { flex-wrap: wrap; }

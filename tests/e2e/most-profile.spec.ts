@@ -1,5 +1,16 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import { previewOrigin } from "./urls";
+
+async function expectModeSwitcherBelowHeading(page: Page, name: string | RegExp) {
+  const back = page.getByRole("button", { name: "Wstecz", exact: true });
+  const heading = page.getByRole("heading", { name, level: 1 });
+  const switcher = page.getByRole("group", { name: "Widok MOST" });
+  await expect(switcher).toBeInViewport({ ratio: 1 });
+  await expect(heading).toBeVisible();
+  const [backBox, headingBox, switcherBox] = await Promise.all([back.boundingBox(), heading.boundingBox(), switcher.boundingBox()]);
+  expect(backBox!.y + backBox!.height).toBeLessThanOrEqual(headingBox!.y);
+  expect(headingBox!.y + headingBox!.height).toBeLessThanOrEqual(switcherBox!.y);
+}
 
 test("Ewa delegates her fine and Kacper pays it after changing profiles in the same tab", async ({ page, context }) => {
   await page.goto(previewOrigin);
@@ -27,6 +38,7 @@ test("Ewa delegates her fine and Kacper pays it after changing profiles in the s
   await page.reload();
   const shared = page.getByRole("region", { name: "Sprawy udostępnione w MOST" });
   await expect(shared.getByText("Mandat drogowy", { exact: true })).toBeVisible();
+  await expectModeSwitcherBelowHeading(page, /^Sprawy · Ewa/);
   await expect(shared.getByText("Podatek od nieruchomości", { exact: true })).toHaveCount(0);
   await button("Terminy").click();
   await expect(page.locator(".control-deadline").getByRole("heading", { name: "Mandat drogowy", exact: true })).toBeVisible();
@@ -62,10 +74,12 @@ test("the contest link opens a readable MOST and recovers a failed initial conne
   const cases = page.getByRole("region", { name: "Moje sprawy w MOST" });
   const fine = cases.getByRole("listitem").filter({ hasText: "Mandat drogowy" });
   await expect(fine.getByRole("button", { name: "Przekaż sprawę Mandat drogowy" })).toBeInViewport();
+  await expectModeSwitcherBelowHeading(page, "Centrum kontroli");
   expect(binds).toBeGreaterThanOrEqual(2);
   await expect(page.locator(".most-hub")).not.toHaveText(/Spróbuj ponownie\./);
   const help = page.getByRole("button", { name: "Pomagam", exact: true });
   await help.click();
+  await expectModeSwitcherBelowHeading(page, "Sprawy, w których pomagam");
   await page.getByRole("button", { name: /^Zmień profil demonstracyjny/ }).click();
   await expect(page.getByRole("heading", { name: "Zmień profil w MOST" })).toBeVisible();
   await page.keyboard.press("Escape");

@@ -2,7 +2,7 @@ import { useState, type ReactNode } from "react";
 import { ChevronDown, UserRound } from "lucide-react";
 import type { Profile } from "../domain";
 import type { MostHubMode } from "../navigation";
-import { MostLayout } from "./components";
+import { MostLayout, MostToolbarContext } from "./components";
 import { DelegationOwner } from "./DelegationPanel";
 import { MostHelperWorkspace } from "./MostHelper";
 import { demoHelperToken, useMostSession } from "./session";
@@ -14,8 +14,8 @@ export default function MostHub({ profile, onSwitchProfile, onBack, workflowKey,
 }) {
   const token = nav ? null : demoHelperToken(profile.id);
   const [mode, setMode] = useState<MostHubMode>(initialMode ?? (token ? "help" : "own"));
-  return <div className="most-hub">
-    <header className="most-hub-header">
+  const toolbar = (
+    <div className="most-hub-toolbar">
       <div className="most-hub-tabs" role="group" aria-label="Widok MOST">
         <button aria-pressed={mode === "own"} onClick={() => setMode("own")}>Moje</button>
         <button aria-pressed={mode === "help"} onClick={() => setMode("help")}>Pomagam</button>
@@ -24,15 +24,19 @@ export default function MostHub({ profile, onSwitchProfile, onBack, workflowKey,
       : <button className="most-hub-profile" onClick={() => onSwitchProfile(mode)} aria-label={"Zmień profil demonstracyjny. Obecnie " + profile.name}>
         <UserRound size={16} aria-hidden="true" /><span>{profile.first}</span><ChevronDown size={14} aria-hidden="true" />
       </button>}
-    </header>
+    </div>
+  );
+  return <div className="most-hub">
     <div className="most-hub-content">
-      {mode === "own" ? <DelegationOwner context={{ kind: "trusted" }} storageId={profile.id + "-trusted"} profile={profile.id}
-        workflowKey={workflowKey} letterKey={letterKey} onBack={onBack} autoStart={!nav} sameTabDemo={!nav && profile.id === "ewa"} />
-        : token ? <ProfileHelp key={token} token={token} onBack={onBack} />
-          : <MostLayout role="helper" title="Sprawy, w których pomagam" screen="most-hub-empty" onBack={onBack}>
-            {onOpenShared ? <button className="most-button most-primary" onClick={onOpenShared}>Otwórz panel pomocy MOST</button>
-              : <p className="most-lead">Tu pojawią się sprawy przekazane temu profilowi w pokazie.</p>}
-          </MostLayout>}
+      <MostToolbarContext.Provider value={toolbar}>
+        {mode === "own" ? <DelegationOwner context={{ kind: "trusted" }} storageId={profile.id + "-trusted"} profile={profile.id}
+          workflowKey={workflowKey} letterKey={letterKey} onBack={onBack} autoStart={!nav} sameTabDemo={!nav && profile.id === "ewa"} />
+          : token ? <ProfileHelp key={token} token={token} onBack={onBack} />
+            : <MostLayout role="helper" title="Sprawy, w których pomagam" screen="most-hub-empty" onBack={onBack}>
+              {onOpenShared ? <button className="most-button most-primary" onClick={onOpenShared}>Otwórz panel pomocy MOST</button>
+                : <p className="most-lead">Tu pojawią się sprawy przekazane temu profilowi w pokazie.</p>}
+            </MostLayout>}
+      </MostToolbarContext.Provider>
     </div>
     {nav}
   </div>;

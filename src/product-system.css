@@ -133,6 +133,23 @@
   border-color: transparent;
   box-shadow: 0 6px 18px #2132682e;
 }
+.phone :is(.approved-hero, .approved-identity.civic-pattern-card, .digital-card-0) {
+  position: relative;
+  isolation: isolate;
+  background: radial-gradient(ellipse at 100% 112%, #79314f, transparent 63%),
+    linear-gradient(140deg, #171b38, #0c132c 57%, #302039);
+  box-shadow: 0 6px 18px #33204435;
+}
+.phone :is(.approved-hero, .approved-identity.civic-pattern-card, .digital-card-0)::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(140deg, #7b334f, #e98a79 72%, #c36b80);
+  mask: url('/document-guilloche.svg') right bottom / cover no-repeat;
+}
 .phone .digital-card-1 { --document-ink: #142941; --document-edge: #2f4a72; }
 .phone .digital-card-2 { --document-ink: #152b39; --document-edge: #2c4c65; }
 .phone .digital-card-3 { --document-ink: #102e35; --document-edge: #2b505b; }
@@ -450,10 +467,37 @@
   width: 100%;
   min-height: 0;
 }
+.presentation[data-surface="simulator"] {
+  background: #11152a url('/warsaw-sunset.png') center / cover no-repeat;
+}
 .presentation[data-surface="simulator"][data-fit="true"] { height: 100dvh; }
 .presentation[data-surface="simulator"][data-fit="true"] .simulator-stage { flex: 1 1 0; }
-.presentation[data-surface="simulator"] :is(.presentation-header, .presentation-footer) { flex: none; }
-.presentation[data-surface="simulator"] .presentation-header { gap: 8px; flex-wrap: wrap; }
+.presentation[data-surface="simulator"] :is(.presentation-header, .presentation-footer) {
+  flex: none;
+  color: #faf6ff;
+}
+.presentation[data-surface="simulator"] .presentation-header {
+  gap: 8px;
+  flex-wrap: wrap;
+  max-width: 1460px;
+}
+.presentation[data-surface="simulator"] .presentation-header > a > span:last-child {
+  color: inherit;
+  border-color: #f1e8f780;
+}
+.presentation[data-surface="simulator"] .presentation-actions button {
+  color: inherit;
+  border-color: #f1e8f780;
+  background: #11152adb;
+}
+.presentation[data-surface="simulator"] .presentation-actions button:hover { background: #2a2540; }
+.presentation[data-surface="simulator"] :is(.presentation-header, .presentation-footer) :focus-visible {
+  outline: 2px solid #f1b9ae;
+  outline-offset: 3px;
+}
+.presentation[data-surface="simulator"] .phone-shell {
+  box-shadow: 0 0 0 2px #948aa7, 0 22px 58px #060818b3;
+}
 .presentation:is([data-surface="app"], [data-surface="embedded"]) {
   min-height: 100dvh;
   padding: 0;
