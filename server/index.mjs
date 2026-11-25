@@ -11,10 +11,9 @@ import { serveBuild } from "./static.mjs";
 import { collaborationState } from "./state.mjs";
 import { createWorkflows } from "./workflows.mjs";
 import { controlIntent, workflowReply } from "./workflow-assistant.mjs";
-export function createAssistantServer(env = process.env, { clock } = {}) {
+export function createAssistantServer(env = process.env, { clock, storageFor = (name) => collaborationState(env.MOST_STATE_DIR, name), limits = new Map() } = {}) {
   const appOrigin = env.APP_ORIGIN || env.RENDER_EXTERNAL_URL;
-  const limits = new Map();
-  function persisted(name, create, storage = collaborationState(env.MOST_STATE_DIR, name), auditErrors = false) {
+  function persisted(name, create, storage = storageFor(name), auditErrors = false) {
     const { state, save, restore } = storage;
     const handler = create(state);
     return (req, reply, body) => handler(req, (status, data) => {
@@ -28,9 +27,9 @@ export function createAssistantServer(env = process.env, { clock } = {}) {
     }, body);
   }
   const family = persisted("family", createFamilyHandler);
-  const mostStorage = collaborationState(env.MOST_STATE_DIR, "most");
+  const mostStorage = storageFor("most");
   const control = createMostControl(mostStorage.state, clock);
-  const workflows = createWorkflows(collaborationState(env.MOST_STATE_DIR, "workflows"), clock, mostStorage.state.sessions, control);
+  const workflows = createWorkflows(storageFor("workflows"), clock, mostStorage.state.sessions, control);
   const mostApi = createMostHandler(clock, mostStorage.state, workflows.assignments, control);
   const most = persisted("most", () => mostApi, mostStorage, true);
   const controlHandler = persisted("most", () => control.handler, mostStorage, true);

@@ -46,9 +46,9 @@ Pod `/?pokaz=most3` oba telefony mają własne Dokumenty, Sprawy, Usługi, Dane 
 
 ## Uruchomienie i publikacja
 
-Vercel buduje frontend z `dist` i przekazuje `/api/*` pod adres `MOST_BACKEND_URL`. Ustaw tę zmienną na pełny adres HTTPS backendu bez ścieżki przed wdrożeniem.
+Zaimportuj repozytorium do Vercela jako projekt Vite. Utwórz projekt PostgreSQL na planie Free w Neon i dodaj jego adres połączenia z włączonym poolingiem jako `DATABASE_URL` w zmiennych środowiskowych Vercela. Zostaw `MOST_BACKEND_URL` puste, aby korzystać z API w Vercelu. Funkcja tworzy tabelę stanu przy pierwszym wywołaniu. Termin i ważność uprawnień są sprawdzane przy odczycie Centrum kontroli.
 
-Backend można uruchomić z istniejącego `Dockerfile` jako jedną usługę HTTP na porcie 8080. W Northflank wybierz **Developer Sandbox**. Jeśli panel udostępnia trwały wolumen w tym planie, podłącz go w `/var/lib/most` i sprawdź, czy użytkownik kontenera może w nim zapisywać. Ustaw `APP_ORIGIN` na adres HTTPS aplikacji w Vercelu bez końcowego ukośnika.
+Jeśli API działa na osobnym serwerze, zamiast `DATABASE_URL` ustaw `MOST_BACKEND_URL` na jego pełny adres HTTPS bez ścieżki. W środowisku tego serwera ustaw `APP_ORIGIN` na adres aplikacji w Vercelu.
 
 Tryb demonstracyjny działa bez klucza. Aby włączyć własny model, dodaj w zakładce **Environment** usługi `ASSISTANT_PROVIDER=compatible`, `MODEL_BASE_URL`, `MODEL_NAME` i `MODEL_API_KEY`. Po wdrożeniu sprawdź publiczne ścieżki `/api/health` i `/?start=most-hub`.
 
