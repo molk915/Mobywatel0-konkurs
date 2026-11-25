@@ -46,7 +46,9 @@ Pod `/?pokaz=most3` oba telefony mają własne Dokumenty, Sprawy, Usługi, Dane 
 
 ## Uruchomienie i publikacja
 
-Render może obsłużyć aplikację i API pod jednym publicznym adresem. Plik `render.yaml` definiuje jedną płatną usługę Node w regionie Frankfurt oraz trwały dysk 1 GB w `/var/data`. Po dodaniu tego pliku do repozytorium na GitHubie wybierz **New → Blueprint** w panelu Render, połącz repozytorium i sprawdź koszt przed utworzeniem usługi. Render ustawia publiczny adres aplikacji automatycznie. W razie użycia osobnego frontendu ustaw w środowisku backendu `APP_ORIGIN` na jego pełny adres HTTPS.
+Vercel buduje frontend z `dist` i przekazuje `/api/*` pod adres `MOST_BACKEND_URL`. Ustaw tę zmienną na pełny adres HTTPS backendu bez ścieżki przed wdrożeniem.
+
+Backend można uruchomić z istniejącego `Dockerfile` jako jedną usługę HTTP na porcie 8080. W Northflank wybierz **Developer Sandbox**. Jeśli panel udostępnia trwały wolumen w tym planie, podłącz go w `/var/lib/most` i sprawdź, czy użytkownik kontenera może w nim zapisywać. Ustaw `APP_ORIGIN` na adres HTTPS aplikacji w Vercelu bez końcowego ukośnika.
 
 Tryb demonstracyjny działa bez klucza. Aby włączyć własny model, dodaj w zakładce **Environment** usługi `ASSISTANT_PROVIDER=compatible`, `MODEL_BASE_URL`, `MODEL_NAME` i `MODEL_API_KEY`. Po wdrożeniu sprawdź publiczne ścieżki `/api/health` i `/?start=most-hub`.
 
