@@ -465,7 +465,7 @@ function GrantWizard({ view, launch, busy, send, onClose }: { view: ControlView;
         if (result?.authorization) { setAuthorization(result.authorization); setStep(3); }
       }}>Przejdź do potwierdzenia</button>}
       {step === 3 && <button className="most-button most-primary" disabled={busy || verifying} onClick={() => void confirm()}>
-        {authorization?.method === "passkey" ? "Potwierdź kluczem dostępu" : "Potwierdź dostęp w demo"}
+        {authorization?.method === "passkey" ? "Potwierdź kluczem dostępu" : "Potwierdź dostęp"}
       </button>}
       {step > (launch.resource ? 1 : 0) && <button className="most-button most-secondary" disabled={busy || verifying} onClick={() => setStep(step - 1)}>Poprzedni krok</button>}
     </div>
@@ -518,11 +518,11 @@ function FormalDocument({ grant, send, busy }: { grant: Grant; send: Send; busy:
   const item = grant.formal;
   const act = (type: string, extra = {}) => send({ type, id: grant.id, ...extra });
   const visible = preview?.status === item?.status && preview?.version === item?.version ? preview?.text : "";
-  return <section className="control-formal" aria-label="Formalne pełnomocnictwo w symulacji">
-    <h4>Formalne pełnomocnictwo · symulacja</h4>
-    <p>Ścieżka pokazowa dokumentu. Wszystkie podpisy i statusy organu w tej sekcji są symulowane.</p>
+  return <section className="control-formal" aria-label="Projekt pełnomocnictwa">
+    <h4>Projekt pełnomocnictwa</h4>
+    <p>Przygotuj dokument do tej sprawy i przejdź przez próbny podpis. Projekt nie zostanie złożony w urzędzie.</p>
     {grant.status === "active" && (!item || item.status === "rejected-demo") && <>
-      <button className="most-button most-secondary" disabled={busy} onClick={() => void act("formal-draft", { procedure })}>Przygotuj dokument demo</button>
+      <button className="most-button most-secondary" disabled={busy} onClick={() => void act("formal-draft", { procedure })}>Przygotuj projekt pełnomocnictwa</button>
     </>}
     {item && <>
       <p><strong>{signatureStatus[item.status]}</strong> · wersja {item.version}</p>
@@ -545,13 +545,13 @@ function FormalDocument({ grant, send, busy }: { grant: Grant; send: Send; busy:
       <label className="control-field">Symulowana metoda podpisu<select value={method} onChange={(event) => setMethod(event.target.value)}>
         {(item.methods ?? [method]).map((option) => <option key={option} value={option}>{methodLabels[option]}</option>)}
       </select></label>
-      <button className="most-button most-secondary" disabled={busy} onClick={() => void act("formal-method", { method })}>Wybierz metodę demo</button>
+      <button className="most-button most-secondary" disabled={busy} onClick={() => void act("formal-method", { method })}>Zapisz metodę podpisu</button>
     </>}
-    {grant.status === "active" && item?.status === "awaiting" && <button className="most-button most-primary" disabled={busy} onClick={() => void act("formal-sign", { confirmDemo: true })}>Potwierdź symulację podpisu</button>}
-    {grant.status === "active" && item?.status === "signed-demo" && <button className="most-button most-secondary" disabled={busy} onClick={() => void act("formal-review")}>Przekaż do weryfikacji demo</button>}
+    {grant.status === "active" && item?.status === "awaiting" && <button className="most-button most-primary" disabled={busy} onClick={() => void act("formal-sign", { confirmDemo: true })}>Potwierdź próbny podpis</button>}
+    {grant.status === "active" && item?.status === "signed-demo" && <button className="most-button most-secondary" disabled={busy} onClick={() => void act("formal-review")}>Przekaż do sprawdzenia</button>}
     {grant.status === "active" && item?.status === "pending-demo" && <div className="control-actions">
-      <button className="most-button most-secondary" disabled={busy} onClick={() => void act("formal-result", { accept: true })}>Zapisz wynik symulacji</button>
-      <button className="most-button control-danger" disabled={busy} onClick={() => void act("formal-result", { accept: false })}>Zasymuluj odrzucenie</button>
+      <button className="most-button most-secondary" disabled={busy} onClick={() => void act("formal-result", { accept: true })}>Oznacz dokument jako sprawdzony</button>
+      <button className="most-button control-danger" disabled={busy} onClick={() => void act("formal-result", { accept: false })}>Oznacz dokument jako odrzucony</button>
     </div>}
   </section>;
 }

@@ -7,7 +7,7 @@ const btn = (phone: FrameLocator, name: string | RegExp) =>
 async function confirmAccess(phone: FrameLocator) {
   await btn(phone, "Sprawdź podsumowanie").click();
   await btn(phone, "Przejdź do potwierdzenia").click();
-  await btn(phone, "Potwierdź dostęp w demo").click();
+  await btn(phone, "Potwierdź dostęp").click();
 }
 
 test("two-phone dashboard keeps a draft, hands it to Ewa, and shows only Kacper's assigned cases", async ({ page }, testInfo) => {
@@ -87,13 +87,13 @@ test("two-phone dashboard keeps a draft, hands it to Ewa, and shows only Kacper'
   await btn(ewa, /^Sprawdź szkic Wezwanie/).click();
   await expect(ewa.getByText(/W imieniu Ewy składam odpowiedź/)).toBeVisible();
   await btn(ewa, "Uzupełnij pakiet").click();
-  await btn(ewa, "Wstaw adres demo").click();
+  await btn(ewa, "Użyj przykładowego adresu").click();
   await btn(ewa, "Zapisz formularz").click();
-  await btn(ewa, "Dołącz kopię demonstracyjną").click();
+  await btn(ewa, "Użyj przykładowej umowy").click();
   await btn(ewa, "Przekaż do zatwierdzenia").click();
   await btn(ewa, "Zatwierdź pakiet").click();
-  await btn(ewa, "Wyślij odpowiedź (demo)").click();
-  await expect(ewa.getByText("Odpowiedź przyjęta przez system demonstracyjny.")).toBeVisible();
+  await btn(ewa, "Wyślij odpowiedź").click();
+  await expect(ewa.getByText("Zapisano potwierdzenie wysyłki.")).toBeVisible();
   await btn(ewa, "Wstecz").click();
   await btn(kacper, "Wstecz").click();
   await expect(sharedCases.getByText("Zakończona", { exact: true })).toBeVisible();

@@ -16,7 +16,7 @@ Prototyp działa bez logowania i korzysta z fikcyjnych danych. W jednej karcie m
 
 Główny link prowadzi do `/?start=most-hub` na publicznej domenie. Cały scenariusz można przejść w jednej karcie.
 
-1. W **MOST → Moje** u Ewy wybierz **Przekaż sprawę Mandat drogowy**. Sprawdź zakres, przejdź do potwierdzenia i wybierz **Potwierdź dostęp w demo**.
+1. W **MOST → Moje** u Ewy wybierz **Przekaż sprawę Mandat drogowy**. Sprawdź zakres, przejdź do potwierdzenia i wybierz **Potwierdź dostęp**.
 2. Kliknij nazwę profilu nad panelem MOST i wybierz Kacpra. W **Pomagam** otwórz udostępniony mandat na 150 zł.
 3. Wybierz **Opłać mandat**, zaznacz BLIK, zapisz szkic i potwierdź płatność demo.
 4. Wróć do listy spraw, przełącz profil na Ewę i otwórz **Moje**. Mandat ma status **Zakończona**. W historii sprawy widać działania Kacpra.

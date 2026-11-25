@@ -12,10 +12,10 @@ async function selectEwa(page: Page) {
   await expect(page.getByRole("dialog")).toHaveCount(0);
 }
 async function prepare(view: View) {
-  await button(view, "Wstaw adres demo").click();
+  await button(view, "Użyj przykładowego adresu").click();
   await button(view, "Zapisz formularz").click();
   await expect(view.getByText(/Zapisano adres/)).toBeVisible();
-  await button(view, "Wstaw uzasadnienie demo").click();
+  await button(view, "Wstaw propozycję uzasadnienia").click();
   await button(view, "Zapisz uzasadnienie").click();
   await expect(view.getByText("Uzasadnienie zapisane.")).toBeVisible();
 }
@@ -44,7 +44,7 @@ test("the public entry opens Ewa's case and the real invitation opens a separate
     await expect(helper.getByText("LUB/DEMO/062")).toHaveCount(0);
     await button(owner, "Przejdź do współpracy").click();
     await prepare(helper);
-    await button(helper, "Dołącz kopię demonstracyjną").click();
+    await button(helper, "Użyj przykładowej umowy").click();
     await button(helper, "Przekaż do zatwierdzenia").click();
     await page.reload();
     await button(owner, "Sprawdź przygotowaną sprawę").click();
@@ -143,8 +143,8 @@ test("Ewa routes from inbox, Kacper prepares a package in an independent session
     await button(task, "Powiadomienia").click();
     await expect(button(helper.getByRole("dialog", { name: "Powiadomienia" }), /Ewa zatwierdziła pakiet dokumentów/)).toBeVisible();
     await button(helper.getByRole("dialog", { name: "Powiadomienia" }), /Ewa zatwierdziła pakiet dokumentów/).click();
-    await button(owner, "Wyślij odpowiedź (demo)").click();
-    await expect(owner.getByText("Odpowiedź przyjęta przez system demonstracyjny.")).toBeVisible();
+    await button(owner, "Wyślij odpowiedź").click();
+    await expect(owner.getByText("Zapisano potwierdzenie wysyłki.")).toBeVisible();
     await expect(task.getByText("Wysłano odpowiedź w pokazie.", { exact: true })).toBeVisible();
     await button(owner, "Zakończ współpracę").click();
     await button(owner, "Cofnij dostęp").click();
@@ -165,14 +165,14 @@ test("desktop phones synchronize a completed checklist, reject and reset", async
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.goto(production + "/?pokaz=most");
   await expect(page.locator("iframe")).toHaveCount(0);
-  await button(page, "Rozpocznij demonstrację").click();
+  await button(page, "Otwórz sprawę Ewy").click();
   const owner = page.frameLocator('iframe[title="Telefon Ewy"]');
   const helper = page.frameLocator('iframe[title="Telefon Kacpra"]');
   await button(owner, "Poproś o pomoc").click();
   await button(owner, "Utwórz zaproszenie").click();
   await expect(helper.getByText("Pomagasz Ewie")).toBeVisible();
   await prepare(helper);
-  await button(helper, "Dołącz kopię demonstracyjną").click();
+  await button(helper, "Użyj przykładowej umowy").click();
   await button(helper, "Przekaż do zatwierdzenia").click();
   await button(owner, "Sprawdź przygotowaną sprawę").click();
   await shot(page, "desktop");

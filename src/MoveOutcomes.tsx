@@ -162,7 +162,7 @@ export function MoveOutcomes({
               {o.attachmentName}
             </button>
           )}
-          {o.status === "ready-to-send" && <button className="primary" onClick={onSend}>Wyślij zgłoszenie (demo)</button>}
+          {o.status === "ready-to-send" && <><p>Zgłoszenie zostanie zapisane w prototypie. Nie trafi do urzędu.</p><button className="primary" onClick={onSend}>Wyślij zgłoszenie</button></>}
         </article>
       ))}
       {busy && <p role="status">Zapisuję załącznik na urządzeniu…</p>}

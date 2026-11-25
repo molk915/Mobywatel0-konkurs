@@ -34,16 +34,16 @@ export function MostPresentation() {
       </header>
       <section className="most-welcome-content">
         <div>
-          <h1>Jedna sprawa.<br />Dwie osoby.<br /><em>Pełna kontrola.</em></h1>
-          <p>Zobacz, jak Ewa może bezpiecznie poprosić Kacpra o pomoc przy sprawie urzędowej.</p>
+          <h1>Ewa dostała pismo z urzędu</h1>
+          <p>Urząd potrzebuje kopii umowy najmu. Kacper przygotuje odpowiedź, a Ewa zdecyduje, czy ją wysłać.</p>
           <button className="most-button most-primary" onClick={() => {
             history.pushState(null, "", "/?pokaz=most&start=1");
             setActive(true);
-          }}>Rozpocznij demonstrację <ArrowRight size={19} /></button>
+          }}>Otwórz sprawę Ewy <ArrowRight size={19} /></button>
         </div>
         <div className="most-welcome-steps civic-pattern-card">
           <WavePattern />
-          <h2>Przebieg pokazu</h2>
+          <h2>Jak załatwią sprawę</h2>
           <ol>{steps.map(({ Icon, label }) => <li key={label}><span className="most-icon"><Icon size={20} /></span>{label}</li>)}</ol>
         </div>
       </section>

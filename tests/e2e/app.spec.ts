@@ -57,11 +57,16 @@ test("desktop frame, small phone and full opacity transitions", async ({
   await page.setViewportSize({ width: 1280, height: 1040 });
   await page.goto("/");
   await expect(page.locator(".phone")).toHaveCSS("width", "390px");
+  await expect(page.locator(".presentation")).toHaveAttribute("data-surface", "simulator");
+  await expect(page.locator(".phone-shell")).toBeInViewport({ ratio: 1 });
   const mainRect = await page.locator(".bottom-nav").boundingBox();
   const actionRect = await page.getByRole("button", { name: "Dodaj", exact: true }).boundingBox();
   expect(actionRect!.y + actionRect!.height).toBeLessThanOrEqual(mainRect!.y);
   await page.setViewportSize({ width: 320, height: 740 });
   await expect(page.locator(".phone")).toHaveCSS("width", "320px");
+  await expect(page.locator(".phone")).toHaveCSS("height", "740px");
+  await expect(page.locator(".presentation-header")).toBeHidden();
+  await expect(page.locator(".dynamic-island")).toBeHidden();
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth,

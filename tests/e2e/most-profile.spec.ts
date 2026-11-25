@@ -19,7 +19,7 @@ test("Ewa delegates her fine and Kacper pays it after changing profiles in the s
   await button("Przekaż sprawę Mandat drogowy").click();
   await button("Sprawdź podsumowanie").click();
   await button("Przejdź do potwierdzenia").click();
-  await button("Potwierdź dostęp w demo").click();
+  await button("Potwierdź dostęp").click();
   await expect(ownerFine).toContainText("Kacper Zieliński");
   await expect(ownerCases.getByRole("listitem").filter({ hasText: "Podatek od nieruchomości" })).toContainText("Sprawa prywatna");
   await select(/^Kacper Zieliński/);
@@ -37,7 +37,7 @@ test("Ewa delegates her fine and Kacper pays it after changing profiles in the s
   await button("Opłać mandat").click();
   await page.getByRole("radio", { name: "BLIK" }).check();
   await button("Zapisz szkic").click();
-  await button("Potwierdź płatność demo").click();
+  await button("Potwierdź płatność").click();
   await expect(page.getByText("Wykonane przez osobę zaufaną")).toBeVisible();
   await button("Wróć do spraw w MOST").click();
   await expect(shared.getByText("Zakończona", { exact: true })).toBeVisible();

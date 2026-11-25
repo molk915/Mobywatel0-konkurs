@@ -33,7 +33,7 @@ test("a paired trusted person pays only Kacper's assigned mandate and Kacper get
     await button(worker, "Opłać mandat").click();
     await worker.getByRole("radio", { name: "BLIK" }).check();
     await button(worker, "Sprawdź podsumowanie").click();
-    await button(worker, "Potwierdź płatność demo").click();
+    await button(worker, "Potwierdź płatność").click();
     const helperReceipt = worker.getByRole("link", { name: "Pobierz potwierdzenie" });
     await expect(helperReceipt).toHaveAttribute("download", /^DEMO-/);
     await expect(page.getByText("Wykonane przez osobę zaufaną")).toBeVisible();

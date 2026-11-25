@@ -5,7 +5,7 @@ import {
   ArrowRight, Car, CarFront, Check, ChevronRight, GraduationCap, Grid2X2, IdCard, Plus,
   ScanLine, ShieldCheck, Sparkles, UsersRound, X,
 } from "lucide-react";
-import { CivicHeader, CivicNav, WavePattern } from "./CivicChrome";
+import { CivicHeader, CivicNav } from "./CivicChrome";
 import { DigitalCard, documentTitles } from "./DigitalCard";
 import type { Profile, Tab } from "./domain";
 
@@ -105,8 +105,6 @@ export function DocumentSelection({ p, ids = defaultDocs, onOpen, onSave, overvi
         <div className="approved-document-list">
           {ids.includes(0) && <motion.button className="approved-hero civic-pattern-card" aria-label="mDowód" onClick={() => onOpen(0)}
             whileTap={reduced ? undefined : { scale: .988 }}>
-            <WavePattern />
-            <img className="approved-hero-watermark" src="/document-lines.svg" alt="" />
             <span className="wallet-hero-label"><i className="polish-flag" /> Dokument tożsamości</span>
             <strong>mDowód</strong>
             <span className="wallet-hero-person">{p.name}</span>
@@ -141,8 +139,7 @@ function ApprovedIdentity({ p }: { p: Profile }) {
   ];
   return (
     <article className="approved-identity civic-pattern-card">
-      <WavePattern />
-      <header><small>Dokument demonstracyjny</small><strong>mDowód</strong><img src="/document-lines.svg" alt="" /></header>
+      <header><small>Dokument demonstracyjny</small><strong>mDowód</strong></header>
       <div className="approved-identity-person">
         <img src={"/portraits/" + p.id + ".png"} alt={"Fikcyjny portret: " + p.name} />
         <span><small>Imię i nazwisko</small><strong>{p.name}</strong></span>

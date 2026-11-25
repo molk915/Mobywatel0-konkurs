@@ -190,7 +190,7 @@ export function WorkflowWorkspace({ kind, applicant, city, session, onAssistant,
               <label>Ulica i numer<input name="street" required minLength={4} maxLength={100} defaultValue={data && "street" in data ? data.street : ""} /></label>
               <label>Kod pocztowy<input name="postalCode" placeholder="00-000" pattern="[0-9]{2}-[0-9]{3}" required defaultValue={data && "street" in data ? data.postalCode : ""} /></label>
               <label>Miejscowość<input name="city" required minLength={2} maxLength={60} defaultValue={data && "street" in data ? data.city : city ?? ""} /></label>
-              {kind === "registration" ? <label>Dokument z portfela demo
+              {kind === "registration" ? <label>Dokument potwierdzający prawo do lokalu
                 <select name="basis" required defaultValue={data && "street" in data ? data.basis ?? "" : ""}>
                   <option value="">Wybierz dokument</option><option value="lease">Kopia umowy najmu</option>
                   <option value="ownership">Potwierdzenie własności</option>
@@ -198,8 +198,8 @@ export function WorkflowWorkspace({ kind, applicant, city, session, onAssistant,
               </label> : <label>Właściwy urząd skarbowy<input name="office" required minLength={4} maxLength={120} defaultValue={data && "street" in data ? data.office : ""} /></label>}
             </>}
           </form> : null}
-        {prepared && canConfirm && <p className="lead">{hasPayment ? "Potwierdzenie uruchomi płatność w systemie demo. Pieniądze pozostaną na Twoim koncie."
-          : "Potwierdzenie przekaże formularz do systemu demo. Zobaczysz wynik i numer operacji."}</p>}
+        {prepared && canConfirm && <p className="lead">{hasPayment ? "To płatność próbna. Żadne pieniądze nie zostaną pobrane."
+          : "Zgłoszenie zostanie zapisane w prototypie. Nie trafi do urzędu."}</p>}
         {prepared && !canConfirm && <p className="lead">Końcową operację zatwierdza właściciel sprawy.</p>}
       </>}
       {item && item.history.length > 0 && <details className="workflow-history">
@@ -224,7 +224,7 @@ export function WorkflowWorkspace({ kind, applicant, city, session, onAssistant,
         (prepared ? <>
           {canPrepare && <button className="text-button" disabled={busy} onClick={() => setEditing(true)}>Zmień dane</button>}
           {canConfirm && <button className="primary" disabled={busy || awaitsHelper} onClick={() => void confirm(item.revision)}>
-            {confirmFirst ? "Rozpocznij osobne potwierdzenie" : hasPayment ? "Potwierdź płatność demo" : "Wyślij zgłoszenie demo"} <Check size={18} />
+            {confirmFirst ? "Rozpocznij osobne potwierdzenie" : hasPayment ? "Potwierdź płatność" : "Wyślij zgłoszenie"} <Check size={18} />
           </button>}
           {preparesForOwner && item.approval === "draft" && <button className="primary" disabled={busy}
             onClick={() => void execute({ type: "review", id: kind, revision: item.revision })}>Przekaż do zatwierdzenia <ArrowRight size={18} /></button>}

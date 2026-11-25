@@ -206,7 +206,7 @@ function OwnerPanel({ context = "app", onClose, onGo, activeTab = "cases", onAss
         <label>Co trzeba poprawić?<textarea id="most-feedback" rows={2} value={feedback} onChange={(e) => setFeedback(e.target.value)} maxLength={500} /></label>
       </form>}
     </>;
-    action = <><p className="most-decision-effect">{view.complete ? "Zatwierdzenie zapisuje pakiet w pokazie. Bez wysyłki do urzędu."
+    action = <><p className="most-decision-effect">{view.complete ? "Po zatwierdzeniu przejdziesz do wysyłki."
       : "Kacper przekazał szkic. Uzupełnij pakiet albo prześlij uwagi."}</p><div className="most-actions">
       {reviewAction ? <button className="most-button most-secondary" onClick={() => setReviewAction(null)}>Anuluj</button>
         : <button className="most-button most-secondary" onClick={() => setReviewAction("correct")}>{hasAccess ? "Poproś o poprawki" : "Wróć do poprawek"}</button>}
@@ -269,20 +269,22 @@ function OwnerPanel({ context = "app", onClose, onGo, activeTab = "cases", onAss
             <MostProgress status={view.status} waiting={invitation.status === "waiting"} />
           </section>
         ) : <>
-          <p className="most-lead">Urząd prosi Cię o kopię dokumentu potwierdzającego prawo do lokalu.</p>
+          <p className="most-lead">Urząd prosi o potwierdzenie, że masz prawo do lokalu. Możesz dołączyć kopię umowy najmu.</p>
           <MostDeadline at={view.deadlineAt} />
           {view.status === "new" && <section className="most-next-step" aria-labelledby="most-next-step-title">
             <UserRoundPlus size={19} aria-hidden="true" />
             <div>
               <h2 id="most-next-step-title">Bliska osoba może pomóc</h2>
               <p>Kacper może uzupełnić adres i uzasadnienie oraz dołączyć kopię umowy. Ty sprawdzisz i zatwierdzisz gotowy pakiet.</p>
+              <button className="most-inline" onClick={() => go("tasks")}>Przygotuj odpowiedź samodzielnie <ArrowRight size={16} /></button>
             </div>
           </section>}
         </>}
         <MostNotice live tone={view.status === "finished" ? "success" : "info"}>{statusLabels[view.status]}</MostNotice>
         {view.status === "finished" && (view.sentAt
           ? <section className="most-proposal">
-            <MostNotice live tone="success">Odpowiedź przyjęta przez system demonstracyjny.</MostNotice>
+            <MostNotice live tone="success">Zapisano potwierdzenie wysyłki.</MostNotice>
+            <p>Potwierdzenie dotyczy prototypu. Odpowiedź nie trafiła do urzędu.</p>
             {view.receipt && <>
               <p>Numer potwierdzenia <strong>{view.receipt.number}</strong></p>
               <p>{timelineDate.format(new Date(view.receipt.at))} · Urząd Miasta Lublin (demo)</p>
@@ -296,8 +298,9 @@ function OwnerPanel({ context = "app", onClose, onGo, activeTab = "cases", onAss
             {!invitation && <button className="most-inline" onClick={() => go("history")}>Historia wysyłki</button>}
           </section>
           : <section className="most-proposal">
-            <p>Adresat: Urząd Miasta Lublin. Wysyłka zapisze potwierdzenie demonstracyjne.</p>
-            <button className="most-button most-primary" disabled={locked} onClick={() => void act({ type: "send", reviewId: view.work.reviewId })}>Wyślij odpowiedź (demo) <ArrowRight size={17} /></button>
+            <p><strong>Odbiorca:</strong> {view.document?.office ?? "Urząd Miasta Lublin"}</p>
+            <p>W prototypie zapiszesz potwierdzenie. Odpowiedź nie trafi do urzędu.</p>
+            <button className="most-button most-primary" disabled={locked} onClick={() => void act({ type: "send", reviewId: view.work.reviewId })}>Wyślij odpowiedź <ArrowRight size={17} /></button>
           </section>)}
         {ready && (
           <section className="most-proposal" aria-label="Sprawa gotowa">
@@ -321,7 +324,7 @@ function OwnerPanel({ context = "app", onClose, onGo, activeTab = "cases", onAss
         </div>}
         <button className="most-inline" onClick={() => go("explain")}>Wyjaśnij pismo <ArrowRight size={16} /></button>
         {onAssistant && <button className="most-inline" onClick={onAssistant}><Sparkles size={16} /> Zapytaj asystenta o pismo</button>}
-        {!ready && !["finished", "rejected"].includes(view.status) && <button className="most-inline" onClick={() => go("tasks")}>Uzupełnij dokumenty <ArrowRight size={16} /></button>}
+        {!ready && (invitation || view.status !== "new") && !["finished", "rejected"].includes(view.status) && <button className="most-inline" onClick={() => go("tasks")}>Przygotuj odpowiedź samodzielnie <ArrowRight size={16} /></button>}
         {!invitation && view.status === "finished" && <PackageSummary view={view} />}
         {hasAccess && invitation && <ScopeSummary scope={invitation.scope} />}
       </>

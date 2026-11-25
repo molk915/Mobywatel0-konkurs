@@ -1,6 +1,7 @@
 import { chatCompletion } from "./assistant.mjs";
 import { fineDueDate, formatWorkflowDay, workflowActions, workflowDetails, workflowStatus } from "../src/workflows/model.ts";
 import { DemoAssistant, profiles } from "../src/domain.ts";
+import { formatMostDeadline } from "../src/most/model.ts";
 
 const tools = [{
   type: "function",
@@ -18,6 +19,8 @@ const tools = [{
 const normalize = (text) => text.toLowerCase().normalize("NFD").replace(/\p{M}/gu, "").replaceAll("ł", "l");
 function demoIntent(text, context) {
   const value = normalize(text);
+  if (/\b(moje|jakie|otwarte|biezace|wszystkie|lista) spraw|co mam do zrobienia/.test(value)) return "cases";
+  if (context === "letter" && /termin|do kiedy|ile (mam|zostalo) czasu/.test(value)) return "letter";
   if (/pomoc|pomoze|kacper|przekaz/.test(value)) return "help";
   if (/mandat|grzywn/.test(value)) return "fine";
   if (/podat/.test(value)) return "tax";
@@ -26,6 +29,21 @@ function demoIntent(text, context) {
   if (/status|spraw[ay]|co dalej|^(tak|jasne|dobrze|kontynuuj)[.!? ]*$/.test(value))
     return context ?? "cases";
   return context;
+}
+
+function explainLetter(letter, question) {
+  if (letter.receipt) return "Odpowiedź przyjęta w systemie demonstracyjnym. Numer: " + letter.receipt.number + ".";
+  if (/termin|do kiedy|ile (mam|zostalo) czasu/.test(normalize(question)))
+    return "Termin odpowiedzi: " + formatMostDeadline(letter.deadlineAt) + ".";
+  if (letter.status === "review") return "Pakiet czeka na Twoje zatwierdzenie. Sprawdź treść odpowiedzi i załącznik przed podjęciem decyzji.";
+  if (letter.status === "finished") return "Pakiet został zatwierdzony. Otwórz pismo, żeby przejść do wysyłki demonstracyjnej.";
+  if (letter.status === "rejected") return "Pakiet został odrzucony. Szczegóły znajdziesz w historii sprawy.";
+  const { attachment, address, reason } = letter.work ?? {};
+  const missing = [!address && "adres lokalu", !attachment && "kopia umowy najmu", !reason && "uzasadnienie"].filter(Boolean);
+  if (letter.status === "correction") return "W sprawie są uwagi do poprawienia. Otwórz szkic, aby je przeczytać.";
+  if (!missing.length) return "Pakiet jest kompletny. Możesz go przejrzeć.";
+  if (/brak|co dalej|co mam teraz/.test(normalize(question))) return "Do uzupełnienia: " + missing.join(", ") + ".";
+  return attachment ? "Załącznik jest zapisany w sprawie." : "Urząd prosi o kopię umowy najmu jako potwierdzenie prawa do lokalu.";
 }
 
 export async function controlIntent(text, allowed, env) {
@@ -81,13 +99,9 @@ export async function workflowReply(body, session, letter, env, request = fetch)
     if (!letter) return action === "letter" ? null : {
       text: "Otwórz sprawę i sprawdź dostępne opcje pomocy.", workflowAction: "cases", fallback,
     };
-    output = letter.receipt
-      ? "Odpowiedź przyjęta w systemie demonstracyjnym. Numer: " + letter.receipt.number + "."
-      : action === "help" ? "W MOST możesz wybrać zakres pomocy Kacpra i wysłać mu zaproszenie. Odpowiedź wyślesz po własnym zatwierdzeniu."
-        : letter.status === "review" ? "Pakiet czeka na Twoje zatwierdzenie."
-          : letter.work?.attachment ? "Załącznik jest zapisany w sprawie. " +
-            (letter.work.address && letter.work.reason ? "Możesz sprawdzić i zatwierdzić odpowiedź." : "Uzupełnij brakujące dane odpowiedzi w formularzu.")
-          : "Urząd prosi o kopię umowy najmu. Otwórz pismo, aby uzupełnić adres i dołączyć dokument.";
+    output = action === "help" && !letter.receipt
+      ? "W MOST możesz wybrać zakres pomocy Kacpra i wysłać mu zaproszenie. Odpowiedź wyślesz po własnym zatwierdzeniu."
+      : explainLetter(letter, text);
   } else if (action === "move") {
     output = "Podaj nowy adres w formularzu. Możesz przesłać zgłoszenie pobytu stałego albo zaktualizować adres w urzędzie skarbowym. Każda operacja ma osobne potwierdzenie demonstracyjne.";
     const profileName = profiles.find(({ id }) => id === session.profile)?.first;
@@ -95,7 +109,12 @@ export async function workflowReply(body, session, letter, env, request = fetch)
     suggestedData = suggestion.suggestedData;
     if (suggestedData?.city) output += " W formularzu podpowiem miejscowość " + suggestedData.city + ".";
   } else {
-    output = "W Sprawach znajdziesz bieżące działania tego profilu, rozpoczęte formularze i potwierdzenia.";
+    const pending = session.items.filter(({ status }) => ["new", "prepared", "failed"].includes(status));
+    const tasks = pending.map((item) => workflowDetails[item.kind].title + " · " + workflowStatus[item.status]);
+    if (letter && !letter.receipt && letter.status !== "rejected") tasks.push("Pismo z urzędu · " +
+      (letter.status === "review" ? "do sprawdzenia" : letter.status === "finished" ? "do wysłania w demo" : "do uzupełnienia"));
+    output = tasks.length ? "Sprawy wymagające działania w tym profilu:\n• " + tasks.join("\n• ")
+      : "W sprawdzonych sprawach tego profilu nie ma teraz zadań do wykonania.";
   }
   return { text: output, workflowAction: action, fallback, ...(suggestedData && { suggestedData }) };
 }

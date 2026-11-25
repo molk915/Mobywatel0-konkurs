@@ -23,13 +23,13 @@ test("Kacper opens the real demo mandate through chat, retries and restores the 
   await button(page, "Opłać mandat").click();
   await page.getByRole("radio", { name: "Płatność testowo odrzucona" }).check();
   await button(page, "Sprawdź podsumowanie").click();
-  await button(page, "Potwierdź płatność demo").click();
+  await button(page, "Potwierdź płatność").click();
   await expect(page.getByRole("alert")).toContainText("została odrzucona");
   await page.getByRole("radio", { name: "BLIK" }).check();
   await button(page, "Sprawdź podsumowanie").click();
   await expect(page.getByRole("heading", { name: "Sprawdź podsumowanie" })).toBeVisible();
   await expect(page.getByText("Tryb demonstracyjny", { exact: true })).toBeInViewport();
-  await button(page, "Potwierdź płatność demo").click();
+  await button(page, "Potwierdź płatność").click();
   await expect(page.getByRole("heading", { name: "Opłacony" })).toBeVisible();
   const receipt = page.getByRole("link", { name: "Pobierz potwierdzenie" });
   const download = await receipt.getAttribute("download");
@@ -52,12 +52,12 @@ test("moving opens two forms, reuses the address and stores separate results", a
   await page.getByLabel("Ulica i numer").fill("Jasna 8/12");
   await page.getByLabel("Kod pocztowy").fill("00-013");
   await page.getByLabel("Miejscowość").fill("Warszawa");
-  await page.getByLabel("Dokument z portfela demo").selectOption("lease");
+  await page.getByLabel("Dokument potwierdzający prawo do lokalu").selectOption("lease");
   await button(page, "Sprawdź podsumowanie").click();
   await expect(page.getByRole("heading", { name: "Sprawdź podsumowanie" })).toBeVisible();
   await page.reload();
   await expect(page.getByText("Jasna 8/12, 00-013 Warszawa")).toBeVisible();
-  await button(page, "Wyślij zgłoszenie demo").click();
+  await button(page, "Wyślij zgłoszenie").click();
   await expect(page.getByRole("heading", { name: "Zgłoszenie przyjęte · oczekuje na rozpatrzenie" })).toBeVisible();
   const first = await page.getByRole("link", { name: "Pobierz potwierdzenie" }).getAttribute("download");
   await button(page, "Wróć do spraw").click();
@@ -67,7 +67,7 @@ test("moving opens two forms, reuses the address and stores separate results", a
   await expect(page.getByLabel("Ulica i numer")).toHaveValue("Jasna 8/12");
   await page.getByLabel("Właściwy urząd skarbowy").fill("Urząd Skarbowy Warszawa-Śródmieście");
   await button(page, "Sprawdź podsumowanie").click();
-  await button(page, "Wyślij zgłoszenie demo").click();
+  await button(page, "Wyślij zgłoszenie").click();
   const second = page.getByRole("link", { name: "Pobierz potwierdzenie" });
   await expect(second).toHaveAttribute("download", /^DEMO-/);
   expect(await second.getAttribute("download")).not.toBe(first);
@@ -79,22 +79,22 @@ test("Ewa submits a file through the shared MOST letter and reopens its receipt"
   await button(page, /Zapytaj o swoje sprawy/).click();
   await button(page, "Nie rozumiem pisma z urzędu").click();
   await button(page, /^Otwórz pismo i dokumenty/).click();
-  await button(page, "Uzupełnij dokumenty").click();
+  await button(page, "Przygotuj odpowiedź samodzielnie").click();
   await expect(button(page, "Przekaż do zatwierdzenia")).toBeDisabled();
-  await button(page, "Wstaw adres demo").click();
+  await button(page, "Użyj przykładowego adresu").click();
   await button(page, "Zapisz formularz").click();
   await expect(page.getByText(/Zapisano adres/)).toBeVisible();
   await page.getByLabel("Dodaj plik z urządzenia").setInputFiles({
     name: "Umowa testowa.pdf", mimeType: "application/pdf", buffer: Buffer.from("%PDF-1.4 demo"),
   });
   await expect(page.getByText("Umowa testowa.pdf", { exact: true })).toBeVisible();
-  await button(page, "Wstaw uzasadnienie demo").click();
+  await button(page, "Wstaw propozycję uzasadnienia").click();
   await button(page, "Zapisz uzasadnienie").click();
   await button(page, "Przekaż do zatwierdzenia").click();
   await expect(page.getByText("Umowa testowa.pdf", { exact: true })).toBeVisible();
   await button(page, "Zatwierdź pakiet").click();
-  await button(page, "Wyślij odpowiedź (demo)").click();
-  await expect(page.getByText("Odpowiedź przyjęta przez system demonstracyjny.")).toBeVisible();
+  await button(page, "Wyślij odpowiedź").click();
+  await expect(page.getByText("Zapisano potwierdzenie wysyłki.")).toBeVisible();
   const receipt = page.getByRole("link", { name: "Pobierz potwierdzenie" });
   const id = await receipt.getAttribute("download");
   expect(id).toMatch(/^DEMO-UP-/);
@@ -115,14 +115,14 @@ test("Kacper prepares Ewa's letter, corrects it, and Ewa sends the same package"
   try {
     const helper = await independent.newPage();
     await helper.goto(link!);
-    await button(helper, "Wstaw adres demo").click();
+    await button(helper, "Użyj przykładowego adresu").click();
     await button(helper, "Zapisz formularz").click();
     await expect(helper.getByText(/Zapisano adres/)).toBeVisible();
-    await button(helper, "Dołącz kopię demonstracyjną").click();
-    await button(helper, "Wstaw uzasadnienie demo").click();
+    await button(helper, "Użyj przykładowej umowy").click();
+    await button(helper, "Wstaw propozycję uzasadnienia").click();
     await button(helper, "Zapisz uzasadnienie").click();
     await button(helper, "Przekaż do zatwierdzenia").click();
-    await expect(button(helper, "Wyślij odpowiedź (demo)")).toHaveCount(0);
+    await expect(button(helper, "Wyślij odpowiedź")).toHaveCount(0);
 
     await button(page, "Sprawdź przygotowaną sprawę").click();
     await button(page, "Poproś o poprawki").click();
@@ -138,7 +138,7 @@ test("Kacper prepares Ewa's letter, corrects it, and Ewa sends the same package"
     await expect(page.getByRole("definition").filter({ hasText: reason })).toBeVisible();
     await expect(page.getByText("Zmieniono", { exact: true })).toBeVisible();
     await button(page, "Zatwierdź pakiet").click();
-    await button(page, "Wyślij odpowiedź (demo)").click();
+    await button(page, "Wyślij odpowiedź").click();
     await expect(page.getByRole("link", { name: "Pobierz potwierdzenie" })).toBeVisible();
     await button(page, "Zakończ współpracę").click();
     await button(page, "Cofnij dostęp").click();

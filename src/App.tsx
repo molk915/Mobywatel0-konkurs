@@ -1,4 +1,4 @@
-import { eventLabels, statusLabels as mostCaption } from "./most/model";
+import { eventLabels, formatMostDeadline, statusLabels as mostCaption } from "./most/model";
 import { MostRow } from "./most/components";
 import { Inbox, type InboxItem } from "./Inbox";
 import { healthCaption, type HealthTarget } from "./health/model";
@@ -112,9 +112,10 @@ import {
 } from "./attachments";
 
 const serverAI = import.meta.env.VITE_ASSISTANT_MODE === "server";
-const previewScale = () => window.innerWidth <= 600 ? 1 : Math.min(1, (window.innerHeight - 112) / 862);
+const fullScreenQuery = "(max-width: 600px), (max-width: 1024px) and (max-height: 560px) and (pointer: coarse), (display-mode: standalone)";
 const demoAssistant = new DemoAssistant();
 const assistant = serverAI ? new ServerAssistant() : demoAssistant;
+const letterSuggestion = "W odpowiedzi na wezwanie wskazuję adres lokalu w formularzu. Kopia umowy najmu stanowi dokument potwierdzający moje prawo do lokalu.";
 const iconFor = (k: CaseKind) =>
   k === "move" ? House : k === "wallet" ? ShieldCheck : FileText;
 const dateLabel = (s: string) =>
@@ -257,14 +258,17 @@ export default function App() {
   const inboxRef = useRef<HTMLDivElement>(null);
   const replaceNotificationEntry = useRef(false);
   const [closing, setClosing] = useState(false);
-  const [fitPreference, setFitPreference] = useState<boolean | null>(null);
+  const [fitPreview, setFitPreview] = useState(true);
   const [documentQuery, setDocumentQuery] = useState("");
   const [selectedDocument, setSelectedDocument] = useState(0);
   const [toast, setToast] = useState("");
   const [online, setOnline] = useState(navigator.onLine);
   const [saveFailed, setSaveFailed] = useState(false);
-  const [deviceScale, setDeviceScale] = useState(previewScale);
-  const fitPreview = fitPreference ?? deviceScale < .98;
+  const [fullScreen, setFullScreen] = useState(() => window.matchMedia(fullScreenQuery).matches);
+  const [deviceScale, setDeviceScale] = useState(1);
+  const simulator = !showcasePhone && !fullScreen;
+  const stageRef = useRef<HTMLDivElement>(null);
+  const shellRef = useRef<HTMLDivElement>(null);
   const historyReady = useRef(false);
   const historyPop = useRef(false);
   const storeRef = useRef(store);
@@ -441,10 +445,23 @@ export default function App() {
     setSaveFailed(!saveStore(store, showcasePhone));
   }, [store, showcasePhone]);
   useEffect(() => {
-    const resize = () => setDeviceScale(previewScale());
-    window.addEventListener("resize", resize);
-    return () => window.removeEventListener("resize", resize);
+    const query = window.matchMedia(fullScreenQuery);
+    const update = () => setFullScreen(query.matches);
+    query.addEventListener("change", update);
+    update();
+    return () => query.removeEventListener("change", update);
   }, []);
+  useLayoutEffect(() => {
+    const stage = stageRef.current;
+    const shell = shellRef.current;
+    if (!simulator || !fitPreview || !stage || !shell) return;
+    const fit = () => setDeviceScale(Math.min(1, stage.clientWidth / shell.offsetWidth, stage.clientHeight / shell.offsetHeight));
+    const observer = new ResizeObserver(fit);
+    observer.observe(stage);
+    observer.observe(shell);
+    fit();
+    return () => observer.disconnect();
+  }, [simulator, fitPreview]);
   useEffect(() => {
     const timer = setInterval(
       () =>
@@ -731,7 +748,8 @@ export default function App() {
   const visibleDocuments = searchDocuments(documentQuery, extra);
   const access = layer?.type === "access" ? c.access.find(({ id }) => id === layer.access.id) ?? layer.access : undefined;
   return (
-    <div className={"presentation " + (store.largeText ? "large-text" : "")}>
+    <div className={"presentation " + (store.largeText ? "large-text" : "")}
+      data-surface={simulator ? "simulator" : showcasePhone ? "embedded" : "app"} data-fit={simulator && fitPreview}>
       <header className="presentation-header" inert={!!layer || inboxOpen}>
         <a
           href="#"
@@ -746,7 +764,7 @@ export default function App() {
         </a>
         <div className="presentation-actions">
           <button
-            onClick={() => setFitPreference(!fitPreview)}
+            onClick={() => setFitPreview(!fitPreview)}
             aria-pressed={fitPreview}
           >
             {fitPreview ? "Rozmiar 100%" : "Dopasuj do okna"}
@@ -758,9 +776,11 @@ export default function App() {
           </button>
         </div>
       </header>
+      <div className="simulator-stage" ref={stageRef}>
       <div
         className="phone-shell"
-        style={{ zoom: fitPreview ? Math.max(0.4, deviceScale) : 1 }}
+        ref={shellRef}
+        style={simulator && fitPreview ? { zoom: deviceScale } : undefined}
       >
         <span className="hardware-button volume-one" />
         <span className="hardware-button volume-two" />
@@ -1541,6 +1561,7 @@ export default function App() {
           <div className="home-indicator" aria-hidden="true" />
         </div>
       </div>
+      </div>
       <footer className="presentation-footer" inert={!!layer || inboxOpen}>
         <button onClick={() => setLayer({ type: "about" })}>
           O koncepcji
@@ -1816,6 +1837,10 @@ function Flow({
   const last = d.step === meta.steps.length - 1;
   const directReply = d.kind === "letter" && d.data.directReply === "true";
   const canSendDirectly = directReply && d.step === 2;
+  const nextAction = canSendDirectly ? "Wyślij odpowiedź" : last
+    ? { move: "Zapisz plan przeprowadzki", wallet: "Zapisz plan ochrony", letter: "Zapisz szkic odpowiedzi" }[d.kind]
+    : { move: ["Podaj nowy adres", "Wybierz formalności", "Sprawdź plan"], wallet: ["Sprawdź plan ochrony", "Przejdź do podsumowania"],
+        letter: ["Wyjaśnij pismo", "Przygotuj odpowiedź", "Sprawdź szkic"] }[d.kind][d.step] ?? "Dalej";
   const analysis = analyzeLetter(d.data.text || "");
   const lastStep = useRef(d.step);
   const direction = d.step < lastStep.current ? "back" : "forward";
@@ -2224,7 +2249,7 @@ function Flow({
               }
             >
               <Sparkles size={16} />
-              Wstaw szkic demonstracyjny
+              Wstaw propozycję odpowiedzi
             </button>
             {d.data.reply === "document" && (
               <AttachmentEditor draft={d} onSave={onSave} />
@@ -2384,8 +2409,7 @@ function Flow({
             >
               <h3>Ty decydujesz, co dalej</h3>
               <p>
-                Asystent przygotował plan. Dopiero Twoja zgoda zapisze wynik tej
-                symulacji.
+                Sprawdź podsumowanie przed zapisaniem.
               </p>
               <dl>
                 <div>
@@ -2418,7 +2442,7 @@ function Flow({
               </dl>
             </section>
             <CheckOption
-              label="Rozumiem i zatwierdzam symulację"
+              label="Sprawdziłem dane i chcę je zapisać"
               description="Dane i operacje są demonstracyjne. Nic nie trafi do administracji ani banku."
               checked={d.data.consent === "true"}
               onChange={() => {
@@ -2448,7 +2472,7 @@ function Flow({
           {canSendDirectly ? "Wysyłka jest symulowana. Plik zostaje na urządzeniu." : "Zapis lokalny · bez wysyłania do urzędu"}
         </span>
         <button className="primary" onClick={advance}>
-          {canSendDirectly ? "Wyślij odpowiedź (demo)" : last ? "Zatwierdź symulację" : d.step === 0 ? "Zaczynamy" : "Dalej"}
+          {nextAction}
           {last ? <Check size={19} /> : <ArrowRight size={19} />}
         </button>
       </div>
@@ -2518,8 +2542,9 @@ function Assistant({
   const [showHistory, setShowHistory] = useState(false);
   const [dismissed, setDismissed] = useState<number>();
   const [embedded, setEmbedded] = useState<{ kind: WorkflowKind; city?: string } | { kind: "letter" }>();
-  const [attachmentQuestion, setAttachmentQuestion] = useState(false);
+  const [draftSaved, setDraftSaved] = useState(false);
   const chatRef = useRef<HTMLDivElement>(null);
+  const latestMessageRef = useRef<HTMLDivElement>(null);
   const embeddedRef = useRef<HTMLElement>(null);
   const requestRef = useRef<AbortController | null>(null);
   const workflowLabels: Record<WorkflowAction, string> = {
@@ -2541,6 +2566,13 @@ function Assistant({
     if (!threads.has(id)) threads.set(id, message.text);
   }
   const lastReply = messages.at(-1);
+  const letter = letterSession?.view;
+  const letterEditable = letter && ["new", "preparing", "document", "correction"].includes(letter.status);
+  const letterTasks = letter && [
+    { label: "Adres lokalu", done: !!letter.work.address },
+    { label: "Kopia umowy najmu", done: !!letter.work.attachment },
+    { label: "Uzasadnienie", done: !!letter.work.reason },
+  ];
   const starter = workflow === "fine" ? "Czy muszę opłacić ten mandat?"
     : workflow === "tax" ? "Co mam zrobić z tą płatnością podatku?"
     : workflow === "letter" ? "Co jest w tym piśmie z urzędu?"
@@ -2555,28 +2587,27 @@ function Assistant({
     if (embedded) embeddedRef.current?.scrollIntoView({ block: "start" });
   }, [embedded]);
   useEffect(() => {
+    if (embeddedRef.current) return;
     if (!messages.length && !busy) {
       chatRef.current?.scrollTo({ top: 0 });
       return;
     }
-    chatRef.current?.scrollTo({
-      top: chatRef.current.scrollHeight,
-      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
-        ? "auto"
-        : "smooth",
-    });
-  }, [messages.length, busy]);
+    if (!busy && lastReply?.role === "assistant") latestMessageRef.current?.scrollIntoView({ block: "start" });
+    else if (chatRef.current) chatRef.current.scrollTop = chatRef.current.scrollHeight;
+  }, [messages.length, busy, lastReply?.role]);
   useEffect(() => {
-    if (busy || waitingForContext) return;
-    const question = attachmentQuestion ? "Czy załącznik jest dodany i co mam teraz zrobić?"
-      : !messages.length ? starter : undefined;
-    if (!question) return;
-    const task = window.setTimeout(() => {
-      if (attachmentQuestion) setAttachmentQuestion(false);
-      void send(question);
-    }, 0);
+    if (busy || waitingForContext || messages.length || !starter) return;
+    const task = window.setTimeout(() => void send(starter), 0);
     return () => clearTimeout(task);
-  }, [starter, messages.length, waitingForContext, attachmentQuestion, busy]);
+  }, [starter, messages.length, waitingForContext, busy]);
+
+  async function saveLetterSuggestion() {
+    if (!letterSession || !letterEditable || letter.work.reason) return;
+    if (await letterSession.act({ type: "saveDraft", draft: { reason: letterSuggestion }, expectedDraft: { reason: "" } })) {
+      setDraftSaved(true);
+      setEmbedded({ kind: "letter" });
+    }
+  }
   async function send(value = text, record = true) {
     if (!value.trim() || requestRef.current) return;
     const input = value.trim();
@@ -2642,9 +2673,7 @@ function Assistant({
       <LayerHeader
         title="Twój asystent"
         subtitle={
-          workflowOnline ? "Sprawy i odpowiedzi · środowisko demo" : serverAI
-            ? "Backend asystenta · środowisko demo"
-            : "Tryb demo · bez połączenia z AI"
+          workflowOnline ? "Twoje sprawy i kolejne kroki" : "Pomoc przy sprawach"
         }
         onClose={onClose}
       />
@@ -2699,19 +2728,27 @@ function Assistant({
           <>
             <div className="chat-context">
               <ShieldCheck size={14} />
-              Dane tylko z profilu: {p.first} · demo
+              Profil {p.first} · dane przykładowe
             </div>
             {messages.map((m, i) => (
-              <div className={"chat-message " + m.role} key={i}>
+              <div className={"chat-message " + m.role} key={i} ref={i === messages.length - 1 ? latestMessageRef : undefined}>
                 {m.role === "assistant" && (
-                  <span className="message-avatar">
+                  <span className="message-avatar" aria-hidden="true">
                     <Sparkles size={16} />
                   </span>
                 )}
                 <div>
                   <p>{m.text}</p>
                   {m.fallback && <small>Odpowiedź z trybu regułowego.</small>}
-                  {m.workflowAction && <button className="chat-action" onClick={() => onWorkflow(m.workflowAction!, m.suggestedData)}>
+                  {i === messages.length - 1 && m.workflowAction === "letter" && letter && !letter.receipt && (
+                    <section className="chat-letter-status" aria-label="Aktualny stan pisma">
+                      <p><CalendarDays size={16} aria-hidden="true" /> <span>Termin odpowiedzi <strong>{formatMostDeadline(letter.deadlineAt)}</strong></span></p>
+                      {letterEditable && <ul>{letterTasks?.map(({ label, done }) => (
+                        <li key={label}><span>{label}</span><strong>{done ? "Gotowe" : "Brakuje"}</strong></li>
+                      ))}</ul>}
+                    </section>
+                  )}
+                  {m.workflowAction && m.workflowAction !== "letter" && <button className="chat-action" onClick={() => onWorkflow(m.workflowAction!, m.suggestedData)}>
                     <span><strong>{workflowLabels[m.workflowAction]}</strong><small>Otwórz formularz lub podgląd sprawy</small></span>
                     <ArrowRight size={20} />
                   </button>}
@@ -2725,19 +2762,24 @@ function Assistant({
                       <button disabled={busy} onClick={() => setEmbedded({ kind: "registration", city: m.suggestedData?.city })}>Zgłoś zameldowanie</button>
                       <button disabled={busy} onClick={() => setEmbedded({ kind: "tax-address", city: m.suggestedData?.city })}>Zaktualizuj adres</button>
                     </>}
-                    {m.workflowAction === "letter" && letterSession?.view && <>
-                      {letterSession.view.document && <details className="chat-letter-preview">
-                        <summary>{letterSession.view.document.title}</summary>
-                        <p>{letterSession.view.document.body}</p>
-                        <small>{letterSession.view.document.office}</small>
-                      </details>}
-                      {["new", "preparing", "document", "correction"].includes(letterSession.view.status) &&
-                        <button disabled={busy} onClick={() => setEmbedded({ kind: "letter" })}>Przygotuj odpowiedź</button>}
-                      {!letterSession.view.invitation && !["review", "finished", "rejected"].includes(letterSession.view.status) &&
+                    {m.workflowAction === "letter" && letter && <>
+                      {letterEditable && <button className="chat-primary-action" disabled={busy} onClick={() => setEmbedded({ kind: "letter" })}>
+                        {letter.work.reason ? "Uzupełnij szkic" : "Przygotuj odpowiedź"}
+                      </button>}
+                      {letter.status === "review" && <button className="chat-primary-action" onClick={onReviewLetter}>Sprawdź przygotowaną odpowiedź</button>}
+                      {!letter.invitation && letterEditable &&
                         <button disabled={busy} onClick={() => onWorkflow("help")}>Poproś o pomoc</button>}
+                      {letter.document && <details className="chat-letter-preview">
+                        <summary>{letter.document.title}</summary>
+                        <p>{letter.document.body}</p>
+                        <small>{letter.document.office}</small>
+                      </details>}
                     </>}
-                    {m.workflowAction !== "cases" && <button onClick={() => { setDismissed(i); setEmbedded(undefined); }}>Później</button>}
+                    {m.workflowAction !== "cases" && m.workflowAction !== "letter" && <button onClick={() => { setDismissed(i); setEmbedded(undefined); }}>Później</button>}
                   </div>}
+                  {m.workflowAction === "letter" && <button className="chat-action" onClick={() => onWorkflow("letter")}>
+                    <span><strong>{workflowLabels.letter}</strong></span><ArrowRight size={18} aria-hidden="true" />
+                  </button>}
                   {(m.documentId !== undefined ||
                     m.shareDocumentId !== undefined) && (
                     <button
@@ -2827,11 +2869,17 @@ function Assistant({
           <button className="text-button" onClick={() => setEmbedded(undefined)}>Schowaj formularz</button>
           {embedded.kind === "letter" ? letterSession?.view && <>
             {["new", "preparing", "document", "correction"].includes(letterSession.view.status) && <>
-              <MostTasks session={letterSession} onAttachment={() => setAttachmentQuestion(true)} />
+              {!letterSession.view.work.reason && <section className="chat-draft-suggestion">
+                <h2>Propozycja uzasadnienia</h2>
+                <p>{letterSuggestion}</p>
+                <button className="primary" disabled={letterSession.busy || !letterSession.connected} onClick={() => void saveLetterSuggestion()}>Zapisz proponowany szkic</button>
+              </section>}
+              {draftSaved && <p role="status" className="chat-draft-saved">Szkic zapisany. Możesz go edytować poniżej.</p>}
+              <MostTasks session={letterSession} />
               {letterSession.error && <p role="alert">{letterSession.error}</p>}
               <button className="primary" disabled={!letterSession.view.canReview || letterSession.busy} onClick={async () => {
                 if (await letterSession.act({ type: "review" })) onReviewLetter();
-              }}>Sprawdź i wyślij</button>
+              }}>Przejdź do sprawdzenia</button>
             </>}
             {letterSession.view.status === "review" && <button className="primary" onClick={onReviewLetter}>Sprawdź przygotowaną odpowiedź</button>}
           </> : <WorkflowWorkspace key={embedded.kind} inline kind={embedded.kind} applicant={p.name} city={embedded.city}

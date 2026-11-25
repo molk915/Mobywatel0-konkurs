@@ -25,7 +25,7 @@ test("MOST 3.0: Ewa and Kacper share one deadline scope and execute only the app
     await page.getByLabel("Monitorowanie terminów").check();
     await button(page, "Sprawdź podsumowanie").click();
     await button(page, "Przejdź do potwierdzenia").click();
-    await button(page, "Potwierdź dostęp w demo").click();
+    await button(page, "Potwierdź dostęp").click();
 
     await button(helper, "Terminy").click();
     const inspection = (frame: Page) => frame.locator("article").filter({ has: frame.getByRole("heading", { name: "Badanie techniczne pojazdu" }) });
@@ -53,7 +53,7 @@ test("MOST 3.0: Ewa and Kacper share one deadline scope and execute only the app
     await page.getByLabel("Sposób zatwierdzania").selectOption("confirm");
     await button(page, "Sprawdź podsumowanie").click();
     await button(page, "Przejdź do potwierdzenia").click();
-    await button(page, "Potwierdź dostęp w demo").click();
+    await button(page, "Potwierdź dostęp").click();
 
     const letter = helper.getByRole("link", { name: "Otwórz sprawę", exact: true });
     await expect(letter).toBeVisible();
@@ -66,9 +66,9 @@ test("MOST 3.0: Ewa and Kacper share one deadline scope and execute only the app
     await button(casePage, "Wyjaśnij pismo").click();
     await expect(casePage.getByText(/Działasz w imieniu: Ewa/)).toBeVisible();
     await button(casePage, "Wstecz").click();
-    await button(casePage, "Wstaw adres demo").click();
+    await button(casePage, "Użyj przykładowego adresu").click();
     await button(casePage, "Zapisz formularz").click();
-    await button(casePage, "Dołącz kopię demonstracyjną").click();
+    await button(casePage, "Użyj przykładowej umowy").click();
     await casePage.getByLabel("Uzasadnienie", { exact: true }).fill("W imieniu Ewy dołączam kopię umowy najmu na potrzeby pokazu.");
     await button(casePage, "Zapisz uzasadnienie").click();
     await button(casePage, "Sprawdź odpowiedź").click();
@@ -89,9 +89,9 @@ test("MOST 3.0: Ewa and Kacper share one deadline scope and execute only the app
     await button(page, "Dostęp").click();
     const paperCard = page.locator("article").filter({ has: page.getByRole("heading", { name: "Wezwanie do uzupełnienia wniosku" }) });
     await button(paperCard, "Dokument pełnomocnictwa").click();
-    await button(paperCard, "Przygotuj dokument demo").click();
-    await button(paperCard, "Wybierz metodę demo").click();
-    await button(paperCard, "Potwierdź symulację podpisu").click();
+    await button(paperCard, "Przygotuj projekt pełnomocnictwa").click();
+    await button(paperCard, "Zapisz metodę podpisu").click();
+    await button(paperCard, "Potwierdź próbny podpis").click();
     await expect(paperCard.getByText("Podpisano w symulacji", { exact: true })).toBeVisible();
     await button(paperCard, "Cofnij dostęp").click();
     await button(paperCard, "Potwierdź cofnięcie dostępu").click();

@@ -178,6 +178,10 @@
 .most-editor textarea { resize: vertical; min-height: 84px; margin: 5px 0 8px; line-height: 1.46; }
 .most-editor > .most-muted { margin-top: 0; }
 .most-editor { margin: 8px 0 12px; }
+.most-attachment-actions { display: grid; justify-items: start; gap: 8px; margin-block: 8px; }
+.most-file-picker { cursor: pointer; position: relative; }
+.most-file-picker:has(:disabled) { cursor: default; opacity: .6; }
+.most-file-picker:focus-within { outline: 2px solid var(--civic-accent); outline-offset: 3px; }
 .most-editor-tools { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; justify-content: space-between; }
 .most-editor-tools button { color: var(--most-dark); font-size: var(--most-small); font-weight: 700; min-height: 44px; }
 .most-current-draft { margin: 5px 0 8px; color: var(--most-muted); font-size: var(--most-small); }

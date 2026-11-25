@@ -62,8 +62,8 @@ function PreviousValue({ value }: { value: string }) {
   return <small className="most-previous-value"><strong>Zmieniono</strong><span>Poprzednio: {value}</span></small>;
 }
 
-export function MostTasks({ session, beforeForms, onAttachment, helperFormId, onDraftReady }: {
-  session: MostSession; beforeForms?: ReactNode; onAttachment?: () => void; helperFormId?: string;
+export function MostTasks({ session, beforeForms, helperFormId, onDraftReady }: {
+  session: MostSession; beforeForms?: ReactNode; helperFormId?: string;
   onDraftReady?: (ready: boolean) => void;
 }) {
   const view = session.view!;
@@ -112,8 +112,7 @@ export function MostTasks({ session, beforeForms, onAttachment, helperFormId, on
     try {
       const bytes = await crypto.subtle.digest("SHA-256", await file.arrayBuffer());
       const digest = Array.from(new Uint8Array(bytes), (byte) => byte.toString(16).padStart(2, "0")).join("");
-      if (await session.act({ type: "upload", file: { name: file.name, mime: file.type, size: file.size, digest } }))
-        onAttachment?.();
+      await session.act({ type: "upload", file: { name: file.name, mime: file.type, size: file.size, digest } });
     } catch {
       setFileError("Nie udało się odczytać pliku. Spróbuj ponownie.");
     } finally {
@@ -137,33 +136,35 @@ export function MostTasks({ session, beforeForms, onAttachment, helperFormId, on
     {beforeForms}
     {work.feedback && <MostNotice tone="warning" live>{work.feedback}{!view.canReview && view.complete && " Zmień co najmniej jedno zadanie przed przekazaniem pakietu."}</MostNotice>}
     <section className="most-draft">
-      <h2>1. Uzupełnij formularz</h2>
+      <h2>1. Potwierdź adres lokalu</h2>
       <p className="most-muted">{work.address ? "Zapisano adres: " + work.address : "Wskaż adres lokalu objętego wezwaniem."}</p>
       {scope.form && <form className="most-editor" onSubmit={async (e) => {
         e.preventDefault();
         if (await session.act({ type: "form", address })) editAddress(undefined);
       }}>
         <label>Adres lokalu<input aria-label="Adres lokalu" value={address} onChange={(e) => changeAddress(e.target.value)} maxLength={120} required /></label>
-        <button type="button" className="most-inline" onClick={() => changeAddress(sampleAddress)}>Wstaw adres demo</button>
+        <button type="button" className="most-inline" onClick={() => changeAddress(sampleAddress)}>Użyj przykładowego adresu</button>
         <button className="most-button most-secondary" disabled={locked || !address.trim()}>Zapisz formularz</button>
       </form>}
       {!scope.form && <p className="most-muted">To zadanie pozostaje po stronie Ewy.</p>}
     </section>
     <section className="most-draft">
-      <h2>2. Dołącz dokument</h2>
+      <h2>2. Dołącz kopię umowy</h2>
       <p className="most-muted">Wymagane potwierdzenie prawa do lokalu. W przykładzie jest to kopia umowy najmu.</p>
-      {attachment ? <AttachmentLink file={attachment} /> : <p className="most-muted">{work.upload?.name ?? "Brak dostępnego załącznika w tym zakresie."}</p>}
-      {scope.attachments && <button className="most-inline" disabled={locked || work.attachment === "helper"} onClick={async () => {
-        if (await session.act({ type: "attach", source: "helper" })) onAttachment?.();
-      }}>Dołącz kopię demonstracyjną</button>}
-      {scope.attachments && <label className="most-editor">
-        Dodaj plik z urządzenia
-        <input type="file" accept=".pdf,.png,.jpg,.jpeg" disabled={locked || readingFile} onChange={(event) => {
-          void addFile(event.currentTarget.files?.[0]);
-          event.currentTarget.value = "";
-        }} />
+      {attachment ? <AttachmentLink file={attachment} /> : <p className="most-muted">{work.upload?.name ?? "Nie dodano jeszcze załącznika."}</p>}
+      {scope.attachments && <div className="most-attachment-actions">
+        <button className="most-inline" disabled={locked || work.attachment === "helper"} onClick={() => void session.act({ type: "attach", source: "helper" })}>
+          Użyj przykładowej umowy
+        </button>
+        <label className="most-button most-secondary most-file-picker">
+          Dodaj plik z urządzenia
+          <input className="sr-only" type="file" accept=".pdf,.png,.jpg,.jpeg" disabled={locked || readingFile} onChange={(event) => {
+            void addFile(event.currentTarget.files?.[0]);
+            event.currentTarget.value = "";
+          }} />
+        </label>
         <small>Użyj pliku przykładowego. Zapisujemy opis pliku, a jego treść pozostaje na urządzeniu.</small>
-      </label>}
+      </div>}
       {fileError && <MostNotice tone="warning" live>{fileError}</MostNotice>}
       {work.documentRequest === "pending" && <MostNotice live>Czeka na dokument od Ewy.</MostNotice>}
       {scope.attachments && work.documentRequest === "shared" && <button className="most-button most-secondary" disabled={locked || work.attachment === "owner"} onClick={() => void session.act({ type: "attach", source: "owner" })}>Dołącz dokument Ewy</button>}
@@ -180,7 +181,7 @@ export function MostTasks({ session, beforeForms, onAttachment, helperFormId, on
         <label>Uzasadnienie<textarea aria-label="Uzasadnienie" rows={3} value={reason} onChange={(e) => changeReason(e.target.value)} maxLength={1400} required /></label>
         <button type="button" className="most-inline" onClick={() => changeReason(!owner && view.invitation?.managed
           ? "W imieniu właścicielki sprawy przekazuję kopię umowy najmu potwierdzającą jej prawo do lokalu."
-          : sampleReason)}>Wstaw uzasadnienie demo</button>
+          : sampleReason)}>Wstaw propozycję uzasadnienia</button>
         <button className="most-button most-secondary" disabled={locked || !reason.trim()}>Zapisz uzasadnienie</button>
       </form>}
       {!scope.response && <p className="most-muted">To zadanie pozostaje po stronie Ewy.</p>}
