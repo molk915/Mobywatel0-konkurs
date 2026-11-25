@@ -11,7 +11,7 @@
   },
   "rewrites": [
     {
-      "source": "/api/:path(health|assistant)",
+      "source": "/api/:path(health|assistant|workflows)",
       "destination": "/api/dispatch?mostPath=:path"
     },
     {
