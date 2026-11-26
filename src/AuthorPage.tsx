@@ -1,53 +1,51 @@
-import { useEffect, useState } from "react";
-import { ArrowDownRight, ArrowLeft, ArrowRight, Sailboat } from "lucide-react";
+import { useLayoutEffect, useRef, useState } from "react";
+import { ArrowDownRight, ArrowRight, Sailboat, X } from "lucide-react";
 import { CivicBrand } from "./CivicChrome";
 import "./author.css";
 
 const experience = [
-  { name: "EY Polska", roles: ["Cybersecurity Intern", "Data & AI Solutions Intern"], description: "Offensive security, analiza bezpieczeństwa aplikacji oraz praca nad rozwiązaniami z obszaru AI i przetwarzania danych." },
+  { name: "EY Polska", roles: ["Cybersecurity Intern", "Data & AI Solutions Intern"], description: "Bezpieczeństwo aplikacji, AI i przetwarzanie danych." },
   { name: "VeloBank", roles: ["IT Intern – Generative AI & Development"], description: "Generatywna AI, RAG, automatyzacja i technologie chmurowe." },
 ];
-const focus = ["Artificial Intelligence & Data", "Cybersecurity & Offensive Security", "Software Development", "Product Development & UX"];
-const activities = [
-  "Zespołowe zwycięstwo w hackathonie",
-  "Wolontariat na wydarzeniach technologicznych, m.in. Data Science Summit i DevAI",
-  "Tworzenie własnych projektów technologicznych",
-  "IELTS Academic · Overall 7.0",
-];
 
-export default function AuthorPage() {
+export default function AuthorDialog({ onClose }: { onClose: () => void }) {
   const [view, setView] = useState<"professional" | "personal">("professional");
-  useEffect(() => {
-    const title = document.title;
-    document.title = "O twórcy · mObywatel MOST";
-    const restore = (event: PageTransitionEvent) => { if (event.persisted) setView("professional"); };
-    window.addEventListener("pageshow", restore);
-    return () => {
-      document.title = title;
-      window.removeEventListener("pageshow", restore);
-    };
+  const dialog = useRef<HTMLDialogElement>(null);
+  const scroll = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const modal = dialog.current!;
+    modal.showModal();
+    return () => modal.close();
   }, []);
 
-  return <div className="author-page" data-view={view}>
-    <header className="author-header author-shell">
-      <a href="/" className="author-brand" aria-label="mObywatel MOST — prototyp"><CivicBrand most /></a>
-      <a className="author-back" href="/"><ArrowLeft size={17} aria-hidden="true" /> <span>Wróć do prototypu</span></a>
-    </header>
-    <main className="author-shell">
-      <div className="author-switchbar">
-        <span>O twórcy</span>
+  function switchView(next: typeof view) {
+    if (next === view) return;
+    setView(next);
+    scroll.current?.scrollTo(0, 0);
+  }
+
+  return <dialog ref={dialog} className="author-page author-dialog" data-view={view} aria-labelledby="author-dialog-title"
+    onCancel={(event) => { event.preventDefault(); onClose(); }}
+    onClick={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+    <div className="author-dialog-frame">
+      <header className="author-header">
+        <div className="author-brand"><CivicBrand most /></div>
+        <span id="author-dialog-title">O twórcy</span>
+        <button className="author-close" aria-label="Zamknij O twórcy" autoFocus onClick={onClose}>
+          <X size={22} aria-hidden="true" />
+        </button>
         <div className="author-switch" role="group" aria-label="Widok profilu">
-          <button aria-pressed={view === "professional"} onClick={() => setView("professional")}>Kandydat na papierze</button>
-          <button aria-pressed={view === "personal"} onClick={() => setView("personal")}>Poznaj mnie</button>
+          <button aria-pressed={view === "professional"} onClick={() => switchView("professional")}>Kandydat na papierze</button>
+          <button aria-pressed={view === "personal"} onClick={() => switchView("personal")}>Poznaj mnie</button>
+        </div>
+      </header>
+      <div className="author-scroll" ref={scroll} tabIndex={0} aria-label="Profil twórcy">
+        <div className="author-shell">
+          {view === "professional" ? <Professional key="professional" /> : <Personal key="personal" onClose={onClose} />}
         </div>
       </div>
-      {view === "professional" ? <Professional key="professional" /> : <Personal key="personal" />}
-    </main>
-    <footer className="author-footer author-shell">
-      <span>Piotr · twórca koncepcji MOST</span>
-      <a href="/">Otwórz prototyp <ArrowRight size={16} aria-hidden="true" /></a>
-    </footer>
-  </div>;
+    </div>
+  </dialog>;
 }
 
 function Professional() {
@@ -57,18 +55,14 @@ function Professional() {
         <p className="author-eyebrow">18 lat <span>·</span> Warszawa</p>
         <h1 id="author-name">Piotr<span>.</span></h1>
         <p className="author-role">Twórca koncepcji<br />mObywatel MOST</p>
-        <p className="author-disciplines">Artificial Intelligence <i /> Cybersecurity <i /> Product Development</p>
       </div>
       <figure className="author-portrait">
         <img src="/author/portret.jpg" width="950" height="950" fetchPriority="high" alt="Piotr w garniturze" />
       </figure>
     </section>
     <section className="author-about author-section" aria-labelledby="author-about">
-      <h2 id="author-about">O mnie zawodowo</h2>
-      <div>
-        <p>Uczę się w technikum programistycznym. Interesuję się sztuczną inteligencją, cyberbezpieczeństwem i tworzeniem produktów cyfrowych. Doświadczenie zdobywałem w EY Polska i VeloBanku, pracując nad rozwiązaniami z obszaru AI, danych i bezpieczeństwa.</p>
-        <p>Najbardziej interesuje mnie cały proces tworzenia produktu: od zrozumienia problemu przez koncepcję i implementację po doświadczenie użytkownika.</p>
-      </div>
+      <h2 id="author-about">Zainteresowania</h2>
+      <p>Interesuję się AI, cyberbezpieczeństwem i tworzeniem produktów cyfrowych. Lubię przechodzić od pomysłu do działającego prototypu.</p>
     </section>
     <section className="author-section author-career" aria-labelledby="author-experience">
       <h2 id="author-experience">Doświadczenie</h2>
@@ -78,29 +72,15 @@ function Professional() {
         <p>{description}</p>
       </li>)}</ol>
     </section>
-    <div className="author-facts author-section">
-      <section aria-labelledby="author-school">
-        <h2 id="author-school">Edukacja</h2>
-        <h3>Techni Schools, Warszawa</h3>
-        <p>Technikum programistyczne</p>
-      </section>
-      <section aria-labelledby="author-focus">
-        <h2 id="author-focus">Kompetencje</h2>
-        <ul>{focus.map((area) => <li key={area}>{area}</li>)}</ul>
-      </section>
-    </div>
-    <section className="author-section author-about" aria-labelledby="author-activities">
-      <h2 id="author-activities">Osiągnięcia i aktywności</h2>
-      <ul className="author-activities">{activities.map((activity) => <li key={activity}><ArrowDownRight size={17} aria-hidden="true" />{activity}</li>)}</ul>
-    </section>
-    <section className="author-social" aria-label="Profile zawodowe">
-      <span><strong>LinkedIn</strong> / <strong>GitHub</strong></span>
-      <small>Adresy profili do uzupełnienia</small>
+    <section className="author-section author-about" aria-labelledby="author-school">
+      <h2 id="author-school">Edukacja</h2>
+      <div><p>Techni Schools, Warszawa · technikum programistyczne</p>
+        <p>Zespołowe zwycięstwo w hackathonie · IELTS Academic 7.0</p></div>
     </section>
   </div>;
 }
 
-function Personal() {
+function Personal({ onClose }: { onClose: () => void }) {
   return <div className="author-view author-life">
     <section className="author-life-hero" aria-labelledby="author-personal">
       <img src="/author/nad-morzem.jpg" width="1600" height="1200" alt="Piotr w żółtej koszulce przy stole na tarasie z widokiem na morze" />
@@ -133,7 +113,7 @@ function Personal() {
     <section className="author-why author-section">
       <h2>Dlaczego mObywatel MOST?</h2>
       <p>Technologia publiczna powinna być dostępna również dla osób, które nie czują się pewnie w cyfrowym świecie. Projektując MOST, chciałem ułatwić bliskim wzajemną pomoc i zostawić właścicielowi danych decyzję o tym, co i komu udostępnia.</p>
-      <a href="/">Zobacz prototyp <ArrowRight size={17} aria-hidden="true" /></a>
+      <button onClick={onClose}>Wróć do prototypu <ArrowRight size={17} aria-hidden="true" /></button>
     </section>
   </div>;
 }

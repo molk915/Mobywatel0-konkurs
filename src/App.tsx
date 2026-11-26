@@ -208,8 +208,18 @@ const HealthWorkspace = lazy(() => import("./health/HealthWorkspace"));
 const MostHelperWorkspace = lazy(() => import("./most/MostHelper").then(({ MostHelperWorkspace }) => ({ default: MostHelperWorkspace })));
 const DelegationOwner = lazy(() => import("./most/DelegationPanel").then(({ DelegationOwner }) => ({ default: DelegationOwner })));
 const MostHub = lazy(() => import("./most/MostHub"));
+const AuthorDialog = lazy(() => import("./AuthorPage"));
 
 export default function App() {
+  const [authorOpen, setAuthorOpen] = useState(() => new URLSearchParams(location.search).get("strona") === "o-tworcy");
+  function closeAuthor() {
+    setAuthorOpen(false);
+    const url = new URL(location.href);
+    if (url.searchParams.get("strona") === "o-tworcy") {
+      url.searchParams.delete("strona");
+      history.replaceState(history.state, "", url);
+    }
+  }
   const [showcasePhone] = useState<"ewa" | "kacper" | undefined>(() => {
     const role = new URLSearchParams(location.search).get("telefon-most");
     return window.parent !== window && (role === "ewa" || role === "kacper") ? role : undefined;
@@ -582,6 +592,7 @@ export default function App() {
   }, [inboxOpen]);
   useEffect(() => {
     function key(e: KeyboardEvent) {
+      if (authorOpen) return;
       if (e.key === "Escape") {
         if (inboxOpen) { e.preventDefault(); dismissInbox(); }
         else if (layer) dismissWorkspace();
@@ -607,7 +618,7 @@ export default function App() {
     }
     window.addEventListener("keydown", key);
     return () => window.removeEventListener("keydown", key);
-  }, [layer, inboxOpen, c.receipts, inlineShowcase, isEwa]);
+  }, [layer, inboxOpen, c.receipts, inlineShowcase, isEwa, authorOpen]);
   const start = (kind: CaseKind, suggestedData?: Record<string, string>) => {
     if (kind === "move") {
       setTab("cases");
@@ -863,7 +874,7 @@ export default function App() {
             Koncepcja 2026
             <ArrowUpRight size={15} />
           </button>
-          <a className="presentation-author-link" href="/?strona=o-tworcy">O twórcy <ArrowUpRight size={15} aria-hidden="true" /></a>
+          <button className="presentation-author-link" aria-haspopup="dialog" onClick={() => setAuthorOpen(true)}>O twórcy</button>
         </div>
       </header>
       {inlineShowcase && isEwa && <InlineShowcaseToolbar onClose={() => setInlineShowcase(undefined)} />}
@@ -1396,7 +1407,7 @@ export default function App() {
                   onClose={() => closeLayer()}
                 >
                   <Badge tone="red">Koncepcja konkursowa 2026</Badge>
-                  <a className="presentation-author-link about-author-link" href="/?strona=o-tworcy">O twórcy <ArrowUpRight size={15} aria-hidden="true" /></a>
+                  <button className="presentation-author-link about-author-link" aria-haspopup="dialog" onClick={() => setAuthorOpen(true)}>O twórcy</button>
                   <p className="sheet-lead">mObywatel · Po Twojej stronie</p>
                   <p>
                     Sprawy zaczynają się od Twojej sytuacji. Asystent pomaga
@@ -1540,6 +1551,7 @@ export default function App() {
           <ArrowUpRight size={12} />
         </button>
       </footer>
+      {authorOpen && <Suspense fallback={null}><AuthorDialog onClose={closeAuthor} /></Suspense>}
     </div>
     </InlineShowcaseContext.Provider>
   );
