@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { ArrowRight, FileText, Link2, ShieldCheck, UsersRound } from "lucide-react";
-import { caseMeta } from "../domain";
+import { caseMeta, type Access } from "../domain";
 import { MostConnection, MostInvite, MostLayout, MostNotice, MostRow } from "./components";
 import { delegationScope, delegationTitles, type DelegationContext } from "./model";
 import { delegationToken, routeForMost, useMostSession } from "./session";
 import { ControlCenter } from "./ControlCenter";
+import type { DashboardProfile } from "./MostDashboard";
 
 type Session = ReturnType<typeof useMostSession>;
 
@@ -19,27 +20,36 @@ export const caseGuides = {
   certificate: "Ustal rodzaj odpisu i sposób odbioru. Zapisz pytania, które chcesz zadać w urzędzie stanu cywilnego.",
 } as const;
 
-export function DelegationOwner({ context, storageId, profile, onBack, onApproved, onStarted, workflowKey, letterKey, initialTab, autoStart, sameTabDemo }: {
+export function DelegationOwner({ context, storageId, profile, onBack, onApproved, onStarted, workflowKey, letterKey, initialTab, autoStart, sameTabDemo, dashboard, trackerEvent, editAccess }: {
   context: DelegationContext; storageId: string; profile: string; onBack: () => void; onApproved?: () => void; onStarted?: () => void;
   workflowKey?: string | null; letterKey?: string | null; initialTab?: "access" | "inbox";
   autoStart?: boolean; sameTabDemo?: boolean;
+  dashboard?: DashboardProfile;
+  trackerEvent?: Access;
+  editAccess?: { id: string; connection?: string };
 }) {
   const session = useMostSession("owner", `delegation-${storageId}`, autoStart, true, context);
-  if (context.kind === "trusted") return <TrustedOwner session={session} profile={profile} onBack={onBack} workflowKey={workflowKey} letterKey={letterKey} initialTab={initialTab} sameTabDemo={sameTabDemo} />;
+  if (context.kind === "trusted") return <TrustedOwner session={session} profile={profile} onBack={onBack} workflowKey={workflowKey} letterKey={letterKey} initialTab={initialTab} sameTabDemo={sameTabDemo} dashboard={dashboard} trackerEvent={trackerEvent} editAccess={editAccess} />;
   return <DelegationPanel session={session} context={context} trustedKey={profile + "-trusted"} onBack={onBack} onApproved={onApproved} onStarted={onStarted} />;
 }
 
-function TrustedOwner({ session, ...props }: {
+function TrustedOwner({ session, editAccess, ...props }: {
   session: Session; profile: string; onBack: () => void; workflowKey?: string | null; letterKey?: string | null; initialTab?: "access" | "inbox"; sameTabDemo?: boolean;
+  dashboard?: DashboardProfile;
+  trackerEvent?: Access;
+  editAccess?: { id: string; connection?: string };
 }) {
-  const [peer, setPeer] = useState<string>();
+  const [peer, setPeer] = useState(editAccess?.connection);
   return peer
-    ? <PeerCenter key={peer} token={peer} onPeerChange={setPeer} {...props} />
-    : <ControlCenter session={session} role="owner" onPeerChange={setPeer} {...props} />;
+    ? <PeerCenter key={peer} token={peer} onPeerChange={setPeer} editAccessId={editAccess?.id} {...props} />
+    : <ControlCenter session={session} role="owner" onPeerChange={setPeer} editAccessId={editAccess?.id} {...props} />;
 }
 
 function PeerCenter({ token, ...props }: {
   token: string; profile: string; onBack: () => void; onPeerChange: (value?: string) => void; workflowKey?: string | null; letterKey?: string | null; initialTab?: "access" | "inbox";
+  dashboard?: DashboardProfile;
+  trackerEvent?: Access;
+  editAccessId?: string;
 }) {
   const session = useMostSession("owner", "delegation-peer", false, true, { kind: "trusted" }, token);
   return <ControlCenter session={session} role="owner" {...props} />;

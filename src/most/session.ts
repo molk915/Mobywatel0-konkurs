@@ -31,6 +31,7 @@ export function routeForMost(role: MostRole, context: MostContext, token?: strin
 }
 
 function storedToken(role: MostRole, context: MostContext) {
+  if (context === "delegation-inline-help") return null;
   if (role === "helper" && location.hash.startsWith("#most="))
     return location.hash.match(invitePattern)?.[1] ?? null;
   try {
@@ -82,7 +83,7 @@ export function useMostSession(role: MostRole, context: MostContext, autoStart =
 
   const update = (next: MostView) => {
     if (blocked.current || next.role !== role) return;
-    if (role === "helper" && context !== "delegation-profile-help" && context !== "delegation-showcase-help" &&
+    if (role === "helper" && context !== "delegation-profile-help" && context !== "delegation-showcase-help" && context !== "delegation-inline-help" &&
         token && next.delegation?.kind === "trusted" && next.invitation?.status === "active") {
       try { sessionStorage.setItem(trustedHelperKey, token); } catch { /* Optional session storage. */ }
     }
@@ -147,7 +148,7 @@ export function useMostSession(role: MostRole, context: MostContext, autoStart =
   }, [autoStart, enabled, role, token]);
 
   useEffect(() => {
-    if (!initialToken || initialToken === token || context !== "delegation-showcase-help") return;
+    if (!initialToken || initialToken === token || !["delegation-showcase-help", "delegation-inline-help"].includes(context)) return;
     blocked.current = false;
     setView(null);
     setConnected(false);

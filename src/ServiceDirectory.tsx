@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { ArrowRight, HeartPulse, House, Search, Sparkles, UsersRound, X } from "lucide-react";
+import { ArrowRight, HeartPulse, House, Search, ShieldCheck, Sparkles, UsersRound, X } from "lucide-react";
 import { MostRow } from "./most/components";
 
 const groups = [
-  { title: "Zdrowie i bliscy", services: [
+  { title: "Usługi osobiste", services: [
     { id: "health", title: "Zdrowie", detail: "Skierowania, wizyty i dokumentacja", keywords: "wizyta wyniki recepta", Icon: HeartPulse },
     { id: "family", title: "Rodzina", detail: "Sprawy bliskich i zgody opiekunów", keywords: "paszport dziecko rodzice", Icon: UsersRound },
+    { id: "privacy", title: "Moje dane", detail: "Sprawdź operacje i uprawnienia MOST", keywords: "rejestry prywatność zgody historia data tracker", Icon: ShieldCheck },
   ] },
   { title: "Codzienne formalności", services: [
     { id: "move", title: "Przeprowadzka", detail: "Zgłoszenia zmiany adresu", keywords: "adres meldunek", Icon: House },
@@ -14,7 +15,10 @@ const groups = [
 type Service = (typeof groups)[number]["services"][number]["id"];
 const normalize = (value: string) => value.toLowerCase().normalize("NFD").replace(/\p{Diacritic}/gu, "").replaceAll("ł", "l");
 
-export function ServiceDirectory({ open, onAssistant }: { open: (id: Service) => void; onAssistant: () => void }) {
+export function ServiceDirectory({ open, onAssistant }: {
+  open: (id: Service) => void;
+  onAssistant: () => void;
+}) {
   const [query, setQuery] = useState("");
   const terms = normalize(query).trim().split(/\s+/).filter(Boolean);
   const results = groups.map(({ title, services }) => ({

@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { motion, useReducedMotion } from "motion/react";
 import {
@@ -85,7 +85,7 @@ function DocumentCatalog({ host, profile, ids, onSave, onClose }: {
 export function DocumentSelection({ p, ids = defaultDocs, onOpen, onSave, overview, recent }: {
   p: Profile;
   ids?: number[];
-  onOpen: (id: number) => void;
+  onOpen: (id: number, source?: HTMLElement) => void;
   onSave: (ids: number[]) => void;
   overview?: ReactNode;
   recent?: ReactNode;
@@ -103,7 +103,7 @@ export function DocumentSelection({ p, ids = defaultDocs, onOpen, onSave, overvi
       </header>
       <div className="approved-selection-scroll" data-testid="document-scroll">
         <div className="approved-document-list">
-          {ids.includes(0) && <motion.button className="approved-hero civic-pattern-card" aria-label="mDowód" onClick={() => onOpen(0)}
+          {ids.includes(0) && <motion.button className="approved-hero civic-pattern-card" aria-label="mDowód" onClick={(event) => onOpen(0, event.currentTarget)}
             whileTap={reduced ? undefined : { scale: .988 }}>
             <span className="wallet-hero-label"><i className="polish-flag" /> Dokument tożsamości</span>
             <strong>mDowód</strong>
@@ -132,13 +132,29 @@ export function DocumentSelection({ p, ids = defaultDocs, onOpen, onSave, overvi
   );
 }
 
-function ApprovedIdentity({ p }: { p: Profile }) {
+function ApprovedIdentity({ p, origin }: { p: Profile; origin?: DOMRect }) {
+  const card = useRef<HTMLElement>(null);
+  const reduced = useReducedMotion();
+  useLayoutEffect(() => {
+    const element = card.current;
+    if (!element || !origin || reduced) return;
+    const target = element.getBoundingClientRect();
+    const scale = target.width / element.offsetWidth;
+    if (!target.width || !target.height || !origin.width || !origin.height) return;
+    const dx = (origin.left - target.left) / scale;
+    const dy = (origin.top - target.top) / scale;
+    const expansion = element.animate([
+      { transformOrigin: "top left", transform: `translate(${dx}px, ${dy}px) scale(${origin.width / target.width}, ${origin.height / target.height})` },
+      { transformOrigin: "top left", transform: "translate(0, 0) scale(1)" },
+    ], { duration: 550, easing: "cubic-bezier(.16, 1, .3, 1)" });
+    return () => expansion.cancel();
+  }, [origin, reduced]);
   const fields = [
     ["Data urodzenia", p.birth], ["Numer PESEL", p.pesel],
     ["Numer dokumentu", p.number], ["Ważność", "12.06.2034"],
   ];
   return (
-    <article className="approved-identity civic-pattern-card">
+    <article className="approved-identity civic-pattern-card" ref={card}>
       <header><small>Dokument demonstracyjny</small><strong>mDowód</strong></header>
       <div className="approved-identity-person">
         <img src={"/portraits/" + p.id + ".png"} alt={"Fikcyjny portret: " + p.name} />
@@ -150,11 +166,12 @@ function ApprovedIdentity({ p }: { p: Profile }) {
   );
 }
 
-export function ApprovedDocument({ p, id, address, protectedPesel, onClose, onShare, onWallet, onAssistant, onGo, onProfile, onNotifications, unreadCount }: {
+export function ApprovedDocument({ p, id, address, protectedPesel, onClose, onShare, onWallet, onAssistant, onGo, onProfile, onNotifications, unreadCount, identityOrigin }: {
   p: Profile; id: number; address: string; protectedPesel: boolean;
   onClose: () => void; onShare: () => void; onWallet: () => void;
   onAssistant: () => void; onGo: (tab: Tab) => void; onProfile: () => void; onNotifications: () => void;
   unreadCount?: number;
+  identityOrigin?: DOMRect;
 }) {
   const [details, setDetails] = useState(false);
   const name = documentTitles(p)[id];
@@ -168,7 +185,7 @@ export function ApprovedDocument({ p, id, address, protectedPesel, onClose, onSh
       <CivicHeader profile={p} unreadCount={unreadCount} onBack={onClose} onNotifications={onNotifications} onProfile={onProfile} />
       <div className="approved-detail-scroll">
         <header className="approved-heading"><div><h1 tabIndex={-1}>{name}</h1><p>{descriptions[id]}</p></div></header>
-        {id === 0 ? <ApprovedIdentity p={p} /> : <DigitalCard p={p} id={id} />}
+        {id === 0 ? <ApprovedIdentity p={p} origin={identityOrigin} /> : <DigitalCard p={p} id={id} />}
         <div className="approved-detail-actions">
           <button className="secondary" aria-expanded={details} onClick={() => setDetails(!details)}>Szczegóły</button>
           <button className="primary" onClick={onShare}><ScanLine size={19} /> Udostępnij</button>

@@ -38,7 +38,7 @@ export function createWorkflows({ state, save }, now = Date.now, mostSessions = 
       ? Object.entries(session.grants ?? {}).flatMap(([id, grant]) =>
         grant.trusted === room.token && activeGrant(grant, at)
           ? [{ title: workflowDetails[id].title, token: grant.token, workflow: true,
-            ...(withCase && { id, item: session.items.find((item) => item.id === id) }) }] : [])
+            ...(withCase && { id, expires: grant.expires, item: session.items.find((item) => item.id === id) }) }] : [])
       : []);
   }
   function profileSession(req) {

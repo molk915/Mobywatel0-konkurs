@@ -1,5 +1,7 @@
 # mObywatel MOST — przekazanie projektu do następnej sesji
 
+**Aktualizacja z 26 listopada 2026 r.** Bieżący stan wdrożenia i najnowsze ustalenia opisuje [przekazanie prac UI/UX](HANDOFF_UI_UX.md). Do rozpoczęcia kolejnej sesji służy [gotowy prompt](PROMPT_UI_UX.md). Poniżej znajduje się zapis stanu z 20 listopada.
+
 **Stan na 20 listopada 2026 r.** Dokument obejmuje stan działającego prototypu i propozycję kolejnej iteracji. Redesign opisany niżej czeka na implementację. Katalog projektu na komputerze Piotrka to `C:\Users\piotr\Documents\ChatGPT\Mobywatel`.
 
 ## 1. Projekt i cel konkursowy

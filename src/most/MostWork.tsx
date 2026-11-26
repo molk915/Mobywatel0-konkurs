@@ -62,9 +62,10 @@ function PreviousValue({ value }: { value: string }) {
   return <small className="most-previous-value"><strong>Zmieniono</strong><span>Poprzednio: {value}</span></small>;
 }
 
-export function MostTasks({ session, beforeForms, helperFormId, onDraftReady }: {
+export function MostTasks({ session, beforeForms, helperFormId, onDraftReady, onDraftSaved }: {
   session: MostSession; beforeForms?: ReactNode; helperFormId?: string;
   onDraftReady?: (ready: boolean) => void;
+  onDraftSaved?: (saved: boolean) => void;
 }) {
   const view = session.view!;
   const { work } = view;
@@ -78,18 +79,17 @@ export function MostTasks({ session, beforeForms, helperFormId, onDraftReady }: 
   const reason = reasonEdit?.value ?? work.reason ?? "";
   const [fileError, setFileError] = useState("");
   const [readingFile, setReadingFile] = useState(false);
-  const [draftSaved, setDraftSaved] = useState(false);
   const localDraft = Boolean(addressEdit?.value.trim() || reasonEdit?.value.trim());
   useEffect(() => {
     onDraftReady?.(localDraft && !readingFile);
     return () => onDraftReady?.(false);
   }, [localDraft, onDraftReady, readingFile]);
   function changeAddress(value: string) {
-    setDraftSaved(false);
+    onDraftSaved?.(false);
     editAddress((previous) => ({ value, base: previous?.base ?? work.address ?? "" }));
   }
   function changeReason(value: string) {
-    setDraftSaved(false);
+    onDraftSaved?.(false);
     editReason((previous) => ({ value, base: previous?.base ?? work.reason ?? "" }));
   }
   const draft = () => ({
@@ -195,11 +195,9 @@ export function MostTasks({ session, beforeForms, helperFormId, onDraftReady }: 
         if (await session.act({ type: "saveDraft", ...draft() })) {
           editAddress(undefined);
           editReason(undefined);
-          setDraftSaved(true);
+          onDraftSaved?.(true);
         }
       } else void session.act({ type: "review", ...draft() });
-    }}>
-      {draftSaved && <MostNotice tone="success" live>Szkic zapisany. Możesz wrócić do niego z panelu MOST.</MostNotice>}
-    </form>}
+    }} />}
   </>;
 }

@@ -17,8 +17,9 @@ export type Layer =
   | { type: "moving"; city?: string }
   | { type: "flow"; kind: CaseKind }
   | { type: "receipt"; receipt: Receipt }
-  | { type: "delegation"; kind: DelegationContext["kind"]; receiptId?: string }
+  | { type: "delegation"; kind: DelegationContext["kind"]; receiptId?: string; trackerEventId?: string }
   | { type: "access"; access: Access }
+  | { type: "data-event"; id: string }
   | {
       type: "share";
       id: number;
@@ -68,8 +69,8 @@ export function restoreNavigation(
           ? { conversation: l.conversation } : {}),
       },
     };
-  if (l.type === "family" && (tab === "cases" || tab === "services")) return { tab, layer: { type: "family", decision: l.decision === true } };
-  if (l.type === "health" && (tab === "cases" || tab === "services" || tab === "privacy") && l.target && typeof l.target === "object") {
+  if (l.type === "family" && (tab === "home" || tab === "cases" || tab === "services")) return { tab, layer: { type: "family", decision: l.decision === true } };
+  if (l.type === "health" && (tab === "home" || tab === "cases" || tab === "services" || tab === "privacy") && l.target && typeof l.target === "object") {
     const target = l.target as HealthTarget;
     if (["home", "timeline", "prescriptions", "referrals", "results", "visits", "access", "assistant", "invite", "plan", "review", "inbox", "share"].includes(target.section))
       return { tab, layer: { type: "health", helper: l.helper === true, target: { section: target.section, id: typeof target.id === "string" ? target.id : undefined,
@@ -88,8 +89,11 @@ export function restoreNavigation(
   if (l.type === "delegation" && l.kind === "trusted") {
     const kind = l.kind as DelegationContext["kind"];
     if (l.receiptId !== undefined && !c.receipts.some((r) => r.id === l.receiptId && r.kind === kind)) return { tab, layer: null };
-    return { tab, layer: { type: "delegation", kind, receiptId: typeof l.receiptId === "string" ? l.receiptId : undefined } };
+    return { tab, layer: { type: "delegation", kind, receiptId: typeof l.receiptId === "string" ? l.receiptId : undefined,
+      ...(typeof l.trackerEventId === "string" && /^[a-z0-9:./-]{1,100}$/i.test(l.trackerEventId) && { trackerEventId: l.trackerEventId }) } };
   }
+  if (l.type === "data-event" && tab === "privacy" && typeof l.id === "string" && /^[a-z0-9:./-]{1,100}$/i.test(l.id))
+    return { tab, layer: { type: "data-event", id: l.id } };
   if (l.type === "profile") return { tab, layer: { type: "profile", ...(l.service === "family" && { service: "family" }),
     ...(l.returnToMost === "own" || l.returnToMost === "help" ? { returnToMost: l.returnToMost }
       : l.returnToMost === true ? { returnToMost: "own" } : {}) } };

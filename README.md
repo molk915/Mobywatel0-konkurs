@@ -2,7 +2,7 @@
 
 Niezależny, interaktywny prototyp konkursowy w React + TypeScript. Nie jest oficjalną usługą administracji. Uruchamia się bez konta, kluczy i połączeń urzędowych.
 
-Aktualny wygląd, porównanie referencji i wyniki testów: [kontrola wizualna Portfela](docs/WALLET-ART-REVIEW.md). Główny ekran to interaktywna talia dokumentów, z gestami, szczegółami, kontekstowymi działaniami i wysuwanym panelem spraw. Asystent ma jeden pasek nad nawigacją.
+Na ekranie Start znajdziesz wejścia do Dokumentów, Zdrowia, Rodziny oraz wyróżnioną kartę „Potrzebujesz pomocy w sprawie?”. W MOST możesz udostępnić wybraną sprawę zaufanej osobie, sprawdzić zakres dostępu i odebrać przygotowany przez nią szkic.
 
 ## Uruchomienie
 
@@ -13,7 +13,7 @@ npm ci
 npm run dev
 ```
 
-W drugim terminalu uruchom `npm run server`, aby włączyć współpracę w MOST, Zdrowiu i Rodzinie. Otwórz `http://localhost:5173/?start=most-hub`, aby udostępnić sprawę jako Ewa i przełączyć się na Kacpra w tej samej karcie. Pokaz dwóch telefonów działa pod `http://localhost:5173/?pokaz=most3`. Zwykłą aplikację otwiera `http://localhost:5173`. Desktop pokazuje ramkę smartfona. Na ekranach do 600 px interfejs zajmuje całą szerokość i wysokość.
+W drugim terminalu uruchom `npm run server`, aby włączyć współpracę w MOST, Zdrowiu i Rodzinie. Wejdź na `http://localhost:5173/` i kliknij „Otwórz MOST”. Nowa sesja zaczyna się na profilu Ewy. Po udostępnieniu sprawy użyj „Zmień profil”, aby kontynuować jako Kacper w tej samej karcie. Pokaz dwóch telefonów działa pod `http://localhost:5173/?pokaz=most3`. Desktop pokazuje ramkę smartfona. Na ekranach do 600 px interfejs zajmuje całą szerokość i wysokość.
 
 ```sh
 npm run build

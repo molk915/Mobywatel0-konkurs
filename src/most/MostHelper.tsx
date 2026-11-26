@@ -6,22 +6,25 @@ import { MostInbox, MostTasks, PackageSummary, unread } from "./MostWork";
 import { useMostSession, type MostContext } from "./session";
 import { ControlCenter, type PersonalCases } from "./ControlCenter";
 import { controlRequest } from "./control-session";
+import type { DashboardProfile } from "./MostDashboard";
 
 export function MostHelper({ context }: { context: MostContext }) {
   const session = useMostSession("helper", context);
   return <MostHelperWorkspace session={session} />;
 }
 
-export function MostHelperWorkspace({ session, close, nav, onInbox, notifications, controlTab, personal, requestedCaseHref }: {
+export function MostHelperWorkspace({ session, close, nav, onInbox, notifications, controlTab, personal, requestedCaseHref, dashboard }: {
   session: ReturnType<typeof useMostSession>; close?: () => void; nav?: ReactNode; onInbox?: () => void; notifications?: number;
   controlTab?: "access" | "inbox";
   personal?: PersonalCases;
   requestedCaseHref?: string;
+  dashboard?: DashboardProfile;
 }) {
   const { view, connected, attempted, busy, error, ended, hasSession, retry, act, clearError } = session;
   const [pane, setPane] = useState<"work" | "document" | "comments" | "inbox">("work");
   const [submission, setSubmission] = useState<{ challenge: string; reviewId: number }>();
   const [draftReady, setDraftReady] = useState(false);
+  const [draftSaved, setDraftSaved] = useState(false);
   const helperFormId = useId();
   const locked = busy || !connected;
   const scope = view?.invitation?.scope;
@@ -32,8 +35,9 @@ export function MostHelperWorkspace({ session, close, nav, onInbox, notification
     setPane(next);
   }
 
-  if (view?.delegation?.kind === "trusted" || personal && ended)
-    return <ControlCenter session={session} role="helper" onBack={close} nav={nav} initialTab={controlTab} personal={personal} requestedCaseHref={requestedCaseHref} />;
+  if (dashboard || view?.delegation?.kind === "trusted" || personal && ended)
+    return <ControlCenter key={dashboard ? "dashboard" : "control"} session={session} role="helper"
+      onBack={close} nav={nav} initialTab={controlTab} personal={personal} requestedCaseHref={requestedCaseHref} dashboard={dashboard} />;
   if (view?.delegation && !ended)
     return <MostLayout role="helper" screen="access-ended" title="Sprawa wycofana z pokazu" onBack={close} nav={nav}>
       <p className="most-lead">Aktualne upoważnienia znajdziesz w zakładce Pomagam.</p>
@@ -85,7 +89,8 @@ export function MostHelperWorkspace({ session, close, nav, onInbox, notification
         <p className="most-lead most-helper-lead">{view.document ? mostSummary : "Ewa udostępniła Ci wybrane czynności w tej sprawie."}</p>
         <MostDeadline at={view.deadlineAt} />
         {editable && canWork ? <MostTasks session={session} beforeForms={resources}
-          helperFormId={scope && (scope.form || scope.response || scope.attachments) ? helperFormId : undefined} onDraftReady={setDraftReady} /> : resources}
+          helperFormId={scope && (scope.form || scope.response || scope.attachments) ? helperFormId : undefined}
+          onDraftReady={setDraftReady} onDraftSaved={setDraftSaved} /> : resources}
         {view.status === "review" && !view.invitation?.maySubmit && <MostNotice tone="success">Przekazano Ewie do zatwierdzenia.</MostNotice>}
         {view.status === "review" && view.invitation?.maySubmit && <PackageSummary view={view} />}
         {scope && <ScopeSummary scope={scope} />}
@@ -93,6 +98,7 @@ export function MostHelperWorkspace({ session, close, nav, onInbox, notification
     );
     if (editable && scope && (scope.form || scope.response || scope.attachments))
       action = <>
+        {draftSaved && <MostNotice tone="success" live>Szkic zapisany.</MostNotice>}
         <button type="submit" value="save-draft" form={helperFormId} className="most-button most-secondary" disabled={locked || !draftReady && !view.canReview}>Zapisz szkic</button>
         <button type="submit" form={helperFormId} className="most-button most-primary" disabled={locked || !draftReady && !view.canReview}>
           <Send size={17} /> {view.invitation?.maySubmit ? "Sprawdź odpowiedź" : "Przekaż do zatwierdzenia"}

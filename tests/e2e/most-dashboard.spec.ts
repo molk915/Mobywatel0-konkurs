@@ -1,8 +1,103 @@
 import { expect, test, type FrameLocator } from "@playwright/test";
 import { previewOrigin } from "./urls";
 
+test.use({ serviceWorkers: "block" });
+
 const btn = (phone: FrameLocator, name: string | RegExp) =>
   phone.getByRole("button", { name, exact: typeof name === "string" });
+
+test("the QR screen opens Kacper inline and he submits Ewa's residence registration", async ({ page, context }, testInfo) => {
+  await page.setViewportSize({ width: 1280, height: 960 });
+  await page.goto(previewOrigin + "/?start=most-hub");
+  const b = (name: string | RegExp) => page.getByRole("button", { name, exact: typeof name === "string" });
+  const title = "Zgłoszenie pobytu stałego";
+  const url = page.url();
+  await expect(page.locator(".most-priority").getByRole("heading", { name: title })).toBeVisible();
+  await b(/^Kto ma dostęp/).click();
+  await b("Utwórz zaproszenie QR").click();
+  await expect(page.getByRole("img", { name: /Kod QR zaproszenia/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: /Otwórz zaproszenie w nowej karcie/ })).toHaveCount(0);
+  await b("Pokaż na dwóch telefonach").click();
+  const kacper = page.frameLocator('iframe[title="Telefon Kacpra"]');
+  await btn(kacper, "Przyjmij zaproszenie").click();
+  await b("Udostępnij zgłoszenie pobytu stałego").click();
+  await b("Sprawdź podsumowanie").click();
+  await expect(page.locator(".control-grant-summary")).toContainText("Wysłanie w pokazie");
+  await b("Przejdź do potwierdzenia").click();
+  await b("Potwierdź dostęp").click();
+  await expect(page.getByRole("heading", { name: title, exact: true })).toBeVisible();
+  await btn(kacper, "Przygotuj zgłoszenie").click();
+  await kacper.getByLabel("Ulica i numer").fill("Jasna 8/12");
+  await kacper.getByLabel("Kod pocztowy").fill("00-013");
+  await kacper.getByLabel("Miejscowość").fill("Warszawa");
+  await kacper.getByLabel("Dokument potwierdzający prawo do lokalu").selectOption("lease");
+  await btn(kacper, "Zapisz szkic").click();
+  await expect(kacper.getByText("Jasna 8/12, 00-013 Warszawa")).toBeVisible();
+  await btn(kacper, "Wyślij zgłoszenie").click();
+  await expect(kacper.getByText("Wykonane przez osobę zaufaną")).toBeVisible();
+  await expect(page.getByRole("region", { name: "Szczegóły sprawy" })).toContainText("Zakończona");
+  await page.screenshot({ path: testInfo.outputPath("most-pobyt-dwa-telefony.png"), animations: "disabled" });
+  expect(context.pages()).toHaveLength(1);
+  await expect(page).toHaveURL(url);
+});
+
+test("inline demo animates on the same page and both phones receive the mandate result", async ({ page, context }, testInfo) => {
+  await page.setViewportSize({ width: 1280, height: 700 });
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await page.goto(previewOrigin + "/?start=most-hub");
+  const b = (name: string | RegExp) => page.getByRole("button", { name, exact: typeof name === "string" });
+  const url = page.url();
+  const shells = page.locator(".simulator-stage .phone-shell");
+  const dimensions = (node: Element) => {
+    const { width, height } = node.getBoundingClientRect();
+    return { width, height };
+  };
+  await expect(page.locator(".most-priority")).toBeVisible();
+  const original = await shells.evaluate(dimensions);
+  const pageWidth = await page.evaluate(() => document.documentElement.clientWidth);
+  await b(/^Pokaż MOST na dwóch telefonach/).click();
+  const helperPhone = page.getByRole("region", { name: "Telefon Kacpra" });
+  await expect(helperPhone).toHaveCSS("animation-name", "most-phone-split");
+  await expect(helperPhone.getByText(/Udostępniona sprawa pojawi się tutaj/)).toBeVisible();
+  await b(/^Mandat drogowy/).click();
+  await b("Poproś o pomoc").click();
+  for (const name of ["Sprawdź podsumowanie", "Przejdź do potwierdzenia", "Potwierdź dostęp"]) await b(name).click();
+  const kacper = page.frameLocator('iframe[title="Telefon Kacpra"]');
+  await expect(kacper.getByRole("heading", { name: "Mandat drogowy" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Mandat drogowy" })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.clientWidth)).toBe(pageWidth);
+  expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBe(700);
+  for (const shell of await shells.evaluateAll((nodes) => nodes.map((node) => {
+    const { width, height } = node.getBoundingClientRect();
+    return { width, height };
+  }))) {
+    expect(shell.width).toBeCloseTo(original.width, 0);
+    expect(shell.height).toBeCloseTo(original.height, 0);
+  }
+  await expect(page.locator(".most-hub-dashboard .most-scroll")).toHaveCSS("scrollbar-width", "none");
+  await expect(kacper.locator(".most-scroll")).toHaveCSS("scrollbar-width", "none");
+  const shared = kacper.getByRole("region", { name: "Sprawy udostępnione w MOST" });
+  await expect(shared.getByText("Podatek od nieruchomości", { exact: true })).toHaveCount(0);
+  const frames = await page.locator(".simulator-stage .phone-shell").evaluateAll((nodes) => nodes.map((node) => ({
+    width: node.clientWidth, height: node.clientHeight, radius: getComputedStyle(node).borderRadius,
+  })));
+  expect(frames).toHaveLength(2);
+  expect(frames[0]).toEqual(frames[1]);
+  await btn(kacper, "Otwórz sprawę").click();
+  await btn(kacper, "Opłać mandat").click();
+  await kacper.getByRole("radio", { name: "BLIK" }).check();
+  await btn(kacper, "Zapisz szkic").click();
+  await btn(kacper, "Potwierdź płatność").click();
+  await expect(kacper.getByText("Wykonane przez osobę zaufaną")).toBeVisible();
+  await b("Historia sprawy").click();
+  await expect(page.getByRole("region", { name: "Historia działań" }).getByText("Opłacono w pokazie", { exact: true })).toBeVisible();
+  await page.screenshot({ path: testInfo.outputPath("most-telefony-w-aplikacji.png"), animations: "disabled" });
+  expect(context.pages()).toHaveLength(1);
+  await expect(page).toHaveURL(url);
+  await b("Zakończ pokaz dwóch telefonów").click();
+  await expect(helperPhone).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Historia", exact: true })).toBeVisible();
+});
 
 async function confirmAccess(phone: FrameLocator) {
   await btn(phone, "Sprawdź podsumowanie").click();

@@ -22,8 +22,9 @@ async function invite(owner: Page, name: string) {
 
 async function enterOwner(page: Page) {
   await page.goto("/");
-  await page.getByRole("button", { name: "Usługi", exact: true }).click();
+  await page.getByRole("button", { name: "Więcej", exact: true }).click();
   await page.getByRole("region", { name: "Katalog usług" }).getByRole("button", { name: /^Rodzina/ }).click();
+  await page.getByRole("button", { name: /^Aleksandra Nowak/ }).click();
   await expect(family(page).getByRole("heading", { name: "Rodzinny wyjazd" })).toBeVisible();
 }
 
@@ -31,7 +32,7 @@ test("the family service explains the profile choice before opening", async ({ p
   await page.goto("/");
   await page.getByRole("button", { name: "Profil i ustawienia" }).click();
   await page.getByRole("button", { name: /^Ewa Wiśniewska/ }).click();
-  await page.getByRole("button", { name: "Usługi", exact: true }).click();
+  await page.getByRole("button", { name: "Więcej", exact: true }).click();
   await page.getByRole("region", { name: "Katalog usług" }).getByRole("button", { name: /^Rodzina/ }).click();
   const choice = page.getByRole("dialog");
   await expect(choice.getByRole("heading", { name: "Wybierz profil do Rodziny" })).toBeVisible();
@@ -155,6 +156,7 @@ for (const [width, height] of [[390, 844], [375, 812], [320, 740]]) {
   test(`Dokumenty ${width}×${height} retain their header, action and navigation on scroll`, async ({ page }) => {
     await page.setViewportSize({ width, height });
     await page.goto("/");
+    await page.getByRole("navigation", { name: "Nawigacja główna" }).getByRole("button", { name: "Dokumenty", exact: true }).click();
     const heading = page.getByRole("heading", { name: "Dokumenty", exact: true });
     const add = page.getByRole("button", { name: "Dodaj", exact: true });
     const nav = page.getByRole("navigation", { name: "Nawigacja główna" });

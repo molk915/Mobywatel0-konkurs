@@ -6,6 +6,7 @@ export type ControlData = {
   answer?: { text: string; links: { title: string; href: string }[]; provider?: "model" | "demo" };
   document?: { title: string; text: string };
   peer?: string;
+  resource?: string;
   authorization?: { key: string; method: "demo" | "passkey"; options?: PublicKeyCredentialRequestOptionsJSON };
   passkey?: { registered?: boolean; options?: PublicKeyCredentialCreationOptionsJSON };
 };

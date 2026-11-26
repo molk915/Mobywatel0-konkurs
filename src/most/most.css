@@ -57,9 +57,9 @@
   overflow-x: hidden;
   padding: 16px max(var(--most-inset), env(safe-area-inset-right)) 20px max(var(--most-inset), env(safe-area-inset-left));
   overscroll-behavior: contain;
-  scrollbar-width: thin;
-  scrollbar-color: var(--civic-line-strong) transparent;
+  scrollbar-width: none;
 }
+.most-scroll::-webkit-scrollbar { display: none; }
 .most-screen { animation: most-enter 240ms cubic-bezier(.2,.75,.25,1) both; }
 .most-heading { margin: 0 0 14px; }
 .most-heading h1 { margin: 0; font: 500 clamp(2rem, 8vw, 2.625rem)/1.04 var(--most-serif); letter-spacing: -.045em; }

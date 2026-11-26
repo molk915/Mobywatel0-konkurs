@@ -1,4 +1,4 @@
-import { randomBytes, randomUUID } from "node:crypto";
+import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { profiles } from "../src/domain.ts";
 import { fineDueDate, workflowDetails } from "../src/workflows/model.ts";
 import { operations } from "../src/most/control-model.ts";
@@ -34,16 +34,19 @@ export function createMostControl(state, now = Date.now) {
   function initialize(room, at) {
     return room.control ??= { revision: 0, dates: {}, grants: [], history: [], notices: [], requests: [], created: at };
   }
-  function audit(room, at, actor, label, detail, resource, result = "Zapisano", grant) {
+  function audit(room, at, actor, label, detail, resource, result = "Zapisano", grant, scope) {
     const control = initialize(room, at);
-    control.history.push({ id: randomUUID(), at: time(at), actor, label, detail, resource, result, grant });
+    const id = randomUUID();
+    control.history.push({ id, at: time(at), actor, label, detail, resource, result, grant, scope });
     if (control.history.length > 500) control.history.shift();
     control.revision++;
+    return id;
   }
-  function notice(room, at, role, title, resource, unique) {
+  function notice(room, at, role, title, resource, unique, metadata) {
     const control = room.control;
     if (unique && control.notices.some((item) => item.unique === unique)) return;
     control.notices.push({ id: randomUUID(), at: time(at), role, title, resource, unique, read: false,
+      ...metadata,
       ...(role === "helper" && { invitation: room.invitation?.token }) });
     if (control.notices.length > 350) control.notices.shift();
     control.revision++;
@@ -66,6 +69,7 @@ export function createMostControl(state, now = Date.now) {
     return root ? [...rooms].filter((peer) => peer.expiresAt > at && (peer === root || peer.control?.root === root.token)) : [room];
   };
   const security = (room) => rootFor(room)?.control ?? room.control;
+  const personId = (room) => room.control.helperProfile ?? createHash("sha256").update(room.token).digest("hex").slice(0, 24);
 
   function catalog(room, at) {
     const account = bindWorkflow(room, at);
@@ -77,6 +81,7 @@ export function createMostControl(state, now = Date.now) {
     return [
       ...(room.control.profile === "ewa" ? [vehicle, ...vehicleDates] : []), ...documents,
       ...(boundLetter(room.control.letterKey, at) ? [letter] : []), ...cases,
+      ...(security(room).trackerEvents ?? []).map(({ id, title }) => ({ id, title, kind: "tracker", actions: ["view"] })),
     ];
   }
   const finished = (grant, at) => grant.resource === "letter" ? Boolean(boundLetter(grant.binding, at)?.sentAt)
@@ -145,7 +150,8 @@ export function createMostControl(state, now = Date.now) {
         if (threshold === undefined) continue;
         const key = [item.id, item.date, threshold].join("|");
         if (!control.root || item.id.startsWith("grant:"))
-          notice(room, at, "owner", "Termin: " + item.title, item.id, "owner|" + key);
+          notice(room, at, "owner", "Termin: " + item.title, item.id, "owner|" + key,
+            item.id.startsWith("grant:") ? { attention: true } : undefined);
         if (deadlineGrant(room, item, at))
           notice(room, at, "helper", "Termin: " + item.title, item.id, room.invitation.token + "|" + key);
       }
@@ -162,7 +168,7 @@ export function createMostControl(state, now = Date.now) {
       return notice.invitation === room.invitation.token &&
         (!notice.resource || rows.some(({ id }) => id === notice.resource) || room.control.grants.some((grant) =>
           grant.resource === notice.resource && status(room, grant, at) === "active"));
-    }).map(({ id, at, title, read, resource }) => ({ id, at, title, read, resource })).reverse();
+    }).map(({ id, at, title, read, resource, eventId, attention }) => ({ id, at, title, read, resource, eventId, attention })).reverse();
   }
 
   function access(key, at) {
@@ -175,10 +181,10 @@ export function createMostControl(state, now = Date.now) {
     if (!entry) return;
     const { room, grant } = entry;
     if (grant.duration === "once" && ["submit", "pay"].includes(action)) grant.used = true;
-    audit(room, at, actorName(room, "helper"), action === "submit" ? "Wysłano odpowiedź w pokazie" : action === "pay" ? "Opłacono w pokazie" : action,
-      detail, grant.resource, "Wykonano", grant.id);
-    if (["submit", "pay"].includes(action)) notice(room, at, "owner", "Wykonano operację · " + grant.title, grant.resource);
-    if (awaitingOwner) notice(room, at, "owner", "Szkic czeka na zatwierdzenie · " + grant.title, grant.resource);
+    const eventId = audit(room, at, actorName(room, "helper"), action === "submit" ? "Wysłano odpowiedź w pokazie" : action === "pay" ? "Opłacono w pokazie" : operations[action] ?? action,
+      detail, grant.resource, "Wykonano", grant.id, grant.title);
+    if (awaitingOwner) notice(room, at, "owner", "Szkic czeka na zatwierdzenie · " + grant.title, grant.resource, undefined, { eventId, attention: true });
+    else notice(room, at, "owner", "Wykonano operację w MOST · " + grant.title, grant.resource, undefined, { eventId });
   }
   function ownerLetterAction(key, at, action, detail) {
     const entry = access(key, at);
@@ -288,11 +294,23 @@ export function createMostControl(state, now = Date.now) {
     notifications.sort((a, b) => b.at.localeCompare(a.at));
     return {
       role, revision: control.revision, owner: actorName(room, "owner"), helper: actorName(room, "helper"), helperProfile: control.helperProfile,
-      ...(owner && { passkeyRegistered: Boolean(security(room).passkey), connections: peersOf(room, at).map((peer) => ({
+      ...(owner && { passkeyRegistered: Boolean(security(room).passkey), connections: peers.map((peer) => ({
         token: peer.token, primary: !peer.control.root, current: peer === room, name: actorName(peer, "helper"),
         status: activeConnection(peer, peer.invitation?.token, at) ? "active" : peer.invitation?.status ?? "waiting",
         lastActivity: peer.control.history.at(-1)?.at,
-      })) }),
+      })), accessOverview: peers.flatMap((peer) => [
+        ...(peer === room ? grants : peer.control.grants).map((grant) => ({
+          id: grant.id, title: grant.title, recipient: actorName(peer, "helper"), personId: personId(peer), expires: grant.expires,
+          ...(peer !== room && { connection: peer.token }),
+          lastUsed: peer.control.history.findLast((event) => event.grant === grant.id && ["Odczytano", "Wykonano"].includes(event.result))?.at,
+          actions: grant.actions, status: status(peer, grant, at),
+        })),
+        ...(workflows?.assignments(peer, at, true) ?? []).map(({ id, title, expires }) => ({
+          id: "workflow:" + id, workflowId: id, title, recipient: actorName(peer, "helper"), personId: personId(peer), expires,
+          lastUsed: (workflows?.controlHistory(peer, actorName(peer, "helper")) ?? []).findLast(({ resource }) => resource === id)?.at,
+          actions: ["view", "prepare", ["fine", "tax"].includes(id) ? "pay" : "submit"], status: "active",
+        })),
+      ]) }),
       connectedAt: connected ? time(room.invitation.joinedAt ?? control.created) : undefined,
       resources: owner ? catalog(room, at).map(({ offset, action, ...resource }) => resource) : requestable.map(({ id, kind }) => ({ id, kind, title: "Dostęp do pisma urzędowego", actions: ["view"] })),
       grants: activeGrants.map((grant) => {
@@ -462,7 +480,8 @@ export function createMostControl(state, now = Date.now) {
     if (type === "case-open" && !owner) {
       const grant = allowed(room, "view", command.resource, at);
       if (!grant || !["letter", "workflow", "payment"].includes(grant.kind)) return denied();
-      audit(room, at, actorName(room, role), "Otwarto sprawę w panelu Pomagam", grant.title, grant.resource, "Odczytano", grant.id);
+      const eventId = audit(room, at, actorName(room, role), "Otwarto sprawę w panelu Pomagam", grant.title, grant.resource, "Odczytano", grant.id, "Treść sprawy · " + grant.title);
+      notice(room, at, "owner", "Osoba zaufana otworzyła sprawę · " + grant.title, grant.resource, undefined, { eventId });
       return done();
     }
     if (type === "read") {
@@ -478,12 +497,17 @@ export function createMostControl(state, now = Date.now) {
       return done();
     }
     if (type === "document") {
-      const document = documents.find(({ id }) => id === command.id);
+      const tracker = (security(room).trackerEvents ?? []).find(({ id }) => id === command.id);
+      const document = tracker ?? documents.find(({ id }) => id === command.id);
       const action = command.download === true ? "download" : "view";
       const grant = document && !owner && allowed(room, action, document.id, at);
       if (!document || !owner && !grant) return denied();
+      const eventId = audit(room, at, actorName(room, role), tracker ? "Otwarto opis operacji na danych"
+        : action === "download" ? "Pobrano dokument" : "Otwarto dokument", document.title, document.id, "Odczytano", grant?.id,
+        tracker ? "Opis jednej udostępnionej operacji · " + document.title : "Treść udostępnionego dokumentu · " + document.title);
+      if (!owner) notice(room, at, "owner", "Użyto dostępu w MOST · " + document.title, document.id, undefined, { eventId });
+      if (tracker) return done({ document: { title: tracker.title, text: tracker.text } });
       const date = control.dates[document.id] ?? warsawDate(control.created + document.offset * day);
-      audit(room, at, actorName(room, role), action === "download" ? "Pobrano dokument" : "Otwarto dokument", document.title, document.id, "Odczytano", grant?.id);
       return done({ document: { title: document.title,
         text: ["DOKUMENT FIKCYJNY · MOST", document.title, "Profil demonstracyjny: " + actorName(room, "owner"), "Ważność: " + date].join("\n") } });
     }
@@ -507,6 +531,29 @@ export function createMostControl(state, now = Date.now) {
       return done();
     }
     if (!owner) return denied();
+    if (type === "tracker-prepare") {
+      const { eventId, title, text } = command;
+      if (typeof eventId !== "string" || !/^[a-z0-9:./-]{1,100}$/i.test(eventId) ||
+          typeof title !== "string" || !title.trim() || title.length > 150 ||
+          typeof text !== "string" || !text.trim() || text.length > 1500) return invalid("Sprawdź opis udostępnianej operacji.");
+      const account = security(room);
+      const events = account.trackerEvents ??= [];
+      const id = "tracker:" + eventId;
+      if (!events.some((event) => event.id === id)) {
+        if (events.length >= 50) return conflict("Osiągnięto limit operacji w pokazie.");
+        events.push({ id, title, text });
+        control.revision++;
+      }
+      return done({ resource: id });
+    }
+    if (type === "revoke-person") {
+      const matching = peersOf(room, at).filter((peer) => personId(peer) === command.personId);
+      if (!matching.length) return denied();
+      for (const peer of matching) for (const grant of peer.control.grants) {
+        if (status(peer, grant, at) === "active") recordRevocation(peer, grant, at);
+      }
+      return done();
+    }
     if (type === "add-peer") {
       const root = rootFor(room);
       if (!root || root.expiresAt <= at || peersOf(room, at).length >= 5) return conflict("Centrum osiągnęło limit połączeń w pokazie.");
@@ -593,6 +640,13 @@ export function createMostControl(state, now = Date.now) {
       audit(room, at, actorName(room, role), "Dodano klucz dostępu");
       return done({ passkey: { registered: true } });
     }
+    if (type === "revoke") {
+      const peer = peersOf(room, at).find(({ control }) => control.grants.some(({ id }) => id === command.id));
+      const grant = peer?.control.grants.find(({ id }) => id === command.id);
+      if (!peer || !grant || status(peer, grant, at) !== "active") return conflict("Dostęp został już zakończony.");
+      recordRevocation(peer, grant, at);
+      return done();
+    }
     const grant = control.grants.find(({ id }) => id === command?.id);
     if (type === "formal-document" && grant?.formal) {
       const item = grant.formal;
@@ -620,10 +674,6 @@ export function createMostControl(state, now = Date.now) {
       ].join("\n") } });
     }
     if (!grant || status(room, grant, at) !== "active") return conflict("Dostęp został już zakończony.");
-    if (type === "revoke") {
-      recordRevocation(room, grant, at);
-      return done();
-    }
     if (type === "formal-draft") {
       if (command.procedure !== formalTemplateFor(grant.resource) || !["letter", "workflow", "payment"].includes(grant.kind) ||
           grant.formal && !["draft", "rejected-demo"].includes(grant.formal.status)) return invalid("Wybierz właściwy wzór.");

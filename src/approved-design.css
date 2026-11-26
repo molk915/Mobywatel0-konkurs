@@ -3,7 +3,7 @@
   overflow: hidden;
   padding: 0;
 }
-.view-home:has(.approved-selection) { height: 100%; }
+.view:has(.approved-selection) { height: 100%; }
 .approved-selection,
 .approved-detail-shell {
   display: flex;

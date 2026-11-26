@@ -1,4 +1,5 @@
-import { initialCitizen, profiles, type CitizenState } from "./domain";
+import { initialCitizen, profiles, type CitizenState, type Profile } from "./domain";
+import { withTrackerExamples } from "./data-tracker";
 export type Store = {
   version: 1;
   profile: string;
@@ -7,17 +8,17 @@ export type Store = {
 };
 const KEY = "mobywatel-next-v1";
 const PROFILE_KEY = "mobywatel-profile";
-export function freshStore(): Store {
+export function freshStore(initialProfile: Profile["id"] = "ewa"): Store {
   return {
     version: 1,
-    profile: profiles[0].id,
+    profile: initialProfile,
     citizens: Object.fromEntries(
-      profiles.map((p) => [p.id, initialCitizen(p)]),
+      profiles.map((p) => [p.id, withTrackerExamples(initialCitizen(p), p)]),
     ),
     largeText: false,
   };
 }
-export function loadStore(phone?: "ewa" | "kacper"): Store {
+export function loadStore(phone?: "ewa" | "kacper", initialProfile?: Profile["id"]): Store {
   try {
     const raw = JSON.parse((phone ? sessionStorage.getItem(KEY + ":" + phone) : localStorage.getItem(KEY)) || "null");
     if (
@@ -39,12 +40,14 @@ export function loadStore(phone?: "ewa" | "kacper"): Store {
       } catch {
         // Local storage still provides a starting profile.
       }
-      return { ...raw, profile };
+      const citizens = Object.fromEntries(profiles.map((person) =>
+        [person.id, withTrackerExamples(raw.citizens[person.id], person)]));
+      return { ...raw, profile, citizens };
     }
   } catch {
     /* a damaged or unavailable local store starts a clean demo */
   }
-  return freshStore();
+  return freshStore(initialProfile);
 }
 export function saveStore(s: Store, phone?: "ewa" | "kacper"): boolean {
   if (phone) {

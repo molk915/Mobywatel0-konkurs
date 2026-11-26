@@ -11,7 +11,7 @@ async function ewa(page: Page) {
   await expect(page.getByRole("dialog")).toHaveCount(0);
 }
 async function openDashboard(page: Page) {
-  await button(page, "Usługi").click();
+  await button(page, "Więcej").click();
   await button(page.getByRole("region", { name: "Katalog usług" }), /^Zdrowie Skierowania/).click();
   await expect(button(wellness(page), "Historia leczenia")).toBeVisible();
   return wellness(page);
@@ -81,6 +81,7 @@ test("wellness prepares, approves and restores a visit across two browser sessio
     await button(owner, "Wstecz").click();
     await button(owner, "Wstecz").click();
     await expect(owner).toHaveCount(0);
+    await button(page, "Sprawy").click();
     await page.getByRole("tab", { name: /Zakończone/ }).click();
     await expect(button(page, /Konsultacja okulistyczna.*Wizyta zaplanowana/)).toBeVisible();
     await button(page, "Pomagam").click();
@@ -215,11 +216,11 @@ test("help is available under shared cases and keeps native navigation and profi
 test("home services lead to a reminder and a scoped result at 430px", async ({ page, browser }) => {
   await page.setViewportSize({ width: 430, height: 932 });
   await ewa(page);
-  await expect(page.getByText("Ewa Wiśniewska", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Dzień dobry, Ewo", exact: true })).toBeVisible();
   await expect(page.getByRole("link", { name: /Pokaż dwa telefony|Pokaz Zdrowia/ })).toHaveCount(0);
   await expect(page.locator(".toast")).toHaveCount(0);
   await capture(page, "home-430");
-  await button(page, "Usługi").click();
+  await button(page, "Więcej").click();
   const services = page.getByRole("region", { name: "Katalog usług" });
   await expect(button(services, /^Rodzina/)).toBeVisible();
   await expect(button(services, /^Otwórz asystenta/)).toBeVisible();

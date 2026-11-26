@@ -81,7 +81,6 @@
 .control-showcase .most-stage-device::before { left: -4px; box-shadow: 0 46px #475365; }
 .control-showcase .most-stage-device::after { right: -4px; top: 130px; height: 54px; }
 .control-showcase .most-stage-device iframe { border-radius: 30px; background: var(--civic-bg); }
-.control-showcase .most-stage-side:nth-child(2) .most-stage-device { border-color: #8794a4; background: #263449; }
 @media (max-width: 680px) {
   .control-showcase .most-stage-phones { max-width: 425px; }
   .control-showcase .most-stage-device { height: max(620px, 86dvh); }

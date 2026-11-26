@@ -1,4 +1,4 @@
-import { eventLabels, formatMostDeadline, statusLabels as mostCaption } from "./most/model";
+import { eventLabels, formatMostDeadline, scopeLabels, statusLabels as mostCaption } from "./most/model";
 import { MostRow } from "./most/components";
 import { Inbox, type InboxItem } from "./Inbox";
 import { healthCaption, type HealthTarget } from "./health/model";
@@ -6,7 +6,10 @@ import { hasWellnessInvite, healthInbox, useWellnessSession } from "./health/ses
 import { delegationToken, demoHelperToken, hasMostInvite, helperDashboardUrl, routeForMost, storedTrustedHelperToken, useMostSession } from "./most/session";
 import { useControl } from "./most/control-session";
 import { DocumentSelection, ApprovedDocument } from "./ApprovedDocuments";
+import { motion } from "motion/react";
+import { InlineHelperPhone, InlineShowcaseContext, InlineShowcaseToolbar, PhoneHardware } from "./most/InlineShowcase";
 import { CivicHeader, CivicNav, WavePattern } from "./CivicChrome";
+import { CivicHome } from "./CivicHome";
 import { FamilyEntry, FamilyWorkspace } from "./family/FamilyWorkspace";
 import { isFamilyInvite, useFamilySession } from "./family/session";
 import { MostEntry } from "./most/MostEntry";
@@ -18,6 +21,7 @@ import {
   useLayoutEffect,
   useRef,
   useState,
+  type CSSProperties,
   type ReactNode,
 } from "react";
 import {
@@ -43,7 +47,6 @@ import {
   FileCheck2,
   FileText,
   Fingerprint,
-  GraduationCap,
   Heart,
   HeartPulse,
   Home,
@@ -55,7 +58,6 @@ import {
   MessageCircle,
   Plus,
   ScanLine,
-  Search,
   Send,
   Settings2,
   Shield,
@@ -89,7 +91,10 @@ import {
 import { freshStore, loadStore, saveStore } from "./storage";
 import { Wallet } from "./DeckWallet";
 import { DigitalCard, documentTitles } from "./DigitalCard";
-import { PrivacyHub } from "./PrivacyHub";
+import { PrivacyHub, type TrackerPermission } from "./PrivacyHub";
+import { DataEventDetails } from "./DataEventDetails";
+import { trackedLetterEvents, trackedMostEvents } from "./data-tracker";
+import { operations } from "./most/control-model";
 import { ServiceDirectory } from "./ServiceDirectory";
 import { ProcessRoute } from "./ProcessRoute";
 import { Cases, type CaseCard } from "./CaseHub";
@@ -103,7 +108,7 @@ import {
   receiptNextStep,
   confirmManualOperation,
 } from "./domain";
-import { conversationFor, openConversation, restoreNavigation, searchDocuments, type Layer } from "./navigation";
+import { conversationFor, openConversation, restoreNavigation, type Layer } from "./navigation";
 import { MostTasks, type MostSession } from "./most/MostWork";
 import {
   clearAttachments,
@@ -198,18 +203,6 @@ function Brand() {
     </span>
   );
 }
-function IdentityCard({
-  p,
-  onClick,
-  detail = false,
-}: {
-  p: Profile;
-  onClick?: () => void;
-  detail?: boolean;
-}) {
-  return <DigitalCard p={p} id={0} onOpen={onClick} />;
-}
-
 const MostOwner = lazy(() => import("./most/MostOwner").then(({ MostOwner }) => ({ default: MostOwner })));
 const HealthWorkspace = lazy(() => import("./health/HealthWorkspace"));
 const MostHelperWorkspace = lazy(() => import("./most/MostHelper").then(({ MostHelperWorkspace }) => ({ default: MostHelperWorkspace })));
@@ -225,7 +218,8 @@ export default function App() {
     ["most", "centrum", "most-hub"].includes(new URLSearchParams(location.search).get("start") ?? "") &&
     !hasMostInvite() && !hasWellnessInvite() && !isFamilyInvite());
   const [store, setStore] = useState(() => {
-    const saved = loadStore(showcasePhone);
+    const fromInvitation = hasMostInvite() || hasWellnessInvite() || isFamilyInvite();
+    const saved = loadStore(showcasePhone, fromInvitation ? "aleksandra" : "ewa");
     if (showcasePhone) return { ...saved, profile: showcasePhone };
     return contestEntry ? { ...saved, profile: "ewa" } : saved;
   });
@@ -234,6 +228,9 @@ export default function App() {
   const [mostHelpEnabled, setMostHelpEnabled] = useState(() =>
     hasMostInvite() || new URLSearchParams(location.search).get("most") === "pomoc");
   const [showcaseInvite, setShowcaseInvite] = useState<string>();
+  const inlineHelper = showcasePhone === "kacper" && new URLSearchParams(location.search).has("pokaz-w-aplikacji");
+  const [inlineShowcase, setInlineShowcase] = useState<{ token?: string }>();
+  const identityOrigin = useRef<DOMRect>(undefined);
   const [initialNavigation] = useState<{ tab: Tab; layer: Layer | null }>(() => {
     if (isFamilyInvite()) return { tab: "cases", layer: { type: "family" } };
     if (hasMostInvite() || (mostHelpEnabled && (showcasePhone === "kacper" || !history.state?.prototype)))
@@ -259,7 +256,6 @@ export default function App() {
   const replaceNotificationEntry = useRef(false);
   const [closing, setClosing] = useState(false);
   const [fitPreview, setFitPreview] = useState(true);
-  const [documentQuery, setDocumentQuery] = useState("");
   const [selectedDocument, setSelectedDocument] = useState(0);
   const [toast, setToast] = useState("");
   const [online, setOnline] = useState(navigator.onLine);
@@ -276,13 +272,15 @@ export default function App() {
   const p = profiles.find((p) => p.id === store.profile)!;
   const c = store.citizens[p.id];
   const isEwa = p.id === "ewa";
+  const duetOpen = !!inlineShowcase && isEwa;
+  const previewScale = simulator && fitPreview ? deviceScale : 1;
   const workflows = useWorkflows(p.id);
   const ownHealthOpen = layer?.type === "health" && !layer.helper;
   const healthEwa = useWellnessSession("ewa", isEwa && (!healthHelpEnabled || ownHealthOpen));
   const healthAleksandra = useWellnessSession("aleksandra", p.id === "aleksandra" && ownHealthOpen);
   const healthKacper = useWellnessSession("kacper", p.id === "kacper" && ownHealthOpen);
   const healthHelper = useWellnessSession(null, healthHelpEnabled);
-  const mostHelper = useMostSession("helper", showcasePhone === "kacper" ? "delegation-showcase-help" : "app",
+  const mostHelper = useMostSession("helper", inlineHelper ? "delegation-inline-help" : showcasePhone === "kacper" ? "delegation-showcase-help" : "app",
     false, mostHelpEnabled || showcasePhone === "kacper", undefined, showcaseInvite);
   useEffect(() => {
     if (showcasePhone !== "kacper") return;
@@ -291,12 +289,15 @@ export default function App() {
           typeof event.data.token !== "string" || !/^[A-Za-z0-9_-]{32}$/.test(event.data.token)) return;
       setShowcaseInvite(event.data.token);
       setMostHelpEnabled(true);
+      if (inlineHelper) setLayer({ type: "most-help" });
     }
     window.addEventListener("message", receive);
     window.parent.postMessage({ type: "most-showcase-ready" }, location.origin);
     return () => window.removeEventListener("message", receive);
-  }, [showcasePhone]);
+  }, [showcasePhone, inlineHelper]);
   const [controlTab, setControlTab] = useState<"access" | "inbox">("access");
+  const [dataTab, setDataTab] = useState<"history" | "most">("history");
+  const [editAccess, setEditAccess] = useState<{ id: string; connection?: string }>();
   const [requestedMostCase, setRequestedMostCase] = useState<string>();
   const trustOwnerKey = delegationToken(p.id + "-trusted");
   const ownerControl = useControl(trustOwnerKey, !!trustOwnerKey);
@@ -308,11 +309,11 @@ export default function App() {
   const familyCase = familyVisible ? familySession.data?.view.case : null;
   function openFamily(decision = false) {
     if (!familyVisible) { setLayer({ type: "profile", service: "family" }); return; }
-    if (tab !== "services" || decision) setTab("cases");
+    if ((tab !== "services" && tab !== "home") || decision) setTab("cases");
     setLayer({ type: "family", decision });
   }
   function openHealth(target: HealthTarget = { section: "home" }) {
-    if (tab !== "services" && tab !== "privacy") setTab("cases");
+    if (tab !== "services" && tab !== "privacy" && tab !== "home") setTab("cases");
     setLayer({ type: "health", target });
   }
   function openHealthHelp(target: HealthTarget = { section: "referrals" }) {
@@ -356,6 +357,7 @@ export default function App() {
     else go("cases");
   }
   function openDelegation(kind: DelegationContext["kind"], receiptId?: string) {
+    setEditAccess(undefined);
     if (kind === "trusted") setControlTab("access");
     setLayer({ type: "delegation", kind, receiptId });
   }
@@ -377,6 +379,11 @@ export default function App() {
       return;
     }
     if (layer?.type === "delegation") {
+      setEditAccess(undefined);
+      if (layer.trackerEventId) {
+        setLayer({ type: "data-event", id: layer.trackerEventId });
+        return;
+      }
       const receipt = c.receipts.find((item) => item.id === layer.receiptId && item.kind === layer.kind);
       if (receipt) { setLayer({ type: "receipt", receipt }); return; }
       if (["move", "wallet", "letter"].includes(layer.kind) && c.drafts[layer.kind as CaseKind]) {
@@ -454,14 +461,14 @@ export default function App() {
   useLayoutEffect(() => {
     const stage = stageRef.current;
     const shell = shellRef.current;
-    if (!simulator || !fitPreview || !stage || !shell) return;
+    if (!simulator || !fitPreview || duetOpen || !stage || !shell) return;
     const fit = () => setDeviceScale(Math.min(1, stage.clientWidth / shell.offsetWidth, stage.clientHeight / shell.offsetHeight));
     const observer = new ResizeObserver(fit);
     observer.observe(stage);
     observer.observe(shell);
     fit();
     return () => observer.disconnect();
-  }, [simulator, fitPreview]);
+  }, [simulator, fitPreview, duetOpen]);
   useEffect(() => {
     const timer = setInterval(
       () =>
@@ -502,7 +509,8 @@ export default function App() {
       const previous = history.state;
       const mostNavigation = layer?.type === "most" && previous?.layer?.type === "most" && previous.profile === store.profile
         ? { mostPane: previous.mostPane, mostHistoryReturn: previous.mostHistoryReturn }
-        : {};
+        : layer?.type === "most-hub" && previous?.layer?.type === "most-hub" && previous.profile === store.profile
+          ? { mostHubCase: previous.mostHubCase } : {};
       history.replaceState(
         { prototype: true, profile: store.profile, tab, layer, ...mostNavigation, ...(previous?.inboxOpen && { inboxOpen: true }) },
         "",
@@ -515,7 +523,12 @@ export default function App() {
       if (replaceNotificationEntry.current) {
         replaceNotificationEntry.current = false;
         history.replaceState(route, "");
-      } else history.pushState(route, "");
+      } else {
+        const current = history.state;
+        const sameMostHub = layer?.type === "most-hub" && current?.layer?.type === "most-hub" &&
+          current.tab === tab && current.profile === store.profile && current.layer.mode === layer.mode;
+        if (!sameMostHub) history.pushState(route, "");
+      }
     }
   }, [tab, layer, store.profile, notificationVisit, mostTarget]);
   useEffect(() => {
@@ -523,6 +536,8 @@ export default function App() {
       setInboxOpen(e.state?.inboxOpen === true);
       if (e.state?.prototype) {
         const next = restoreNavigation(e.state, storeRef.current);
+        if (next.layer?.type === "most-hub" && layer?.type === "most-hub" &&
+            next.tab === tab && next.layer.mode === layer.mode) return;
         if (tab === next.tab && !layer && !next.layer) return;
         historyPop.current = true;
         setClosing(false);
@@ -571,12 +586,12 @@ export default function App() {
         if (inboxOpen) { e.preventDefault(); dismissInbox(); }
         else if (layer) dismissWorkspace();
       }
-      if (e.key === "Tab" && (layer || inboxOpen)) {
+      if (e.key === "Tab" && (layer || inboxOpen) && !(inlineShowcase && isEwa)) {
         const dialog = inboxOpen ? inboxRef.current : document.querySelector(".app-workspace");
         if (!dialog) return;
         const nodes = Array.from(
           dialog.querySelectorAll<HTMLElement>(
-            'button:not([disabled]),a[href],input:not([disabled]),textarea:not([disabled]),select:not([disabled]),[tabindex="0"]',
+            'button:not([disabled]),a[href],input:not([disabled]),textarea:not([disabled]),select:not([disabled]),summary,[tabindex="0"]',
           ),
         ).filter((el) => el.offsetParent !== null);
         const first = nodes[0],
@@ -592,7 +607,7 @@ export default function App() {
     }
     window.addEventListener("keydown", key);
     return () => window.removeEventListener("keydown", key);
-  }, [layer, inboxOpen, c.receipts]);
+  }, [layer, inboxOpen, c.receipts, inlineShowcase, isEwa]);
   const start = (kind: CaseKind, suggestedData?: Record<string, string>) => {
     if (kind === "move") {
       setTab("cases");
@@ -620,10 +635,14 @@ export default function App() {
       });
     setLayer({ type: "flow", kind });
   };
-  const openDoc = (id: number) => setLayer({ type: "document", id });
+  const openDoc = (id: number, source?: HTMLElement) => {
+    identityOrigin.current = id === 0 ? source?.getBoundingClientRect() : undefined;
+    setLayer({ type: "document", id });
+  };
   const go = (t: Tab) => {
     setTab(t);
-    if (layer) closeLayer();
+    if (layer?.type === "most-hub") setLayer(null);
+    else if (layer) closeLayer();
   };
   function openMostTab() {
     if (showcasePhone === "kacper" && mostHelper.hasSession) {
@@ -634,13 +653,41 @@ export default function App() {
   }
   const mostNav = showcasePhone ? <CivicNav tab="most" onGo={go} onMost={openMostTab}
     onAssistant={() => setLayer({ type: "assistant", screen: tab })} /> : undefined;
+  const appMostNav = <CivicNav tab="most" full onGo={go} onMost={openMostTab}
+    onAssistant={() => setLayer({ type: "assistant", screen: tab })} />;
   const drafts = Object.values(c.drafts) as Draft[];
   const draft = drafts[0];
+  const letterEvents = mostView?.invitation?.managed ? [] : trackedLetterEvents(mostView?.history ?? []);
+  const trackerEvents = [...c.access, ...trackedMostEvents(ownerControl.view?.history ?? []), ...letterEvents];
+  const eventToShare = layer?.type === "delegation" && layer.trackerEventId
+    ? trackerEvents.find(({ id }) => id === layer.trackerEventId) : undefined;
+  function openDataEvent(id: string) {
+    setTab("privacy");
+    setDataTab("history");
+    setLayer({ type: "data-event", id });
+  }
   const inbox: InboxItem[] = [
+    ...c.access.filter(({ source, id }) => source && !id.startsWith("tracker-demo-")).map((event): InboxItem => ({
+      key: "privacy-" + event.id, title: "Zapisano operację na danych · " + event.who, at: event.at, context: "Moje dane",
+      read: !!c.dataNoticesRead?.includes(event.id),
+      markRead: () => {
+        update((citizen) => ({ ...citizen, dataNoticesRead: [...new Set([...(citizen.dataNoticesRead ?? []), event.id])] }));
+        return true;
+      },
+      open: () => openDataEvent(event.id),
+    })),
     ...[ownerControl, helperControl].flatMap((control, index) => (control.view?.notifications ?? []).map((item): InboxItem => ({
-      ...item, key: "control-" + item.id, context: "Centrum kontroli MOST",
+      ...item, key: "control-" + item.id, context: item.attention ? "Wymaga uwagi · MOST" : "Centrum kontroli MOST",
       markRead: async () => Boolean(await control.send({ type: "read", id: item.id })),
       open: () => {
+        if (index === 0 && item.eventId && trackerEvents.some(({ id }) => id === "most:" + item.eventId)) {
+          openDataEvent("most:" + item.eventId);
+          return;
+        }
+        if (index === 0 && item.resource?.startsWith("grant:")) {
+          setTab("privacy"); setDataTab("most"); setLayer(null);
+          return;
+        }
         setControlTab("inbox");
         if (index === 0) { setTab("privacy"); setLayer({ type: "delegation", kind: "trusted" }); }
         else openMostHelp();
@@ -668,7 +715,11 @@ export default function App() {
     ...(mostView?.notifications ?? []).map((item) => ({
       ...item, key: "most-" + item.id, title: eventLabels[item.type], context: "MOST",
       markRead: () => mostSession.act({ type: "read", id: item.id }),
-      open: () => openMost(item.type === "review" && mostView?.status === "review" ? "review" : "work"),
+      open: () => {
+        const event = letterEvents.find(({ id }) => id === "most-letter:" + item.id);
+        if (event && item.type !== "review") openDataEvent(event.id);
+        else openMost(item.type === "review" && mostView?.status === "review" ? "review" : "work");
+      },
     })),
     ...(familyVisible ? familySession.data?.notifications ?? [] : []).map((item) => ({
       ...item, key: "family-" + item.id, context: "Rodzina",
@@ -744,11 +795,49 @@ export default function App() {
         ? c.tasks.filter((x) => x !== id)
         : [...c.tasks, id],
     }));
-  const extra = p.extra;
-  const visibleDocuments = searchDocuments(documentQuery, extra);
-  const access = layer?.type === "access" ? c.access.find(({ id }) => id === layer.access.id) ?? layer.access : undefined;
+  const access = layer?.type === "access" ? c.access.find(({ id }) => id === layer.access.id) ?? layer.access
+    : layer?.type === "data-event" ? trackerEvents.find(({ id }) => id === layer.id) : undefined;
+  const legacyLetter = mostView?.invitation?.token && !mostView.invitation.managed ? mostView.invitation : undefined;
+  const overviewGrants = ownerControl.view?.accessOverview ?? [];
+  const trackerPermissions: TrackerPermission[] = overviewGrants.map((grant) => ({
+    ...grant,
+    scope: grant.actions.map((operation) => operations[operation]),
+    edit: grant.status === "active" && !grant.workflowId ? () => {
+      openDelegation("trusted");
+      setEditAccess({ id: grant.id, connection: grant.connection });
+    } : undefined,
+    revoke: grant.status !== "active" ? undefined : async () => grant.workflowId
+      ? Boolean(await workflows.act({ type: "revoke", id: grant.workflowId }))
+      : Boolean(await ownerControl.send({ type: "revoke", id: grant.id })),
+  }));
+  if (legacyLetter) trackerPermissions.push({
+    id: "direct-letter", personId: "kacper", title: mostView?.document?.title ?? "Pismo z urzędu",
+    recipient: "Kacper Zieliński", status: legacyLetter.status, expires: legacyLetter.expiresAt,
+    lastUsed: letterEvents.at(-1)?.at,
+    scope: (Object.keys(scopeLabels) as (keyof typeof scopeLabels)[]).filter((key) => legacyLetter.scope[key]).map((key) => scopeLabels[key]),
+    revoke: ["active", "waiting"].includes(legacyLetter.status) ? () => mostSession.act({ type: "revoke" }) : undefined,
+  });
+  async function revokeTrackerPerson(personId: string) {
+    const current = overviewGrants.filter((item) => item.personId === personId && item.status === "active");
+    if (current.some(({ workflowId }) => !workflowId) && !await ownerControl.send({ type: "revoke-person", personId })) return false;
+    for (const { workflowId } of current) {
+      if (workflowId && !await workflows.act({ type: "revoke", id: workflowId })) return false;
+    }
+    if (personId === "kacper" && legacyLetter && ["active", "waiting"].includes(legacyLetter.status)) {
+      return mostSession.act({ type: "revoke" });
+    }
+    return true;
+  }
   return (
+    <InlineShowcaseContext.Provider value={isEwa && !showcasePhone ? {
+      active: !!inlineShowcase,
+      open: (token) => setInlineShowcase({ token }),
+      connect: (token) => setInlineShowcase((current) =>
+        current || window.matchMedia("(min-width: 901px)").matches ? { token } : undefined),
+    } : null}>
     <div className={"presentation " + (store.largeText ? "large-text" : "")}
+      data-duet={duetOpen || undefined}
+      style={duetOpen ? { "--duet-scale": previewScale } as CSSProperties : undefined}
       data-surface={simulator ? "simulator" : showcasePhone ? "embedded" : "app"} data-fit={simulator && fitPreview}>
       <header className="presentation-header" inert={!!layer || inboxOpen}>
         <a
@@ -774,18 +863,20 @@ export default function App() {
             Koncepcja 2026
             <ArrowUpRight size={15} />
           </button>
+          <a className="presentation-author-link" href="/?strona=o-tworcy">O twórcy <ArrowUpRight size={15} aria-hidden="true" /></a>
         </div>
       </header>
+      {inlineShowcase && isEwa && <InlineShowcaseToolbar onClose={() => setInlineShowcase(undefined)} />}
       <div className="simulator-stage" ref={stageRef}>
-      <div
+      <motion.div layout="position" transition={{ layout: { type: "spring", stiffness: 220, damping: 26 } }}
         className="phone-shell"
         ref={shellRef}
-        style={simulator && fitPreview ? { zoom: deviceScale } : undefined}
+        style={simulator && fitPreview ? { zoom: previewScale } : undefined}
       >
-        <span className="hardware-button volume-one" />
-        <span className="hardware-button volume-two" />
-        <span className="hardware-button power" />
-        <div className="phone" data-testid="phone" data-showcase-phone={showcasePhone}>
+        <PhoneHardware />
+        <div className={inlineHelper ? "phone most-hub-dashboard" : "phone"} data-testid="phone"
+          data-showcase-phone={inlineHelper ? undefined : showcasePhone}
+          data-inline-helper={inlineHelper ? new URLSearchParams(location.search).get("rama") ?? "mobile" : undefined}>
           <div className="status-bar" aria-hidden="true">
             <b>9:41</b>
             <span className="dynamic-island" />
@@ -798,6 +889,7 @@ export default function App() {
           <div className="base" inert={!!layer || inboxOpen} aria-hidden={!!layer || inboxOpen}>
             <CivicHeader
               profile={p}
+              mostBrand={!!showcasePhone}
               unreadCount={inboxCount}
               onHome={() => go("home")}
               onNotifications={openInbox}
@@ -818,129 +910,23 @@ export default function App() {
                 key={tab}
                 data-direction={tabDirection}
               >
-                {tab === "home" && (
+                {tab === "home" && !showcasePhone && <CivicHome profile={p} onMost={openMostTab}
+                  onDocuments={() => go("documents")} onHealth={() => openHealth()} onFamily={() => openFamily()} onPrivacy={() => go("privacy")} />}
+                {(tab === "documents" || tab === "home" && showcasePhone) && (
                   <DocumentSelection
                     p={p}
                     ids={c.documentIds}
                     onOpen={openDoc}
                     onSave={(documentIds) => update((citizen) => ({ ...citizen, documentIds }))}
-                    overview={isEwa && !["finished", "rejected"].includes(mostStatus) ? (
+                    overview={showcasePhone && isEwa && !["finished", "rejected"].includes(mostStatus) ? (
                       <MostEntry isEwa view={mostView} compact onOpen={() => openMost(mostStatus === "review" ? "review" : "work")} />
                     ) : undefined}
                   />
 
                 )}
-                {tab === "documents" && (
-                  <>
-                    <div className="page-heading">
-                      <div className="eyebrow">TWÓJ CYFROWY PORTFEL</div>
-                      <h1>
-                        Dokumenty<span className="red-dot">.</span>
-                      </h1>
-                      <p>Wszystkie dokumenty w jednym miejscu.</p>
-                    </div>
-                    <label className="search-field">
-                      <Search size={20} />
-                      <input
-                        aria-label="Szukaj dokumentu"
-                        placeholder="Szukaj dokumentu…"
-                        value={documentQuery}
-                        onChange={(e) => setDocumentQuery(e.target.value)}
-                      />
-                      {documentQuery && (
-                        <button
-                          type="button"
-                          aria-label="Wyczyść wyszukiwanie"
-                          onClick={() => setDocumentQuery("")}
-                        >
-                          <X size={18} />
-                        </button>
-                      )}
-                    </label>
-                    {visibleDocuments.includes(0) && (
-                      <IdentityCard p={p} onClick={() => openDoc(0)} />
-                    )}
-                    {!visibleDocuments.length && (
-                      <div className="empty-state" role="status">
-                        <Search size={28} />
-                        <strong>Nie ma takiego dokumentu</strong>
-                        <p>Spróbuj „dowód”, „prawo jazdy” albo „auto”.</p>
-                        <button
-                          className="text-button"
-                          onClick={() => setDocumentQuery("")}
-                        >
-                          Pokaż wszystkie dokumenty
-                        </button>
-                      </div>
-                    )}
-                    <div className="document-list">
-                      <button
-                        className="document-row violet"
-                        hidden={!visibleDocuments.includes(1)}
-                        onClick={() => openDoc(1)}
-                      >
-                        <div>
-                          <IdCard size={26} />
-                          <span className="tiny-caps">PL · DEMO</span>
-                        </div>
-                        <strong>mPrawo jazdy</strong>
-                        <span>
-                          Kategoria B<ChevronRight size={20} />
-                        </span>
-                      </button>
-                      <button
-                        className="document-row sand"
-                        hidden={!visibleDocuments.includes(2)}
-                        onClick={() => openDoc(2)}
-                      >
-                        <div>
-                          <Car size={26} />
-                          <span className="tiny-caps">PL · DEMO</span>
-                        </div>
-                        <strong>Moje pojazdy</strong>
-                        <span>
-                          1 pojazd · WX DEMO
-                          <ChevronRight size={20} />
-                        </span>
-                      </button>
-                      <button
-                        className="document-row mint"
-                        hidden={!visibleDocuments.includes(3)}
-                        onClick={() => openDoc(3)}
-                      >
-                        <div>
-                          {extra === "Karta EKUZ" ? (
-                            <Heart size={26} />
-                          ) : (
-                            <GraduationCap size={26} />
-                          )}
-                          <span className="tiny-caps">DEMO</span>
-                        </div>
-                        <strong>{extra}</strong>
-                        <span>
-                          {extra === "Karta EKUZ"
-                            ? "Ważna do 12.06.2028"
-                            : "Ważna do 31.03.2027"}
-                          <ChevronRight size={20} />
-                        </span>
-                      </button>
-                    </div>
-                    <Row
-                      icon={<Plus size={21} />}
-                      title="O dokumentach w pokazie"
-                      subtitle="Zakres i możliwości tej koncepcji"
-                      onClick={() => setLayer({ type: "about" })}
-                    />
-                    <p className="footnote">
-                      <LockKeyhole size={13} />
-                      Wszystkie dokumenty są fikcyjne i nie potwierdzają
-                      tożsamości.
-                    </p>
-                  </>
-                )}
                 {tab === "services" && (
                   <ServiceDirectory
-                    open={(id) => id === "health" ? openHealth() : id === "family" ? openFamily() : start("move")}
+                    open={(id) => id === "privacy" ? go("privacy") : id === "health" ? openHealth() : id === "family" ? openFamily() : start("move")}
                     onAssistant={() => setLayer({ type: "assistant", screen: "services" })}
                   />
                 )}
@@ -963,18 +949,28 @@ export default function App() {
                 )}
                 {tab === "privacy" && (
                   <PrivacyHub
+                    key={p.id}
                     p={p}
                     c={c}
+                    events={trackerEvents}
+                    tab={dataTab}
+                    onTab={(next) => {
+                      if (next === dataTab) return;
+                      setDataTab(next);
+                      screenRef.current?.scrollTo(0, 0);
+                    }}
                     onShare={(initialScope) =>
                       setLayer({ type: "share", id: 0, initialScope })
                     }
-                    onAccess={(access) => setLayer({ type: "access", access })}
+                    onAccess={({ id }) => openDataEvent(id)}
                     onProtect={() => start("wallet")}
                     onTrusted={() => openDelegation("trusted")}
-                    collaboration={isEwa && (mostView?.invitation?.token || health.view?.grants.some((grant) => grant.token)) ? <>
-                      {mostView?.invitation?.token && <MostRow icon={<ShieldCheck size={20} />} title="Dostęp do pisma" detail={"Kacper · ważny do " + new Date(mostView.invitation.expiresAt).toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" })} onClick={() => openMost("end")} />}
-                      {health.view?.grants.some((grant) => grant.token) && <MostRow icon={<HeartPulse size={20} />} title="Upoważnienia zdrowotne" detail="Sprawdź zakres i odbiorców" onClick={() => openHealth({ section: "access" })} />}
-                    </> : undefined}
+                    permissions={trackerPermissions}
+                    onRevokePerson={revokeTrackerPerson}
+                    loading={!!trustOwnerKey && !ownerControl.view}
+                    error={ownerControl.error}
+                    collaboration={health.view?.grants.some((grant) => grant.token) &&
+                      <MostRow icon={<HeartPulse size={20} />} title="Upoważnienia zdrowotne" detail="Sprawdź zakres i odbiorców" onClick={() => openHealth({ section: "access" })} />}
                   />
                 )}
                 <div className="demo-caption">
@@ -982,7 +978,7 @@ export default function App() {
                 </div>
               </div>
             </main>
-            <CivicNav tab={tab} onGo={go} onMost={openMostTab} onAssistant={() => setLayer({ type: "assistant", screen: tab })} />
+            <CivicNav tab={tab} full={!showcasePhone} onGo={go} onMost={openMostTab} onAssistant={() => setLayer({ type: "assistant", screen: tab })} />
 
           </div>
           {layer && (
@@ -1008,10 +1004,11 @@ export default function App() {
                 layer.type === "receipt"
                   ? "full-layer"
                   : "sheet-layer") +
-                (closing ? " is-closing" : "")
+                (closing ? " is-closing" : "") +
+                (layer.type === "document" && layer.id === 0 && identityOrigin.current ? " identity-expansion-layer" : "")
               }
               role="dialog"
-              aria-modal="true"
+              aria-modal={!(inlineShowcase && isEwa)}
               aria-label={
                 layer.type === "flow"
                   ? caseMeta[layer.kind].short
@@ -1029,7 +1026,8 @@ export default function App() {
             >
               {layer.type === "most-hub" && <Suspense fallback={<p role="status">Otwieramy MOST…</p>}>
                 <MostHub key={p.id} profile={p} onBack={closeLayer} workflowKey={workflows.token} letterKey={isEwa ? mostSession.token : undefined}
-                  initialMode={layer.mode} nav={mostNav} onOpenShared={showcasePhone === "kacper" && mostHelper.hasSession ? openMostTab : undefined}
+                  initialMode={layer.mode} nav={mostNav ?? appMostNav} showcase={!!showcasePhone}
+                  onFullApp={() => go("home")} onOpenShared={showcasePhone === "kacper" && mostHelper.hasSession ? openMostTab : undefined}
                   onSwitchProfile={(mode) => setLayer({ type: "profile", returnToMost: mode })} />
               </Suspense>}
               {layer.type === "workflow" && <>
@@ -1067,6 +1065,7 @@ export default function App() {
               </>}
               {layer.type === "delegation" && <Suspense fallback={<p role="status">Otwieramy pomoc…</p>}>
                 <DelegationOwner key={p.id + "-" + (layer.receiptId ?? layer.kind) + "-" + controlTab} profile={p.id} initialTab={controlTab}
+                  trackerEvent={eventToShare} editAccess={editAccess} sameTabDemo={!!eventToShare && isEwa} autoStart={!!eventToShare}
                   workflowKey={workflows.token} letterKey={isEwa ? mostSession.token : undefined}
                   storageId={p.id + "-" + (layer.receiptId ?? layer.kind)} context={{ kind: layer.kind,
                     step: layer.receiptId ? undefined : c.drafts[layer.kind as CaseKind]?.step }} onBack={dismissWorkspace}
@@ -1101,8 +1100,9 @@ export default function App() {
                     else closeLayer();
                   }}
                   personal={showcasePhone === "kacper" ? { profile: p.id, items: workflows.items, ready: workflows.ready, error: workflows.error } : undefined}
+                  dashboard={inlineHelper && trustedHelper ? { profile: p, onFullApp: () => go("home") } : undefined}
                   onInbox={openInbox}
-                  nav={mostNav ?? <CivicNav tab="cases" onGo={go} onAssistant={() => setLayer({ type: "assistant", screen: "cases" })} />} />
+                  nav={inlineHelper ? appMostNav : mostNav ?? <CivicNav tab="cases" onGo={go} onAssistant={() => setLayer({ type: "assistant", screen: "cases" })} />} />
               </Suspense>}
               {layer.type === "family" && (
                 <FamilyWorkspace
@@ -1189,6 +1189,7 @@ export default function App() {
                   p={p}
                   unreadCount={inboxCount}
                   id={layer.id}
+                  identityOrigin={layer.id === 0 ? identityOrigin.current : undefined}
                   protectedPesel={c.protected}
                   address={c.address}
                   onGo={go}
@@ -1260,6 +1261,7 @@ export default function App() {
                 "install",
                 "reset",
                 "access",
+                "data-event",
                 "share",
               ].includes(layer.type) && (
                 <div className="sheet-backdrop" onClick={dismissWorkspace} />
@@ -1278,6 +1280,8 @@ export default function App() {
                       scope,
                       at: new Date().toISOString(),
                       expiresAt: new Date(Date.now() + 60000).toISOString(),
+                      source: "share",
+                      basis: "Zgoda w aplikacji demonstracyjnej",
                       revocable: true,
                       active: true,
                     };
@@ -1319,7 +1323,7 @@ export default function App() {
                         if (pr.id !== p.id && pr.id !== "kacper") leaveHealthHelp();
                         setStore((s) => ({ ...s, profile: pr.id }));
                         if (layer.service === "family") setLayer({ type: "family" });
-                        else if (layer.returnToMost || demoHelperToken(pr.id))
+                        else if (layer.returnToMost)
                           setLayer({ type: "most-hub", mode: pr.id === p.id ? layer.returnToMost : undefined });
                         else {
                           closeLayer();
@@ -1392,6 +1396,7 @@ export default function App() {
                   onClose={() => closeLayer()}
                 >
                   <Badge tone="red">Koncepcja konkursowa 2026</Badge>
+                  <a className="presentation-author-link about-author-link" href="/?strona=o-tworcy">O twórcy <ArrowUpRight size={15} aria-hidden="true" /></a>
                   <p className="sheet-lead">mObywatel · Po Twojej stronie</p>
                   <p>
                     Sprawy zaczynają się od Twojej sytuacji. Asystent pomaga
@@ -1488,60 +1493,26 @@ export default function App() {
                   </button>
                 </Sheet>
               )}
-              {access && (
-                <Sheet title="Ślad użycia danych" onClose={() => closeLayer()}>
-                  <Badge tone={access.active ? "green" : "neutral"}>
-                    {access.active
-                      ? "Zdarzenie demonstracyjne"
-                      : access.inactiveReason === "expired" ? "Dostęp wygasł" : "Zgoda wycofana"}
-                  </Badge>
-                  <h3>{access.who}</h3>
-                  <dl className="data-list">
-                    <div>
-                      <dt>Cel dostępu</dt>
-                      <dd>{access.purpose}</dd>
-                    </div>
-                    <div>
-                      <dt>Zakres danych</dt>
-                      <dd>{access.scope}</dd>
-                    </div>
-                    <div>
-                      <dt>Kiedy</dt>
-                      <dd>{dateLabel(access.at)}</dd>
-                    </div>
-                    {access.expiresAt && <div><dt>Ważność kodu</dt><dd>{dateLabel(access.expiresAt)}</dd></div>}
-                    <div>
-                      <dt>Podstawa w pokazie</dt>
-                      <dd>
-                        {access.revocable
-                          ? "Twoja zgoda demonstracyjna"
-                          : "Symulowane działanie lub przykładowy odczyt"}
-                      </dd>
-                    </div>
-                  </dl>
-                  {access.revocable && access.active ? (
-                    <button
-                      className="primary"
-                      onClick={() => {
-                        const id = access.id;
-                        update((c) => ({
-                          ...c,
-                          access: c.access.map((a) =>
-                            a.id === id ? { ...a, active: false } : a,
-                          ),
-                        }));
-                        closeLayer();
-                        setToast("Zgoda demonstracyjna została wycofana");
-                      }}
-                    >
-                      Wycofaj zgodę
-                    </button>
-                  ) : (
-                    <p className="footnote">
-                      Historia zdarzenia pozostaje widoczna. Nie oznacza
-                      rzeczywistego połączenia z tą instytucją.
-                    </p>
-                  )}
+              {(layer.type === "data-event" || layer.type === "access") && (
+                <Sheet title="Szczegóły operacji" onClose={closeLayer}>
+                  {access ? <DataEventDetails key={access.id} entry={access}
+                    followups={(c.dataFollowups ?? []).filter(({ eventId }) => eventId === access.id)}
+                    onFollowup={(kind, note) => update((citizen) => {
+                      const saved = citizen.dataFollowups ?? [];
+                      if (saved.some((item) => item.eventId === access.id && item.kind === kind)) return citizen;
+                      return { ...citizen, dataFollowups: [...saved, { eventId: access.id, kind, note, at: new Date().toISOString() }] };
+                    })}
+                    onHelp={() => {
+                      setControlTab("access");
+                      setLayer({ type: "delegation", kind: "trusted", trackerEventId: access.id });
+                    }}
+                    onRevoke={() => {
+                      update((citizen) => ({ ...citizen, access: citizen.access.map((item) =>
+                        item.id === access.id && item.active && item.revocable ? { ...item, active: false } : item) }));
+                      closeLayer();
+                      setToast("Zgoda demonstracyjna została wycofana");
+                    }} /> : <p role="status">{trustOwnerKey && !ownerControl.view && !ownerControl.error
+                    ? "Wczytujemy szczegóły operacji…" : "Ta operacja nie jest obecnie dostępna."}</p>}
                 </Sheet>
               )}
             </div>
@@ -1560,7 +1531,8 @@ export default function App() {
           )}
           <div className="home-indicator" aria-hidden="true" />
         </div>
-      </div>
+      </motion.div>
+      {inlineShowcase && isEwa && <InlineHelperPhone token={inlineShowcase.token} framed={simulator} scale={previewScale} />}
       </div>
       <footer className="presentation-footer" inert={!!layer || inboxOpen}>
         <button onClick={() => setLayer({ type: "about" })}>
@@ -1569,6 +1541,7 @@ export default function App() {
         </button>
       </footer>
     </div>
+    </InlineShowcaseContext.Provider>
   );
 }
 
@@ -3143,7 +3116,7 @@ function Share({
       title: "Mam ukończone 18 lat",
       description:
         "Wyłącznie potwierdzenie: TAK. Bez daty urodzenia, imienia i PESEL.",
-      who: "Punkt weryfikacji wieku · demo",
+      who: "Żabka · demo",
       purpose: "Potwierdzenie pełnoletności",
     },
     identity: {

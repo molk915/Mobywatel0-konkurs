@@ -10,18 +10,23 @@ async function checkNav(nav: Locator, selected: string, count = 5) {
   await expect(nav.getByRole("button", { name: selected, exact: true })).toHaveAttribute("aria-current", "page");
 }
 
-for (const [width, height] of [[320, 740], [375, 812], [390, 844]]) {
+for (const [width, height] of [[320, 740], [390, 844], [430, 932]]) {
   test(`product design at ${width}×${height} keeps the navigation within the screen`, async ({ page }) => {
     await page.setViewportSize({ width, height });
     const errors: string[] = [];
     page.on("pageerror", (err) => errors.push(err.message));
     await page.goto("/");
     const nav = page.getByRole("navigation", { name: "Nawigacja główna" });
-    await checkNav(nav, "Dokumenty");
+    await checkNav(nav, "Start");
+    await expect(button(page, "Otwórz MOST")).toBeInViewport({ ratio: 1 });
+    await expect(page.getByRole("navigation", { name: "Najważniejsze usługi" }).getByRole("button")).toHaveCount(4);
+    if (width === 390) await shot(page, "start", width);
     const navRows = await nav.getByRole("button").evaluateAll((nodes) =>
       new Set(nodes.map((node) => Math.round(node.getBoundingClientRect().top))).size,
     );
     expect(navRows).toBe(1);
+    await button(page, "Dokumenty").click();
+    await checkNav(nav, "Dokumenty");
     await expect(button(page, "Dodaj")).toBeInViewport({ ratio: 1 });
     await page.locator(".approved-hero").click();
     const identity = page.getByRole("dialog");
@@ -37,7 +42,7 @@ for (const [width, height] of [[320, 740], [375, 812], [390, 844]]) {
     await expect(page.getByRole("tabpanel", { name: "Do zrobienia" })
       .getByText("Brak przekazanych spraw na tym etapie.")).toBeVisible();
     if (width === 390) await shot(page, "shared", width);
-    await button(page, "Usługi").click();
+    await button(page, "Więcej").click();
     const search = page.getByRole("searchbox", { name: "Szukaj usługi" });
     await search.fill("paszport");
     await expect(page.getByRole("button", { name: /^Rodzina/ })).toBeVisible();
@@ -50,7 +55,7 @@ for (const [width, height] of [[320, 740], [375, 812], [390, 844]]) {
     await expect(assistant.getByRole("textbox", { name: "Wiadomość do asystenta" })).toBeInViewport({ ratio: 1 });
     await shot(page, "assistant", width);
     await assistant.getByRole("button", { name: "Dane", exact: true }).click();
-    await checkNav(nav, "Dane");
+    await checkNav(nav, "Więcej");
     await shot(page, "privacy", width);
     await button(page, "Udostępnij wybrane dane").click();
     await expect(page.getByRole("dialog")).toBeVisible();

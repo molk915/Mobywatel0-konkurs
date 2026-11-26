@@ -156,7 +156,7 @@ export function WorkflowWorkspace({ kind, applicant, city, session, onAssistant,
           {(prepared || receipt) && submitted && "method" in submitted && <div><dt>Metoda</dt><dd>{paymentMethods[submitted.method]}</dd></div>}
         </dl>}
       </>}
-      {!hasPayment && (prepared || receipt) && submitted && "street" in submitted && <dl className="data-list">
+      {!hasPayment && (prepared || receipt) && submitted && "street" in submitted && <dl className="data-list workflow-review-data">
         <div><dt>Wnioskodawca</dt><dd>{applicant}</dd></div>
         <div><dt>Nowy adres</dt><dd>{submitted.street}, {submitted.postalCode} {submitted.city}</dd></div>
         <div><dt>Odbiorca</dt><dd>{recipient}</dd></div>
@@ -166,7 +166,7 @@ export function WorkflowWorkspace({ kind, applicant, city, session, onAssistant,
       {item?.status === "failed" && <p role="alert" className="most-notice warning">Płatność testowa została odrzucona. Wybierz BLIK albo kartę i spróbuj ponownie.</p>}
       {receipt ? <>
         <section className="workflow-receipt">
-          <Check size={22} />
+          <Check size={22} aria-hidden="true" />
           <div><h2>Potwierdzenie demonstracyjne</h2><p>{receipt.number} · {date(receipt.at)}</p>
             {item.performedBy === "trusted" && <p>Wykonane przez osobę zaufaną</p>}</div>
         </section>

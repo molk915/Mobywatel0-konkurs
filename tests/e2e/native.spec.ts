@@ -11,6 +11,7 @@ test("larger text expands content without horizontal clipping", async ({
     .getByRole("switch", { name: "Większy tekst", exact: true })
     .click();
   await page.getByRole("button", { name: "Zamknij", exact: true }).click();
+  await page.getByRole("navigation", { name: "Nawigacja główna" }).getByRole("button", { name: "Dokumenty", exact: true }).click();
   await page.locator(".approved-document-list").getByRole("button", { name: /^mDowód/ }).click();
   await expect(page.locator(".approved-identity-person strong")).toHaveCSS(
     "font-size",
@@ -35,6 +36,7 @@ test("non-reduced motion supports keyboard activation and closing a document", a
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto("/");
+  await page.getByRole("navigation", { name: "Nawigacja główna" }).getByRole("button", { name: "Dokumenty", exact: true }).click();
   const vehicle = page.locator(".approved-document-list").getByRole("button", { name: /^Moje pojazdy/ });
   await vehicle.focus();
   await page.keyboard.press("Enter");
@@ -64,8 +66,8 @@ test("small screens keep content inside the app and every fictional portrait loa
     ).toBeGreaterThan(100);
   }
   await page.setViewportSize({ width: 320, height: 740 });
-  for (const tab of ["Dokumenty", "Sprawy", "Dane"]) {
-    await page.getByRole("button", { name: tab, exact: true }).click();
+  for (const tab of ["Dokumenty", "Sprawy", "Więcej"]) {
+    await page.getByRole("navigation", { name: "Nawigacja główna" }).getByRole("button", { name: tab, exact: true }).click();
     const overflow = await page
       .locator(".screen-content")
       .evaluate((el) => el.scrollWidth > el.clientWidth + 1);

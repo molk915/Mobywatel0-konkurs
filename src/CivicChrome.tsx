@@ -1,24 +1,25 @@
-import { ArrowLeft, Bell, FolderOpen, Grid2X2, ShieldCheck, UsersRound, WalletCards } from "lucide-react";
+import { ArrowLeft, Bell, ChevronRight, FileText, FolderOpen, Grid2X2, House, Menu, ShieldCheck, UsersRound, WalletCards, type LucideIcon } from "lucide-react";
 import type { Profile, Tab } from "./domain";
 
-export function CivicBrand() {
-  return <><img src="/icon.svg" alt="" /><span>mObywatel <b>MOST</b></span></>;
+export function CivicBrand({ most = true }: { most?: boolean }) {
+  return <><img src="/icon.svg" alt="" /><span>mObywatel{most && <> <b>MOST</b></>}</span></>;
 }
 
-export function CivicHeader({ profile, onHome, onBack, onNotifications, onProfile, unreadCount = 0 }: {
+export function CivicHeader({ profile, onHome, onBack, onNotifications, onProfile, unreadCount = 0, mostBrand = true }: {
   profile: Profile;
   onHome?: () => void;
   onBack?: () => void;
   onNotifications: () => void;
   onProfile: () => void;
   unreadCount?: number;
+  mostBrand?: boolean;
 }) {
   return (
     <header className="civic-header">
       {onBack && <button className="civic-icon-button" onClick={onBack} aria-label="Wstecz"><ArrowLeft size={20} /></button>}
       {onHome ? (
-        <button className="civic-brand" onClick={onHome} aria-label="Ekran główny"><CivicBrand /></button>
-      ) : <span className="civic-brand"><CivicBrand /></span>}
+        <button className="civic-brand" onClick={onHome} aria-label="Ekran główny"><CivicBrand most={mostBrand} /></button>
+      ) : <span className="civic-brand"><CivicBrand most={mostBrand} /></span>}
       <div className="civic-header-actions">
         <button className="civic-icon-button" onClick={onNotifications} aria-label="Powiadomienia">
           <Bell size={20} />{unreadCount > 0 && <b className="notification-count" aria-label={unreadCount + " nieprzeczytanych"}>{unreadCount}</b>}
@@ -38,32 +39,57 @@ const navigation = [
   { name: "Dane", tab: "privacy", Icon: ShieldCheck },
 ] as const;
 
-export function CivicNav({ tab, onGo, onMost }: {
+const appNavigation = [
+  { name: "Start", tab: "home", Icon: House },
+  { name: "Dokumenty", tab: "documents", Icon: FileText },
+  { name: "MOST", tab: "most", Icon: UsersRound },
+  { name: "Sprawy", tab: "cases", Icon: FolderOpen },
+  { name: "Więcej", tab: "services", Icon: Menu },
+] as const;
+
+export function CivicNav({ tab, onGo, onMost, full = false }: {
   tab: Tab | "assistant" | "most";
   onGo: (tab: Tab) => void;
   onAssistant: () => void;
   onMost?: () => void;
+  full?: boolean;
 }) {
   return (
-    <nav className={"bottom-nav approved-nav" + (onMost ? " with-most" : "")} aria-label="Nawigacja główna">
-      {navigation.map(({ name, tab: target, Icon }) => {
-        const selected = target === tab || (target === "home" && tab === "documents") || (target === "services" && tab === "assistant");
+    <nav className={"bottom-nav approved-nav" + (onMost ? " with-most" : "") + (full ? " civic-app-nav" : "")} aria-label="Nawigacja główna">
+      {(full ? appNavigation : navigation).map(({ name, tab: target, Icon }) => {
+        const selected = target === tab || (!full && target === "home" && tab === "documents") ||
+          (target === "services" && (tab === "assistant" || full && tab === "privacy"));
         return (
           <button
             key={target}
-            className={selected ? "selected" : ""}
+            className={[selected ? "selected" : "", target === "most" ? "civic-most-tab" : ""].join(" ").trim()}
             aria-current={selected ? "page" : undefined}
-            onClick={() => onGo(target)}
+            onClick={target === "most" ? onMost : () => onGo(target)}
           >
             <span className="civic-nav-icon"><Icon size={20} strokeWidth={selected ? 2.25 : 1.75} aria-hidden="true" /></span><span>{name}</span>
           </button>
         );
       })}
-      {onMost && <button onClick={onMost} className={tab === "most" ? "selected" : undefined} aria-current={tab === "most" ? "page" : undefined}>
+      {!full && onMost && <button onClick={onMost} className={tab === "most" ? "selected" : undefined} aria-current={tab === "most" ? "page" : undefined}>
         <span className="civic-nav-icon"><UsersRound size={20} strokeWidth={tab === "most" ? 2.25 : 1.75} aria-hidden="true" /></span><span>MOST</span>
       </button>}
     </nav>
   );
+}
+
+export function CivicLinkRow({ icon: Icon, title, detail, onClick, disabled, label }: {
+  icon: LucideIcon;
+  title: string;
+  detail?: string;
+  onClick: () => void;
+  disabled?: boolean;
+  label?: string;
+}) {
+  return <button className="civic-link-row" onClick={onClick} disabled={disabled} aria-label={label}>
+    <span className="civic-link-icon"><Icon size={23} strokeWidth={1.8} aria-hidden="true" /></span>
+    <span className="civic-link-copy"><strong>{title}</strong>{detail && <small>{detail}</small>}</span>
+    <ChevronRight size={18} aria-hidden="true" />
+  </button>;
 }
 
 export function WavePattern() {

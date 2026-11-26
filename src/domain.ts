@@ -182,7 +182,12 @@ export type Access = {
   inactiveReason?: "expired";
   revocable: boolean;
   active: boolean;
+  source?: "registry" | "share" | "bank" | "pesel" | "most";
+  registry?: string;
+  basis?: string;
+  sourceLabel?: string;
 };
+export type DataFollowup = { eventId: string; kind: "explain" | "report"; at: string; note: string };
 export type Message = {
   role: "user" | "assistant";
   text: string;
@@ -201,6 +206,8 @@ export type CitizenState = {
   drafts: Partial<Record<CaseKind, Draft>>;
   receipts: Receipt[];
   access: Access[];
+  dataFollowups?: DataFollowup[];
+  dataNoticesRead?: string[];
   protected: boolean;
   messages: Message[];
   address: string;

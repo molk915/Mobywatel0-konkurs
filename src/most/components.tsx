@@ -10,7 +10,7 @@ export function Portrait({ person }: { person: "ewa" | "kacper" }) {
   return <img className="most-avatar" src={"/portraits/" + person + ".png"} alt="" />;
 }
 
-export function MostLayout({ role, identity, roleLabel, title, eyebrow, screen, children, footer, onBack, nav, contextTitle, notifications = 0, onInbox, busy = false }: {
+export function MostLayout({ role, identity, roleLabel, title, eyebrow, screen, children, footer, onBack, nav, contextTitle, notifications = 0, onInbox, busy = false, header, headingAvatar }: {
   role: MostRole;
   identity?: { id: string; first: string };
   roleLabel?: string;
@@ -25,6 +25,8 @@ export function MostLayout({ role, identity, roleLabel, title, eyebrow, screen, 
   notifications?: number;
   onInbox?: () => void;
   busy?: boolean;
+  header?: ReactNode;
+  headingAvatar?: string;
 }) {
   const toolbar = useContext(MostToolbarContext);
   const content = useRef<HTMLElement>(null);
@@ -35,7 +37,7 @@ export function MostLayout({ role, identity, roleLabel, title, eyebrow, screen, 
   }, [screen]);
   return (
     <div className="most-phone-ui">
-      <header className="most-top">
+      {header ?? <header className="most-top">
         {onBack && <button className="civic-icon-button most-back" onClick={onBack} aria-label="Wstecz"><ArrowLeft size={20} /></button>}
         {contextTitle ? <span className="most-context-title">{contextTitle}</span>
           : <span className="civic-brand most-wordmark"><CivicBrand /></span>}
@@ -43,10 +45,11 @@ export function MostLayout({ role, identity, roleLabel, title, eyebrow, screen, 
           ? <><img className="most-avatar" src={"/portraits/" + identity.id + ".png"} alt="" />{identity.first}</>
           : <><Portrait person={role === "owner" ? "ewa" : "kacper"} />{role === "owner" ? "Ewa" : "Kacper"}</>)}</span>
         {onInbox && <button className="civic-icon-button most-bell" onClick={onInbox} aria-label="Powiadomienia"><Bell size={18} />{notifications > 0 && <b className="notification-count">{notifications}</b>}</button>}
-      </header>
+      </header>}
       <section className="most-scroll" ref={content} aria-busy={busy}>
         <div className="most-screen" data-screen={screen} key={screen}>
-          <header className="most-heading">
+          <header className={"most-heading" + (headingAvatar ? " most-dashboard-heading" : "")}>
+            {headingAvatar && <span className="most-dashboard-avatar" data-role={role} aria-hidden="true">{headingAvatar}</span>}
             {eyebrow && <p className="most-eyebrow">{eyebrow}</p>}
             <h1 ref={heading} tabIndex={-1}>{title}</h1>
           </header>
@@ -129,7 +132,9 @@ export function ScopeSummary({ scope }: { scope: MostScope }) {
   );
 }
 
-export function MostInvite({ invitation, generic = false }: { invitation: MostInvitation; generic?: boolean }) {
+export function MostInvite({ invitation, generic = false, onShowcase }: {
+  invitation: MostInvitation; generic?: boolean; onShowcase?: () => void;
+}) {
   const link = invitation.token ? routeForMost("helper", "app", invitation.token) : "";
   const [qr, setQr] = useState("");
   const [qrError, setQrError] = useState(false);
@@ -169,7 +174,7 @@ export function MostInvite({ invitation, generic = false }: { invitation: MostIn
           : <p className="most-muted">{qrError ? "Kod QR jest niedostępny. Użyj linku." : "Tworzenie kodu QR…"}</p>}
         <p><Clock3 size={16} /> Ważność <strong>{clock}</strong></p>
       </div>
-      <div className="most-actions most-invite-actions">
+      <div className={"most-actions most-invite-actions" + (onShowcase ? " most-invite-with-showcase" : "")}>
         <button className="most-button most-secondary" onClick={async () => {
           try {
             await navigator.clipboard.writeText(link);
@@ -179,7 +184,11 @@ export function MostInvite({ invitation, generic = false }: { invitation: MostIn
             input.current?.focus();
           }
         }}><Link2 size={16} /> Kopiuj link</button>
-        <a className="most-button most-secondary" href={link} target="_blank" rel="noopener noreferrer">{generic ? "Otwórz zaproszenie w nowej karcie" : "Otwórz zadanie Kacpra"} <ArrowUpRight size={17} aria-hidden="true" /></a>
+        {onShowcase
+          ? <button className="most-button most-primary" disabled={remaining === 0} onClick={onShowcase}>
+            Pokaż na dwóch telefonach <ChevronRight size={18} aria-hidden="true" />
+          </button>
+          : <a className="most-button most-secondary" href={link} target="_blank" rel="noopener noreferrer">{generic ? "Otwórz zaproszenie w nowej karcie" : "Otwórz zadanie Kacpra"} <ArrowUpRight size={17} aria-hidden="true" /></a>}
       </div>
       {copy === "manual" && <label className="most-link-field">Link zaproszenia<input ref={input} value={link} readOnly onFocus={(e) => e.currentTarget.select()} /></label>}
       {copy && <p className="most-muted" role="status">{copy === "copied" ? "Link został skopiowany." : "Skopiuj zaznaczony link."}</p>}

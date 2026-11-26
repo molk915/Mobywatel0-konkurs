@@ -491,6 +491,22 @@
   background: #11152adb;
 }
 .presentation[data-surface="simulator"] .presentation-actions button:hover { background: #2a2540; }
+.presentation-author-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 8px 14px;
+  border: 1px solid #f1e8f780;
+  border-radius: 22px;
+  background: #11152adb;
+  color: #fff;
+  text-decoration: none;
+  font-size: 13px;
+  white-space: nowrap;
+}
+.presentation-author-link:hover { background: #2a2540; }
+.about-author-link { margin: 6px 0; min-height: 44px; }
 .presentation[data-surface="simulator"] :is(.presentation-header, .presentation-footer) :focus-visible {
   outline: 2px solid #f1b9ae;
   outline-offset: 3px;

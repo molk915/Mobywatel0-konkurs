@@ -44,6 +44,49 @@ async function grant(send, owner, selection, extra = {}) {
   return view.grants.find((grant) => grant.resource === selection.resource && grant.status === "active");
 }
 
+test("operation access uses MOST grants, alerts the owner and stays in history after bulk revocation", async () => {
+  const directory = mkdtempSync(join(tmpdir(), "most-tracker-"));
+  const timestamp = Date.parse("2026-06-01T10:00:00Z");
+  const api = await start(directory, () => timestamp);
+  const control = "most/control";
+  try {
+    const { owner, helper } = await connect(api.send);
+    const other = await connect(api.send, "aleksandra");
+    const preparation = { type: "tracker-prepare", eventId: "tracker-demo-age", title: "Potwierdzenie pełnoletności", text: "Sklep otrzymał potwierdzenie wieku." };
+    await api.send(control, helper, preparation, 403);
+    const { resource } = await api.send(control, owner, preparation);
+    const open = { type: "document", id: resource };
+    await api.send(control, helper, open, 403);
+    const first = await grant(api.send, owner, { resource, actions: ["view"], duration: "open", mode: "owner" });
+    const access = await grant(api.send, owner, { resource, actions: ["view"], duration: "period", end: "2026-06-02", mode: "owner" }, { changeId: first.id });
+    const document = await grant(api.send, owner, { resource: "passport", actions: ["view"], duration: "open", mode: "owner" });
+    await api.send(control, other.helper, open, 403);
+    await api.send(control, helper, { ...open, download: true }, 403);
+    assert.equal((await api.send(control, helper, open)).document.text, preparation.text);
+    const ownerView = (await api.send(control, owner)).view;
+    const permission = ownerView.accessOverview.find(({ id }) => id === access.id);
+    assert.deepEqual(permission.actions, ["view"]);
+    assert.equal(permission.expires, Date.parse("2026-06-02T22:00:00Z"));
+    assert.equal(permission.lastUsed, new Date(timestamp).toISOString());
+    const event = ownerView.history.find(({ grant, result }) => grant === access.id && result === "Odczytano");
+    assert.equal(ownerView.notifications.find(({ eventId }) => eventId === event.id).attention, undefined);
+    assert.equal(ownerView.notifications.find(({ resource }) => resource === "grant:" + access.id).attention, true);
+    assert.equal((await api.send(control, helper)).view.accessOverview, undefined);
+    await api.send(control, other.owner, { type: "revoke-person", personId: permission.personId });
+    await api.send(control, helper, open);
+    await api.send(control, owner, { type: "revoke", id: document.id });
+    await api.send(control, helper, { type: "document", id: "passport" }, 403);
+    await api.send(control, helper, open);
+    const revoked = await api.send(control, owner, { type: "revoke-person", personId: permission.personId });
+    assert.equal(revoked.view.accessOverview.find(({ id }) => id === access.id).status, "revoked");
+    assert.ok(revoked.view.history.some(({ id }) => id === event.id));
+    await api.send(control, helper, open, 403);
+  } finally {
+    await api.close();
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
 test("MOST control persists privacy, deadlines, requests, formal demo and the letter operation across restart", async () => {
   const directory = mkdtempSync(join(tmpdir(), "most-control-"));
   let timestamp = Date.parse("2026-06-01T10:00:00Z");

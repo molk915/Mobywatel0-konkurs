@@ -6,7 +6,9 @@ test("a paired trusted person pays only Kacper's assigned mandate and Kacper get
   await page.goto("/");
   await button(page, "Profil i ustawienia").click();
   await button(page, /^Kacper Zieliński/).click();
-  await button(page, "Dane").click();
+  await button(page, "Więcej").click();
+  await button(page, /^Moje dane Sprawdź/).click();
+  await page.getByRole("group", { name: "Widok Moich danych" }).getByRole("button", { name: "MOST", exact: true }).click();
   await button(page, /^Osoba zaufana/).click();
   await button(page, "Przygotuj zaproszenie").click();
   await button(page, "Utwórz zaproszenie QR").click();

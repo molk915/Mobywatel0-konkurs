@@ -3,6 +3,7 @@ import { test, expect } from "@playwright/test";
 test("the identity card shows all required fields and browser back preserves document scroll", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 740 });
   await page.goto("/");
+  await page.getByRole("navigation", { name: "Nawigacja główna" }).getByRole("button", { name: "Dokumenty", exact: true }).click();
   const scroll = page.getByTestId("document-scroll");
   const card = page.locator(".approved-document-list").getByRole("button", { name: /^mDowód/ });
   await card.scrollIntoViewIfNeeded();
@@ -12,7 +13,7 @@ test("the identity card shows all required fields and browser back preserves doc
   for (const field of ["Imię i nazwisko", "Data urodzenia", "Numer PESEL", "Numer dokumentu", "Ważność", "Obywatelstwo"]) {
     await expect(identity.getByText(field, { exact: true })).toBeVisible();
   }
-  await expect(identity.getByRole("img", { name: "Fikcyjny portret: Aleksandra Nowak" })).toBeVisible();
+  await expect(identity.getByRole("img", { name: "Fikcyjny portret: Ewa Wiśniewska" })).toBeVisible();
   await expect(identity.getByText("DEMO", { exact: true })).toBeVisible();
   await page.goBack();
   await expect(page.getByRole("dialog")).toHaveCount(0);
@@ -21,6 +22,7 @@ test("the identity card shows all required fields and browser back preserves doc
 
 test("the document catalog persists each persona's selection independently", async ({ page }) => {
   await page.goto("/");
+  await page.getByRole("navigation", { name: "Nawigacja główna" }).getByRole("button", { name: "Dokumenty", exact: true }).click();
   const rows = page.locator(".approved-document-list");
   const driving = rows.getByRole("button", { name: /^mPrawo jazdy/ });
   await page.getByRole("button", { name: "Zarządzaj" }).click();
@@ -34,6 +36,6 @@ test("the document catalog persists each persona's selection independently", asy
   await page.getByRole("button", { name: /^Kacper / }).click();
   await expect(driving).toHaveCount(1);
   await profile.click();
-  await page.getByRole("button", { name: /^Aleksandra / }).click();
+  await page.getByRole("button", { name: /^Ewa / }).click();
   await expect(driving).toHaveCount(0);
 });

@@ -5,6 +5,7 @@ test("the document list opens all four documents and sharing returns to the docu
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto("/");
+  await page.getByRole("navigation", { name: "Nawigacja główna" }).getByRole("button", { name: "Dokumenty", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Dokumenty", exact: true })).toBeVisible();
   const rows = page.locator(".approved-document-list");
   for (const name of ["mDowód", "mPrawo jazdy", "Moje pojazdy", "Karta Dużej Rodziny"]) {
@@ -24,7 +25,8 @@ test("the document list opens all four documents and sharing returns to the docu
 });
 test("privacy consent is explicit and revocable", async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("button", { name: "Dane", exact: true }).click();
+  await page.getByRole("button", { name: "Więcej", exact: true }).click();
+  await page.getByRole("button", { name: /^Moje dane Sprawdź/ }).click();
   await page
     .getByRole("button", { name: "Udostępnij wybrane dane", exact: true })
     .click();
@@ -60,7 +62,7 @@ test("desktop frame, small phone and full opacity transitions", async ({
   await expect(page.locator(".presentation")).toHaveAttribute("data-surface", "simulator");
   await expect(page.locator(".phone-shell")).toBeInViewport({ ratio: 1 });
   const mainRect = await page.locator(".bottom-nav").boundingBox();
-  const actionRect = await page.getByRole("button", { name: "Dodaj", exact: true }).boundingBox();
+  const actionRect = await page.getByRole("button", { name: "Otwórz MOST", exact: true }).boundingBox();
   expect(actionRect!.y + actionRect!.height).toBeLessThanOrEqual(mainRect!.y);
   await page.setViewportSize({ width: 320, height: 740 });
   await expect(page.locator(".phone")).toHaveCSS("width", "320px");

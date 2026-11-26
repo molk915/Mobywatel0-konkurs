@@ -21,6 +21,7 @@ test("notifications dismiss via Escape and open the actual letter flow", async (
 });
 test("the assistant on a document uses its context and prepares the right share action", async ({ page }) => {
   await page.goto("/");
+  await page.getByRole("navigation", { name: "Nawigacja główna" }).getByRole("button", { name: "Dokumenty", exact: true }).click();
   await page.locator(".approved-document-list").getByRole("button", { name: /^mPrawo jazdy/ }).click();
   const document = page.getByRole("dialog");
   await expect(document.getByRole("navigation").getByRole("button")).toHaveCount(4);
@@ -45,12 +46,13 @@ test("privacy selection is reflected in actual consent and its revocable audit e
   page,
 }) => {
   await page.goto("/");
-  await page.getByRole("button", { name: "Dane", exact: true }).click();
+  await page.getByRole("button", { name: "Więcej", exact: true }).click();
+  await page.getByRole("button", { name: /^Moje dane Sprawdź/ }).click();
   await page
     .getByRole("button", { name: "Imię i nazwisko", exact: true })
     .click();
   await expect(page.locator(".privacy-preview")).toContainText(
-    "Aleksandra Nowak",
+    "Ewa Wiśniewska",
   );
   await page.screenshot({ path: "test-results/experience-data.png" });
   await page
@@ -80,7 +82,8 @@ test("privacy selection is reflected in actual consent and its revocable audit e
 test("an expired share is distinguished from a withdrawn consent", async ({ page }) => {
   await page.clock.install();
   await page.goto("/");
-  await page.getByRole("button", { name: "Dane", exact: true }).click();
+  await page.getByRole("button", { name: "Więcej", exact: true }).click();
+  await page.getByRole("button", { name: /^Moje dane Sprawdź/ }).click();
   await page.getByRole("button", { name: "Udostępnij wybrane dane" }).click();
   await page.getByRole("checkbox", { name: "Zgadzam się na ten zakres w pokazie" }).check();
   await page.getByRole("button", { name: "Utwórz kod demonstracyjny" }).click();
@@ -95,7 +98,7 @@ test("an expired share is distinguished from a withdrawn consent", async ({ page
 
 test("an unsupported question offers a direct route to a supported process", async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("button", { name: "Usługi", exact: true }).click();
+  await page.getByRole("button", { name: "Więcej", exact: true }).click();
   await page.getByRole("button", { name: /^Otwórz asystenta/ }).click();
   const input = page.getByRole("textbox", { name: "Wiadomość do asystenta" });
   await input.fill("Jaka będzie pogoda?");

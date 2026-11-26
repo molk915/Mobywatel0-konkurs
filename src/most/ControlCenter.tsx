@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useId, useState, type FormEvent, type ReactNode } from "react";
+import { lazy, Suspense, useContext, useEffect, useId, useLayoutEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { Bell, CalendarClock, ChevronRight, FileCheck2, FolderOpen, History, KeyRound, Link2, ShieldCheck, Sparkles, UsersRound } from "lucide-react";
 import { MostConnection, MostInvite, MostLayout, MostNotice } from "./components";
 import {
@@ -9,13 +9,17 @@ import { delegationScope, formatMostDeadline } from "./model";
 import { rememberDemoHelper, routeForMost, type useMostSession } from "./session";
 import { WorkflowCard } from "../workflows/Workspace";
 import { workflowDetails, type WorkflowCase } from "../workflows/model";
+import { caseStages, DashboardDeadline, MostDashboardCases, MostDashboardHeader, MostDashboardProfile, type DashboardProfile } from "./MostDashboard";
+import { InlineShowcaseContext, ShowcaseEntry } from "./InlineShowcase";
+import { trackerDate, trackerSource } from "../data-tracker";
+import type { Access } from "../domain";
 import "./control.css";
 
 type Session = ReturnType<typeof useMostSession>;
 type Send = ReturnType<typeof useControl>["send"];
-type Tab = "access" | "dates" | "history" | "inbox" | "personal";
+type Tab = "overview" | "access" | "dates" | "history" | "inbox" | "personal";
 export type PersonalCases = { profile: string; items: WorkflowCase[]; ready: boolean; error?: string };
-type Wizard = { resource?: string; change?: Grant; request?: string; prepare?: boolean; pay?: boolean };
+type Wizard = { resource?: string; change?: Grant; request?: string; prepare?: boolean; pay?: boolean; submit?: boolean; monitor?: boolean; recipientProfile?: string; viewOnly?: boolean };
 const ControlCasePanel = lazy(() => import("./ControlCasePanel"));
 const stages: Record<ControlCase["stage"], string> = {
   new: "Do zrobienia", draft: "Szkic", review: "Do zatwierdzenia", approved: "Gotowe do wysłania", correction: "Do poprawy", done: "Zakończona",
@@ -46,27 +50,35 @@ function download(title: string, text: string) {
   setTimeout(() => URL.revokeObjectURL(href), 1000);
 }
 
-export function ControlCenter({ session, role, profile, workflowKey, letterKey, onBack, nav, onPeerChange, initialTab = "access", personal, requestedCaseHref, sameTabDemo }: {
+export function ControlCenter({ session, role, profile, workflowKey, letterKey, onBack, nav, onPeerChange, initialTab = "access", personal, requestedCaseHref, sameTabDemo, dashboard, trackerEvent, editAccessId }: {
   session: Session; role: "owner" | "helper"; workflowKey?: string | null; letterKey?: string | null; onBack?: () => void; nav?: ReactNode;
   onPeerChange?: (token?: string) => void;
-  initialTab?: Tab;
+  initialTab?: Exclude<Tab, "overview">;
   profile?: string;
   personal?: PersonalCases;
   requestedCaseHref?: string;
   sameTabDemo?: boolean;
+  dashboard?: DashboardProfile;
+  trackerEvent?: Access;
+  editAccessId?: string;
 }) {
   const owner = role === "owner";
   const invitation = session.view?.invitation;
   const connected = invitation?.status === "active";
+  const showcase = useContext(InlineShowcaseContext);
   const { view, send, busy, error } = useControl(session.token, owner || connected, workflowKey, letterKey);
-  const [tab, setTab] = useState<Tab>(initialTab);
+  const [tab, setTab] = useState<Tab>(dashboard ? "overview" : initialTab);
   const [wizard, setWizard] = useState<Wizard>();
+  const [pendingEdit, setPendingEdit] = useState(editAccessId);
   const [wizardKey, setWizardKey] = useState(0);
   const [feedback, setFeedback] = useState("");
   const [assistant, setAssistant] = useState(false);
   const [disconnect, setDisconnect] = useState(false);
   const [helperProfile, setHelperProfile] = useState("");
   const [activeCase, setActiveCase] = useState<ControlCase>();
+  const [caseInfoId, setCaseInfoId] = useState<string>();
+  const [helperCaseId, setHelperCaseId] = useState<string | undefined>(() =>
+    dashboard && !owner ? history.state?.mostHubCase : undefined);
   const [pendingCaseHref, setPendingCaseHref] = useState(requestedCaseHref);
   const [personalCase, setPersonalCase] = useState<ControlCase>();
   const [historyFilter, setHistoryFilter] = useState("");
@@ -79,28 +91,68 @@ export function ControlCenter({ session, role, profile, workflowKey, letterKey, 
   const openWizard = (next: Wizard) => { setWizardKey((value) => value + 1); setWizard(next); };
   const changeTab = (next: Tab) => { setWizard(undefined); setAssistant(false); setTab(next); setFeedback(""); };
   const unread = view?.notifications.filter(({ read }) => !read).length ?? 0;
-  const enabledTabs: Tab[] = owner ? ["access", "dates", "history", "inbox"]
+  const enabledTabs: Exclude<Tab, "overview">[] = owner ? ["access", "dates", "history", "inbox"]
     : personal ? connected ? ["personal", "access", "dates", "inbox"] : ["personal", "access"]
       : ["access", "dates", "inbox"];
   const locked = busy || session.busy;
   const cases = view?.cases ?? [];
+  const caseInfo = cases.find(({ id }) => id === caseInfoId);
+  const dashboardHelperCase = cases.find(({ id }) => id === helperCaseId);
   const requestedCase = view && pendingCaseHref && findCase(view, pendingCaseHref);
   useEffect(() => {
     if (!view || !pendingCaseHref) return;
     setPendingCaseHref(undefined);
     if (requestedCase) void openCase(requestedCase);
   }, [view, pendingCaseHref, requestedCase]);
+  useEffect(() => {
+    if (!dashboard || owner) return;
+    const restore = (event: PopStateEvent) => setHelperCaseId(event.state?.mostHubCase);
+    window.addEventListener("popstate", restore);
+    return () => window.removeEventListener("popstate", restore);
+  }, [!!dashboard, owner]);
   const visibleHistory = (view?.history ?? []).filter((item) => !historyFilter || item.resource === historyFilter);
+  useEffect(() => {
+    if (!view || !pendingEdit) return;
+    setPendingEdit(undefined);
+    const change = view.grants.find(({ id, status }) => id === pendingEdit && status === "active");
+    if (change) setWizard({ resource: change.resource, change });
+  }, [view, pendingEdit]);
+  async function shareTrackerEvent(entry: Access) {
+    if (!connected && (!sameTabDemo || invitation?.status === "waiting")) {
+      setFeedback(invitation?.status === "waiting"
+        ? "Osoba zaufana musi najpierw przyjąć aktywne zaproszenie."
+        : "Najpierw połącz się z osobą zaufaną za pomocą zaproszenia poniżej.");
+      return;
+    }
+    if (!connected && !await session.act({ type: "invite", scope: delegationScope, demoHelper: "kacper" })) return;
+    const result = await send({ type: "tracker-prepare", eventId: entry.id, title: ("Operacja na danych · " + entry.who).slice(0, 150),
+      text: [entry.who, trackerDate.format(new Date(entry.at)), entry.purpose, entry.scope, trackerSource(entry), "Opis demonstracyjny"].join("\n").slice(0, 1500) });
+    if (!result?.resource) return;
+    const grant = result.view.grants.find((item) => item.resource === result.resource && item.status === "active");
+    if (grant) {
+      setFeedback("Ta osoba ma już dostęp do opisu. Zakres możesz zmienić poniżej.");
+      return;
+    }
+    openWizard({ resource: result.resource, viewOnly: true, ...(!connected && sameTabDemo && { recipientProfile: "kacper" }) });
+  }
   async function shareCase(item: ControlCase) {
     const current = view?.grants.find((grant) => grant.id === item.grantId);
     if (!connected) {
-      if (!sameTabDemo || !await session.act({ type: "invite", scope: delegationScope, demoHelper: "kacper" })) return;
+      if (!sameTabDemo) { setCaseInfoId(undefined); changeTab("access"); return; }
+      if (!await session.act({ type: "invite", scope: delegationScope, demoHelper: "kacper" })) return;
     }
-    openWizard({ resource: item.id, ...(current ? { change: current } : { prepare: true, pay: sameTabDemo && item.kind === "payment" }) });
+    openWizard({ resource: item.id, ...(current ? { change: current } : {
+      prepare: true, pay: sameTabDemo && item.kind === "payment",
+      submit: sameTabDemo && item.id === "registration" && (!connected || view?.helperProfile === "kacper"),
+      monitor: !!dashboard && item.kind === "letter",
+    }), ...(!connected && sameTabDemo && { recipientProfile: "kacper" }) });
   }
   async function openCase(item: ControlCase) {
     if (!owner && item.grantId && !await send({ type: "case-open", resource: item.id })) return;
-    setActiveCase(item);
+    if (dashboard && !owner && view?.cases.some(({ id }) => id === item.id)) {
+      history.pushState({ ...history.state, mostHubCase: item.id }, "");
+      setHelperCaseId(item.id);
+    } else setActiveCase(item);
   }
   function openInboxItem(resource: string | undefined) {
     const item = cases.find(({ id }) => id === resource);
@@ -123,19 +175,43 @@ export function ControlCenter({ session, role, profile, workflowKey, letterKey, 
   if (personalCase) return <Suspense fallback={<p className="most-loading" role="status">Otwieramy sprawę…</p>}>
     <ControlCasePanel item={personalCase} role="owner" profile={personal?.profile} back={() => setPersonalCase(undefined)} />
   </Suspense>;
-  if (activeCase) return <Suspense fallback={<p className="most-loading" role="status">Otwieramy sprawę…</p>}>
-    <ControlCasePanel key={activeCase.id + (activeCase.href ?? "")} item={activeCase} role={role} profile={profile} letterKey={letterKey}
+  const openItem = dashboardHelperCase ?? activeCase;
+  if (openItem) return <Suspense fallback={<p className="most-loading" role="status">Otwieramy sprawę…</p>}>
+    <ControlCasePanel key={openItem.id + (openItem.href ?? "")} item={openItem} role={role} profile={profile} letterKey={letterKey}
       back={() => {
-        if (!owner) changeTab("access");
+        if (dashboardHelperCase) { history.back(); return; }
+        if (!owner) changeTab(dashboard ? "overview" : "access");
         setActiveCase(undefined);
       }} />
   </Suspense>;
 
+  const overview = tab === "overview" && !wizard && !caseInfo && !assistant ? dashboard : undefined;
+  const canShowInline = owner && sameTabDemo && showcase && (!connected || view?.helperProfile === "kacper");
+  const residenceCase = canShowInline && showcase.active && connected
+    ? cases.find(({ id, stage, grantId }) => id === "registration" && stage !== "done" && !grantId) : undefined;
+  const showcaseEntry = canShowInline && !showcase.active ?
+    <ShowcaseEntry onOpen={() => showcase.open(invitation?.token)}
+      ready={connected && view?.grants.some(({ status }) => status === "active")} /> : undefined;
+  const awaitingRecipient = wizard?.recipientProfile && view?.helperProfile !== wizard.recipientProfile;
+  const connectionError = session.error || (!!dashboard && !owner && session.attempted && !session.connected && !session.ended
+    ? "Nie udało się wczytać udostępnionych spraw." : "");
+  const dashboardTitle = caseInfo?.title ?? (tab === "access" ? owner ? "Kto ma dostęp" : "Mój dostęp"
+    : tab === "overview" ? "MOST – " + dashboard?.profile.first : labels[tab]);
+  const caseHistory = (id: string) => { setCaseInfoId(undefined); setHistoryFilter(id); changeTab("history"); };
+  function backToDashboard() {
+    if (wizard) { setWizard(undefined); return; }
+    if (assistant) { setAssistant(false); return; }
+    if (caseInfo) { setCaseInfoId(undefined); return; }
+    changeTab("overview");
+  }
+
   return <MostLayout role={role} roleLabel={owner ? "Moje dane" : "Pomagam"} contextTitle="mObywatel MOST"
-    title={assistant ? "Asystent MOST" : wizard ? "Udziel dostępu" : owner ? "Centrum kontroli"
+    title={assistant ? "Asystent MOST" : wizard ? "Udziel dostępu" : trackerEvent ? "Pomoc przy operacji na danych" : dashboard ? dashboardTitle : owner ? "Centrum kontroli"
       : view ? inShowcase ? "Panel pomocy" : "Sprawy · " + view.owner : "Osoba zaufana"}
-    screen={assistant ? "control-assistant" : wizard ? "control-wizard" : "control-" + tab} nav={nav}
-    onBack={assistant || wizard ? () => { setAssistant(false); setWizard(undefined); } : onBack} busy={locked}>
+    screen={assistant ? "control-assistant" : wizard ? "control-wizard" : caseInfo ? "control-case-info" : "control-" + tab} nav={nav}
+    header={overview ? <MostDashboardHeader onFullApp={overview.onFullApp} /> : undefined}
+    headingAvatar={overview ? overview.profile.first.charAt(0) : undefined}
+    onBack={dashboard ? backToDashboard : assistant || wizard ? () => { setAssistant(false); setWizard(undefined); } : onBack} busy={locked}>
     <div className="control-center" data-showcase={inShowcase} data-role={role} onClick={(event) => {
       if (owner || !view || event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey ||
           !(event.target instanceof Element)) return;
@@ -144,11 +220,19 @@ export function ControlCenter({ session, role, profile, workflowKey, letterKey, 
       const item = href && findCase(view, href);
       if (item) { event.preventDefault(); openCase(item); }
     }}>
-      {session.ended && tab !== "personal" && <MostNotice tone="warning" live>Dostęp lub zaproszenie wygasły.</MostNotice>}
-      {session.error && <MostConnection connected={session.connected} retry={session.retry} error={session.error} />}
+      {overview && <MostDashboardProfile dashboard={overview} />}
+      {session.ended && !owner && tab !== "personal" && <MostNotice tone="warning" live>Dostęp lub zaproszenie wygasły.</MostNotice>}
+      {connectionError && <MostConnection connected={session.connected} retry={session.retry} error={connectionError} />}
       {error && <p className="most-error" role="alert">{error}</p>}
       {feedback && <MostNotice live>{feedback}</MostNotice>}
-      {!owner && !connected && !session.ended && tab === "access" && <>
+      {trackerEvent && !wizard && tab === "access" && <article className="control-card">
+        <h2>{trackerEvent.who}</h2>
+        <p>{trackerEvent.purpose}</p>
+        <p>Osoba zaufana zobaczy opis tej jednej operacji.</p>
+        <button className="most-button most-primary" disabled={!view || locked || !session.connected}
+          onClick={() => void shareTrackerEvent(trackerEvent)}>Udostępnij opis operacji</button>
+      </article>}
+      {!owner && !connected && !session.ended && (tab === "access" || overview && session.view) && <>
         <p className="most-lead">Przyjmij zaproszenie od bliskiej osoby. Zobaczysz przyznane Ci sprawy i terminy.</p>
         {!inShowcase && <label className="control-field">Twój profil w pokazie<select value={helperProfile} onChange={(event) => setHelperProfile(event.target.value)}>
           <option value="">Osoba zaufana w pokazie</option><option value="kacper">Kacper Zieliński</option><option value="ewa">Ewa Wiśniewska</option>
@@ -157,11 +241,11 @@ export function ControlCenter({ session, role, profile, workflowKey, letterKey, 
         <button className="most-button most-primary" disabled={locked || !session.connected}
           onClick={() => void session.act({ type: "join", profile: inShowcase ? "kacper" : helperProfile })}>Przyjmij zaproszenie</button>
       </>}
-      {owner && (!session.view || session.ended) && <>
+      {owner && (!session.view || session.ended) && (!dashboard || session.error || session.ended) && <>
         <p className="most-lead">Udostępnij wybraną sprawę, dokument lub termin bliskiej osobie. Ty ustalasz zakres i czas dostępu.</p>
         <button className="most-button most-primary" disabled={locked} onClick={() => void session.start()}>Przygotuj zaproszenie</button>
       </>}
-      {(view || personal) && !assistant && !wizard && <nav className="control-tabs" aria-label="Centrum kontroli">
+      {!dashboard && (view || personal) && !assistant && !wizard && <nav className="control-tabs" aria-label="Centrum kontroli">
         {enabledTabs.map((key) => {
           const Icon = icons[key];
           const label = personal && key === "access" ? "Sprawy Ewy" : labels[key];
@@ -182,12 +266,41 @@ export function ControlCenter({ session, role, profile, workflowKey, letterKey, 
         {!personal.items.length && <p role="status">{personal.error ?? (personal.ready ? "Brak własnych spraw." : "Wczytujemy Twoje sprawy…")}</p>}
       </section>}
       {assistant && view && <ControlAssistant key={view.role} view={view} busy={busy} send={send} />}
-      {wizard && view && <GrantWizard key={wizardKey} view={view} launch={wizard} send={send} busy={locked}
-        onClose={(updated) => {
+      {overview && view && <MostDashboardCases view={view} busy={locked || !session.connected} open={openCase} share={shareCase}
+        showcaseEntry={showcaseEntry}
+        showAccess={() => changeTab("access")} showDates={() => changeTab("dates")} showInbox={() => changeTab("inbox")}
+        showHistory={() => { setHistoryFilter(""); changeTab("history"); }} showCaseInfo={(item) => setCaseInfoId(item.id)} />}
+      {overview && !owner && view?.grants.some(({ resource }) => resource.startsWith("tracker:")) &&
+        <button className="most-button most-secondary" onClick={() => changeTab("access")}>Opisy operacji na danych <ChevronRight size={18} /></button>}
+      {overview && !view && !session.ended && !connectionError && !(session.view && !connected && !owner) &&
+        <p className="most-dashboard-state" role="status">Wczytujemy sprawy w MOST…</p>}
+      {caseInfo && !wizard && <section className="most-dashboard-state" aria-label="Szczegóły sprawy">
+        <p>{[caseStages[caseInfo.stage], caseInfo.paymentAmount].filter(Boolean).join(" · ")}</p>
+        <DashboardDeadline deadline={view?.deadlines.find(({ id }) => id === caseInfo.id)} isLetter={caseInfo.kind === "letter"} />
+        <p>{caseInfo.people?.length ? "Dostęp ma " + caseInfo.people.join(", ") : "Sprawa prywatna"}</p>
+        <button className="most-dashboard-primary" onClick={() => void openCase(caseInfo)}>
+          {caseInfo.stage === "review" ? "Sprawdź szkic" : "Otwórz sprawę"} <ChevronRight size={18} aria-hidden="true" />
+        </button>
+        {(caseInfo.stage !== "done" || caseInfo.grantId) &&
+          <button className="most-button most-secondary" disabled={locked || !session.connected} onClick={() => void shareCase(caseInfo)}>
+            {caseInfo.grantId ? "Zmień zakres dostępu" : "Poproś o pomoc"}
+          </button>}
+        <button className="most-button most-secondary" onClick={() => caseHistory(caseInfo.id)}>Historia sprawy</button>
+      </section>}
+      {wizard && awaitingRecipient && <p role="status" className="most-dashboard-state">Wczytujemy dane osoby, która otrzyma dostęp…</p>}
+      {wizard && view && !awaitingRecipient && <GrantWizard key={wizardKey} view={view} launch={wizard} send={send} busy={locked}
+        onClose={(updated, resource) => {
           setWizard(undefined);
+          setCaseInfoId(undefined);
           if (sameTabDemo && updated.helperProfile === "kacper" && invitation?.token) try {
+            if (showcase && (showcase.active || window.matchMedia("(min-width: 901px)").matches)) {
+              changeTab("overview");
+              setCaseInfoId(resource);
+            }
+            showcase?.connect(invitation.token);
             rememberDemoHelper("kacper", invitation.token);
-            setFeedback("Zakres zapisany. Zmień profil na Kacpra i otwórz „Pomagam”.");
+            setFeedback(dashboard ? "Kacper ma dostęp do sprawy."
+              : "Zakres zapisany. Zmień profil na Kacpra i otwórz „Pomagam”.");
             return;
           } catch {
             setFeedback("Zakres zapisany. Aby otworzyć go na drugim profilu, użyj zaproszenia QR.");
@@ -196,6 +309,7 @@ export function ControlCenter({ session, role, profile, workflowKey, letterKey, 
           setFeedback("Zakres dostępu zapisany.");
         }} />}
       {tab === "access" && !wizard && !assistant && <>
+        {invitation?.status !== "waiting" && showcaseEntry}
         {view && connected && <article className="control-person">
           <div className="control-person-icon"><UsersRound size={23} /></div>
           <div><h2>{owner ? view.helper : view.owner}</h2>
@@ -203,7 +317,7 @@ export function ControlCenter({ session, role, profile, workflowKey, letterKey, 
             {view.connectedAt && !inShowcase && <small>Połączenie od {localTime(view.connectedAt)}</small>}
           </div>
         </article>}
-        {view && (connected || (owner && sameTabDemo)) && <CaseDashboard view={view} cases={cases} busy={locked || !session.connected} connected spotlightFine={sameTabDemo}
+        {!dashboard && !trackerEvent && view && (connected || (owner && sameTabDemo)) && <CaseDashboard view={view} cases={cases} busy={locked || !session.connected} connected spotlightFine={sameTabDemo}
           open={openCase} share={shareCase} showDates={() => changeTab("dates")}
           showHistory={(id) => { setHistoryFilter(id); changeTab("history"); }} />}
         {!owner && view && connected && session.token && <RepresentedOwners key={session.token} view={view} token={session.token} />}
@@ -230,14 +344,17 @@ export function ControlCenter({ session, role, profile, workflowKey, letterKey, 
               <details className="control-card control-settings"><summary><Link2 size={17} /> Kod QR i link</summary>
                 <MostInvite invitation={invitation} generic />
               </details>
-            </> : <MostInvite invitation={invitation} generic />
+            </> : <MostInvite invitation={invitation} generic
+              onShowcase={canShowInline ? () => showcase.open(invitation.token) : undefined} />
             : <button className="most-button most-primary" disabled={locked || !session.connected} onClick={() => void session.act({ type: "invite", scope: delegationScope })}>
                 {inShowcase ? "Wyślij zaproszenie do Kacpra" : "Utwórz zaproszenie QR"}
               </button>}
         </>}
-        {view && connected && owner && <button className="most-button most-primary" disabled={locked} onClick={() => openWizard({})}>Udziel dostępu <ChevronRight size={17} /></button>}
-        {owner && !inShowcase && <a className="most-inline" href="/?pokaz=most3" target="_blank" rel="noopener noreferrer">Otwórz widok dwóch telefonów <ChevronRight size={16} /></a>}
-        {view && owner && !connected && !sameTabDemo && <CaseDashboard view={view} cases={cases} busy={locked || !session.connected}
+        {residenceCase && <button className="most-button most-primary" disabled={locked} onClick={() => void shareCase(residenceCase)}>
+          Udostępnij zgłoszenie pobytu stałego <ChevronRight size={17} aria-hidden="true" />
+        </button>}
+        {view && connected && owner && <button className={"most-button " + (residenceCase ? "most-secondary" : "most-primary")} disabled={locked} onClick={() => openWizard({})}>Udziel dostępu <ChevronRight size={17} /></button>}
+        {!dashboard && !trackerEvent && view && owner && !connected && !sameTabDemo && <CaseDashboard view={view} cases={cases} busy={locked || !session.connected}
           open={openCase} share={shareCase} showDates={() => changeTab("dates")}
           showHistory={(id) => { setHistoryFilter(id); changeTab("history"); }} />}
         {view && connected && !owner && <button className="most-button most-secondary" disabled={locked || view.requests.some(({ status }) => status === "pending")}
@@ -255,6 +372,7 @@ export function ControlCenter({ session, role, profile, workflowKey, letterKey, 
             edit={() => openWizard({ change: grant, resource: grant.resource })} />)}
           {view.assignments.map(({ title, href }) => <a key={href} className="most-button most-secondary" href={href}>{title}<ChevronRight size={17} /></a>)}
           {!owner && !view.grants.length && !view.assignments.length && connected && <p className="most-lead">Tutaj pojawią się udostępnione sprawy, dokumenty i terminy.</p>}
+          {dashboard && owner && view.grants.length === 0 && <p className="most-lead">Nie udzielono jeszcze dostępu w tym połączeniu.</p>}
         </section>}
         {view && <button className="most-button most-secondary" onClick={() => setAssistant(true)}><Sparkles size={18} /> Zapytaj asystenta MOST</button>}
         {owner && view && <details className="control-card control-settings"><summary><KeyRound size={17} /> Bezpieczeństwo połączenia</summary>
@@ -379,19 +497,33 @@ function RepresentedOwners({ view, token }: { view: ControlView; token: string }
   </section>;
 }
 
-function GrantWizard({ view, launch, busy, send, onClose }: { view: ControlView; launch: Wizard; busy: boolean; send: Send; onClose: (view: ControlView) => void }) {
+function GrantWizard({ view, launch, busy, send, onClose }: { view: ControlView; launch: Wizard; busy: boolean; send: Send; onClose: (view: ControlView, resource: string) => void }) {
   const resourceLabel = useId();
+  const stepHeading = useRef<HTMLHeadingElement>(null);
+  const wizardCard = useRef<HTMLDivElement>(null);
   const previous = launch.change;
   const [step, setStep] = useState(launch.resource ? 1 : 0);
   const [resource, setResource] = useState(launch.resource ?? "");
-  const [actions, setActions] = useState<Operation[]>(previous?.actions ?? (launch.pay ? ["view", "monitor", "prepare", "pay"] : launch.prepare ? ["view", "prepare"] : launch.request ? ["view"] : []));
-  const [mode, setMode] = useState<Mode>(previous?.mode ?? (launch.pay ? "independent" : "owner"));
-  const [duration, setDuration] = useState<Duration>(previous?.duration ?? "open");
+  const [actions, setActions] = useState<Operation[]>(previous?.actions ?? (launch.submit ? ["view", "prepare", "submit"] : launch.pay ? ["view", "monitor", "prepare", "pay"]
+    : launch.monitor ? ["view", "monitor", "prepare"] : launch.prepare ? ["view", "prepare"] : launch.viewOnly || launch.request ? ["view"] : []));
+  const [mode, setMode] = useState<Mode>(previous?.mode ?? (launch.pay || launch.submit ? "independent" : "owner"));
+  const [duration, setDuration] = useState<Duration>(previous?.duration ?? (launch.monitor ? "case" : "open"));
   const [end, setEnd] = useState(previous?.end ?? "");
   const [formalRequired, setFormalRequired] = useState(Boolean(previous?.formalRequired));
   const [authorization, setAuthorization] = useState<ControlData["authorization"]>();
   const [authError, setAuthError] = useState("");
   const [verifying, setVerifying] = useState(false);
+  useLayoutEffect(() => {
+    if (step === (launch.resource ? 1 : 0)) return;
+    stepHeading.current?.focus();
+    stepHeading.current?.scrollIntoView({ block: "start" });
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const transition = wizardCard.current?.animate([
+      { opacity: .35, transform: "translateY(12px) scale(.985)" },
+      { opacity: 1, transform: "translateY(0) scale(1)" },
+    ], { duration: 330, easing: "cubic-bezier(.16, 1, .3, 1)" });
+    return () => transition?.cancel();
+  }, [step, launch.resource]);
   const item = view.resources.find(({ id }) => id === resource);
   const canExecute = actions.includes("submit") || actions.includes("pay");
   const isCase = item && ["letter", "workflow", "payment"].includes(item.kind);
@@ -407,17 +539,17 @@ function GrantWizard({ view, launch, busy, send, onClose }: { view: ControlView;
     try {
       const assertion = authorization.options ? await getPasskey(authorization.options) : undefined;
       const granted = await send({ type: "grant", key: authorization.key, assertion, confirmDemo: authorization.method === "demo" });
-      if (granted) onClose(granted.view);
+      if (granted) onClose(granted.view, resource);
     } catch {
       setAuthError("Nie potwierdzono operacji kluczem dostępu. Spróbuj ponownie.");
     } finally {
       setVerifying(false);
     }
   }
-  return <div className="control-card control-wizard">
+  return <div className="control-card control-wizard" ref={wizardCard}>
     <p className="control-kicker"><ShieldCheck size={16} /> Upoważnienie aplikacyjne · MOST</p>
-    <h2>{["Wybierz zasób", "Wybierz czynności i czas dostępu", "Sprawdź zakres", "Potwierdź zmianę"][step]}</h2>
-    <p>Osoba zaufana: <strong>{view.helper}</strong></p>
+    <h2 ref={stepHeading} tabIndex={-1}>{["Wybierz zasób", "Wybierz czynności i czas dostępu", "Sprawdź, co udostępniasz", "Potwierdź dostęp"][step]}</h2>
+    {step < 2 && <p>Osoba zaufana: <strong>{view.helper}</strong></p>}
     {step === 0 && <label className="control-field" htmlFor={resourceLabel}><span>Zasób</span>
       <select id={resourceLabel} aria-label="Zasób" value={resource} onChange={(event) => { setResource(event.target.value); setActions([]); setDuration("open"); setMode("owner"); }}>
         <option value="">Wybierz…</option>{view.resources.filter((entry) => !view.grants.some((grant) => grant.resource === entry.id && grant.status === "active"))
@@ -449,9 +581,13 @@ function GrantWizard({ view, launch, busy, send, onClose }: { view: ControlView;
       {canExecute && !valid && <p>Do wykonania wybierz otwieranie i przygotowanie sprawy oraz tryb samodzielny albo osobne potwierdzenie.</p>}
     </>}
     {step >= 2 && item && <>
-      <p><strong>{item.title}</strong></p><ul>{actions.map((action) => <li key={action}>{operations[action]}</li>)}</ul>
-      <p>{durationLabels[duration]}{duration === "period" && end ? " · " + dateLabel(end) : ""}</p>
-      {isCase && <p>{modeLabels[mode]}.</p>}
+      <dl className="control-grant-summary">
+        <div><dt>Kto otrzyma dostęp</dt><dd>{view.helper}</dd></div>
+        <div><dt>Co udostępniasz</dt><dd>{item.title}</dd></div>
+        <div><dt>Co ta osoba może zrobić</dt><dd><ul>{actions.map((action) => <li key={action}>{operations[action]}</li>)}</ul></dd></div>
+        <div><dt>Jak długo</dt><dd>{durationLabels[duration]}{duration === "period" && end ? " · " + dateLabel(end) : ""}</dd></div>
+        {isCase && <div><dt>Kto decyduje o wykonaniu</dt><dd>{modeLabels[mode]}</dd></div>}
+      </dl>
       {canExecute && formalRequired && <p>Końcowa czynność będzie dostępna po weryfikacji dokumentu w symulacji.</p>}
       <p>Ten zakres obowiązuje w aplikacji demonstracyjnej. Dokument pełnomocnictwa ma osobną ścieżkę.</p>
     </>}
@@ -490,7 +626,9 @@ function GrantCard({ grant, view, send, busy, edit }: { grant: Grant; view: Cont
     {owner && grant.formal && <p>{signatureStatus[grant.formal.status]} · dokument demo</p>}
     {!owner && active && grant.href && <a className="most-button most-secondary" href={grant.href}>Otwórz sprawę <ChevronRight size={17} /></a>}
     {!owner && active && canOpenDoc && <div className="control-actions">
-      <button className="most-button most-secondary" disabled={busy} onClick={async () => setDocument((await send({ type: "document", id: grant.resource }))?.document)}>Otwórz dokument</button>
+      <button className="most-button most-secondary" disabled={busy} onClick={async () => setDocument((await send({ type: "document", id: grant.resource }))?.document)}>
+        {grant.resource.startsWith("tracker:") ? "Otwórz opis operacji" : "Otwórz dokument"}
+      </button>
       {grant.actions.includes("download") && <button className="most-button most-secondary" disabled={busy} onClick={async () => {
         const result = (await send({ type: "document", id: grant.resource, download: true }))?.document;
         if (result) download(result.title + " · demo", result.text);

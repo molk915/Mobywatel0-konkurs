@@ -1,68 +1,63 @@
 import { expect, test, type Page } from "@playwright/test";
 import { previewOrigin } from "./urls";
 
-async function expectModeSwitcherBelowHeading(page: Page, name: string | RegExp) {
-  const back = page.getByRole("button", { name: "Wstecz", exact: true });
-  const heading = page.getByRole("heading", { name, level: 1 });
-  const switcher = page.getByRole("group", { name: "Widok MOST" });
-  await expect(switcher).toBeInViewport({ ratio: 1 });
-  await expect(heading).toBeVisible();
-  const [backBox, headingBox, switcherBox] = await Promise.all([back.boundingBox(), heading.boundingBox(), switcher.boundingBox()]);
-  expect(backBox!.y + backBox!.height).toBeLessThanOrEqual(headingBox!.y);
-  expect(headingBox!.y + headingBox!.height).toBeLessThanOrEqual(switcherBox!.y);
+const button = (page: Page, name: string | RegExp) => page.getByRole("button", { name, exact: typeof name === "string" });
+const letter = "Wezwanie do uzupełnienia wniosku";
+const ownerCases = (page: Page) => page.getByRole("region", { name: "Moje sprawy w MOST" });
+const sharedCases = (page: Page) => page.getByRole("region", { name: "Sprawy udostępnione w MOST" });
+
+async function switchProfile(page: Page, name: RegExp) {
+  await button(page, "Zmień profil").click();
+  await button(page, name).click();
 }
 
-test("Ewa delegates her fine and Kacper pays it after changing profiles in the same tab", async ({ page, context }) => {
+async function grantAccess(page: Page, title: string, duration: string) {
+  await button(page, "Sprawdź podsumowanie").click();
+  const summary = page.locator(".control-grant-summary");
+  await expect(summary).toContainText("Kacper Zieliński");
+  await expect(summary).toContainText(title);
+  await expect(summary).toContainText(duration);
+  await button(page, "Przejdź do potwierdzenia").click();
+  await button(page, "Potwierdź dostęp").click();
+  await expect(page.getByText(/Kacper ma dostęp do sprawy/)).toBeVisible();
+}
+
+test("Ewa shares her fine and Kacper pays it after changing profiles in the same tab", async ({ page, context }) => {
   await page.goto(previewOrigin);
-  const button = (name: string | RegExp) => page.getByRole("button", { name, exact: typeof name === "string" });
-  const select = async (name: RegExp) => {
-    await button(/^Zmień profil demonstracyjny/).click();
-    await button(name).click();
-  };
-  await button("Profil i ustawienia").click();
-  await button(/^Ewa Wiśniewska/).click();
-  await button("MOST").click();
-  await expect(button("Moje")).toHaveAttribute("aria-pressed", "true");
-  const ownerCases = page.getByRole("region", { name: "Moje sprawy w MOST" });
-  const ownerFine = ownerCases.getByRole("listitem").filter({ hasText: "Mandat drogowy" });
-  await expect(ownerFine).toContainText("Sprawa prywatna");
-  await expect(ownerFine).toContainText("150,00 zł");
-  await button("Przekaż sprawę Mandat drogowy").click();
-  await button("Sprawdź podsumowanie").click();
-  await button("Przejdź do potwierdzenia").click();
-  await button("Potwierdź dostęp").click();
-  await expect(ownerFine).toContainText("Kacper Zieliński");
-  await expect(ownerCases.getByRole("listitem").filter({ hasText: "Podatek od nieruchomości" })).toContainText("Sprawa prywatna");
-  await select(/^Kacper Zieliński/);
-  await expect(button("Pomagam")).toHaveAttribute("aria-pressed", "true");
+  await button(page, "Otwórz MOST").click();
+  await ownerCases(page).getByRole("button", { name: /^Mandat drogowy/ }).click();
+  await expect(page.getByText("Sprawa prywatna", { exact: true })).toBeVisible();
+  await button(page, "Poproś o pomoc").click();
+  await grantAccess(page, "Mandat drogowy", "Przez czas połączenia");
+  await switchProfile(page, /^Kacper Zieliński/);
   await page.reload();
-  const shared = page.getByRole("region", { name: "Sprawy udostępnione w MOST" });
-  await expect(shared.getByText("Mandat drogowy", { exact: true })).toBeVisible();
-  await expectModeSwitcherBelowHeading(page, /^Sprawy · Ewa/);
-  await expect(shared.getByText("Podatek od nieruchomości", { exact: true })).toHaveCount(0);
-  await button("Terminy").click();
+  await expect(page.getByRole("heading", { name: "MOST – Kacper" })).toBeVisible();
+  await expect(sharedCases(page).getByRole("heading", { name: "Mandat drogowy" })).toBeVisible();
+  await expect(sharedCases(page).getByText("Podatek od nieruchomości", { exact: true })).toHaveCount(0);
+  await button(page, "Terminy").click();
   await expect(page.locator(".control-deadline").getByRole("heading", { name: "Mandat drogowy", exact: true })).toBeVisible();
   await expect(page.locator(".control-deadline").filter({ hasText: "Podatek od nieruchomości" })).toHaveCount(0);
-  await button("Dostęp").click();
-  await button("Otwórz w MOST Mandat drogowy").click();
+  await button(page, "Wstecz").click();
+  await sharedCases(page).getByRole("button", { name: "Otwórz sprawę" }).click();
   await expect(page.getByText("150,00 zł", { exact: true })).toBeVisible();
-  await button("Opłać mandat").click();
+  await button(page, "Opłać mandat").click();
   await page.getByRole("radio", { name: "BLIK" }).check();
-  await button("Zapisz szkic").click();
-  await button("Potwierdź płatność").click();
+  await button(page, "Zapisz szkic").click();
+  await button(page, "Potwierdź płatność").click();
   await expect(page.getByText("Wykonane przez osobę zaufaną")).toBeVisible();
-  await button("Wróć do spraw w MOST").click();
-  await expect(shared.getByText("Zakończona", { exact: true })).toBeVisible();
-  await select(/^Ewa Wiśniewska/);
-  await expect(ownerFine.getByText("Zakończona", { exact: true })).toBeVisible();
-  await button("Historia sprawy Mandat drogowy").click();
+  await button(page, "Wróć do spraw w MOST").click();
+  await expect(sharedCases(page).getByText("Zakończona", { exact: true })).toBeVisible();
+  await switchProfile(page, /^Ewa Wiśniewska/);
+  await page.locator(".most-dashboard-more summary").click();
+  await ownerCases(page).getByRole("button", { name: /^Mandat drogowy.*Zakończona/ }).click();
+  await button(page, "Historia sprawy").click();
   const history = page.getByRole("region", { name: "Historia działań" });
   await expect(history.getByText("Opłacono w pokazie", { exact: true })).toBeVisible();
   await expect(history.getByText(/Kacper Zieliński/).first()).toBeVisible();
   expect(context.pages()).toHaveLength(1);
 });
 
-test("the contest link opens a readable MOST and recovers a failed initial connection", async ({ page }) => {
+test("the contest link recovers an initial connection failure and supports keyboard and larger text at 320 px", async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 320, height: 740 });
   let binds = 0;
   await page.route("**/api/most/control", async (route) => {
@@ -71,18 +66,102 @@ test("the contest link opens a readable MOST and recovers a failed initial conne
     } else await route.continue();
   });
   await page.goto(previewOrigin + "/?start=most-hub");
-  const cases = page.getByRole("region", { name: "Moje sprawy w MOST" });
-  const fine = cases.getByRole("listitem").filter({ hasText: "Mandat drogowy" });
-  await expect(fine.getByRole("button", { name: "Przekaż sprawę Mandat drogowy" })).toBeInViewport();
-  await expectModeSwitcherBelowHeading(page, "Centrum kontroli");
+  const heading = page.getByRole("heading", { name: "MOST – Ewa" });
+  await expect(heading).toBeVisible();
+  await expect(button(page, "Poproś o pomoc")).toBeInViewport();
   expect(binds).toBeGreaterThanOrEqual(2);
   await expect(page.locator(".most-hub")).not.toHaveText(/Spróbuj ponownie\./);
-  const help = page.getByRole("button", { name: "Pomagam", exact: true });
-  await help.click();
-  await expectModeSwitcherBelowHeading(page, "Sprawy, w których pomagam");
-  await page.getByRole("button", { name: /^Zmień profil demonstracyjny/ }).click();
+  await button(page, "Zmień profil").focus();
+  await page.keyboard.press("Enter");
   await expect(page.getByRole("heading", { name: "Zmień profil w MOST" })).toBeVisible();
+  await page.getByRole("switch", { name: /Większy tekst/ }).click();
   await page.keyboard.press("Escape");
-  await expect(help).toHaveAttribute("aria-pressed", "true");
+  await expect(heading).toBeVisible();
+  await expect(button(page, "Poproś o pomoc")).toHaveCSS("font-size", "18px");
+  await button(page, "Poproś o pomoc").focus();
+  expect(await button(page, "Poproś o pomoc").evaluate((element) => element.matches(":focus-visible"))).toBe(true);
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(320);
+  const overlapsHeader = await heading.evaluate((element) => {
+    const header = document.querySelector(".most-dashboard-header")!;
+    return element.getBoundingClientRect().top < header.getBoundingClientRect().bottom;
+  });
+  expect(overlapsHeader).toBe(false);
+  await page.screenshot({ path: testInfo.outputPath("ewa-320-wiekszy-tekst.png") });
+  await button(page, "Pełna aplikacja").click();
+  await expect(page.getByRole("heading", { name: "Dzień dobry, Ewo" })).toBeVisible();
+});
+
+test("from Start Ewa shares a letter, Kacper saves and returns to his list, and Ewa reviews the draft", async ({ page }, testInfo) => {
+  await page.goto(previewOrigin);
+  const shot = (name: string) => page.screenshot({ path: testInfo.outputPath(name + ".png"), animations: "disabled" });
+  await expect(button(page, "Otwórz MOST")).toBeInViewport();
+  await shot("start-390");
+  const services = page.getByRole("navigation", { name: "Najważniejsze usługi" });
+  await services.getByRole("button", { name: /^Zdrowie/ }).click();
+  await expect(page.getByRole("dialog", { name: "Zdrowie" })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await services.getByRole("button", { name: /^Rodzina/ }).click();
+  await button(page, /^Aleksandra Nowak/).click();
+  await expect(page.getByRole("dialog", { name: "mObywatel Rodzina" })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await button(page, "Profil i ustawienia").click();
+  await button(page, /^Ewa Wiśniewska/).click();
+  await button(page, "Otwórz MOST").click();
+  await expect(ownerCases(page).getByRole("heading", { name: "Zgłoszenie pobytu stałego" })).toBeVisible();
+  await shot("most-ewa-390");
+  await ownerCases(page).getByRole("button", { name: new RegExp("^" + letter) }).click();
+  await button(page, "Poproś o pomoc").click();
+  await grantAccess(page, letter, "Do zakończenia sprawy");
+  await button(page, /^Kto ma dostęp/).click();
+  await expect(page.getByRole("region", { name: "Zakres upoważnień" })).toContainText(letter);
+  await button(page, "Wstecz").click();
+
+  const otherCases = ["Mandat drogowy", "Aktualizacja adresu w urzędzie skarbowym"];
+  for (const [index, title] of otherCases.entries()) {
+    if (index === 1) await page.locator(".most-dashboard-more summary").click();
+    await ownerCases(page).getByRole("button", { name: new RegExp("^" + title) }).click();
+    await button(page, "Poproś o pomoc").click();
+    await grantAccess(page, title, "Przez czas połączenia");
+  }
+  await switchProfile(page, /^Kacper Zieliński/);
+  await expect(sharedCases(page).getByText("Ewa prosi Cię o pomoc", { exact: true })).toBeVisible();
+  await expect(sharedCases(page).getByText(/Termin odpowiedzi/)).toBeInViewport();
+  await expect(sharedCases(page).getByText("Podatek od nieruchomości", { exact: true })).toHaveCount(0);
+  await shot("most-kacper-390");
+  await page.setViewportSize({ width: 430, height: 932 });
+  await expect(button(page, "Przygotuj odpowiedź")).toBeInViewport();
+  await expect(page.getByRole("navigation", { name: "Nawigacja główna" })).toBeInViewport({ ratio: 1 });
+  await shot("most-kacper-430");
+
+  await button(page, "Przygotuj odpowiedź").click();
+  const reason = page.getByLabel("Uzasadnienie", { exact: true });
+  const text = "Dołączam kopię umowy najmu i proszę o przyjęcie uzupełnienia wniosku.";
+  await reason.fill(text);
+  await button(page, "Zapisz szkic").click();
+  await expect(page.getByText("Szkic zapisany.", { exact: true })).toBeInViewport();
+  await button(page, "Wstecz").click();
+  await expect(button(page, "Wróć do szkicu")).toBeVisible();
+  const other = sharedCases(page).getByRole("button", { name: /^Aktualizacja adresu w urzędzie skarbowym/ });
+  await other.click();
+  await expect(page.getByRole("heading", { name: "Aktualizacja adresu w urzędzie skarbowym", exact: true, level: 1 })).toBeVisible();
+  await page.goBack();
+  await expect(other).toBeVisible();
+  await button(page, "Wróć do szkicu").click();
+  await expect(reason).toHaveValue(text);
+  await page.reload();
+  await expect(reason).toHaveValue(text);
+  await button(page, "Przekaż do zatwierdzenia").click();
+  await expect(page.getByText("Przekazano Ewie do zatwierdzenia.", { exact: true })).toBeVisible();
+  await page.goBack();
+  await expect(page.getByRole("heading", { name: "MOST – Kacper" })).toBeVisible();
+  await expect(other).toBeVisible();
+  await switchProfile(page, /^Ewa Wiśniewska/);
+  await page.setViewportSize({ width: 1440, height: 980 });
+  await expect(page.locator(".phone-shell")).toBeInViewport({ ratio: 1 });
+  await expect(button(page, "Sprawdź szkic")).toBeInViewport();
+  await shot("most-ewa-desktop");
+  await button(page, "Sprawdź szkic").click();
+  await expect(page.getByText(text, { exact: true })).toBeVisible();
+  await button(page, "Sprawdź wykonane czynności").click();
+  await expect(page.getByText(/Kacper przygotował sprawę do zatwierdzenia/)).toBeVisible();
 });

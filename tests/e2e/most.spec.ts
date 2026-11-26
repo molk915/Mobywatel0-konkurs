@@ -185,6 +185,8 @@ test("desktop phones synchronize a completed checklist, reject and reset", async
 
 test("the shared-cases entry changes persona only after explicit selection", async ({ page }) => {
   await page.goto(production);
+  await button(page, "Profil i ustawienia").click();
+  await button(page, /^Aleksandra Nowak/).click();
   await button(page, "Sprawy").click();
   await button(page, "Pomagam").click();
   await button(page, "Profil i ustawienia").click();
@@ -213,6 +215,7 @@ test("320-pixel case preserves navigation, scope and browser back", async ({ pag
   await button(page, "Sprawy").click();
   await button(page, /Pismo z urzędu — wymaga Twojej uwagi/).click();
   const owner = ownerDialog(page);
+  await expect(owner.getByRole("heading", { name: "Pismo z urzędu", exact: true })).toBeVisible({ timeout: 12000 });
   await expect(button(owner, "Poproś o pomoc")).toBeInViewport({ ratio: 1 });
   await button(owner, "Poproś o pomoc").click();
   await owner.getByRole("checkbox", { name: "Treść tego pisma" }).uncheck();
