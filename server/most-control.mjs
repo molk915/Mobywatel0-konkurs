@@ -118,7 +118,7 @@ export function createMostControl(state, now = Date.now) {
     for (const grant of control.grants) {
       if (status(room, grant, at) !== "active") continue;
       const date = warsawDate(grant.expires - 1);
-      rows.push({ id: "grant:" + grant.id, title: "Koniec dostępu · " + grant.title, date, days: days(date), source: "Upoważnienie MOST",
+      rows.push({ id: "grant:" + grant.id, title: "Koniec dostępu · " + grant.title, date, days: days(date), source: "Upoważnienie do sprawy",
         helper: actorName(room, "helper"),
         category: "Dostęp", done: false });
     }
@@ -141,7 +141,7 @@ export function createMostControl(state, now = Date.now) {
         const current = status(room, grant, at);
         if (current !== "expired" || grant.expiryRecorded) continue;
         grant.expiryRecorded = true;
-        audit(room, at, "MOST", "Dostęp wygasł", grant.title, grant.resource, "Zakończono", grant.id);
+        audit(room, at, "System", "Dostęp wygasł", grant.title, grant.resource, "Zakończono", grant.id);
         notice(room, at, "owner", "Wygasło upoważnienie", grant.resource);
       }
       for (const item of deadlines(room, at)) {
@@ -168,7 +168,11 @@ export function createMostControl(state, now = Date.now) {
       return notice.invitation === room.invitation.token &&
         (!notice.resource || rows.some(({ id }) => id === notice.resource) || room.control.grants.some((grant) =>
           grant.resource === notice.resource && status(room, grant, at) === "active"));
-    }).map(({ id, at, title, read, resource, eventId, attention }) => ({ id, at, title, read, resource, eventId, attention })).reverse();
+    }).map(({ id, at, title, read, resource, eventId, attention }) => ({
+      id, at, read, resource, eventId, attention,
+      title: title.replace(/^Wykonano operację w MOST · /, "Wykonano operację w udostępnionej sprawie · ")
+        .replace(/^Użyto dostępu w MOST · /, "Użyto udzielonego dostępu · "),
+    })).reverse();
   }
 
   function access(key, at) {
@@ -184,7 +188,7 @@ export function createMostControl(state, now = Date.now) {
     const eventId = audit(room, at, actorName(room, "helper"), action === "submit" ? "Wysłano odpowiedź w pokazie" : action === "pay" ? "Opłacono w pokazie" : operations[action] ?? action,
       detail, grant.resource, "Wykonano", grant.id, grant.title);
     if (awaitingOwner) notice(room, at, "owner", "Szkic czeka na zatwierdzenie · " + grant.title, grant.resource, undefined, { eventId, attention: true });
-    else notice(room, at, "owner", "Wykonano operację w MOST · " + grant.title, grant.resource, undefined, { eventId });
+    else notice(room, at, "owner", "Wykonano operację w udostępnionej sprawie · " + grant.title, grant.resource, undefined, { eventId });
   }
   function ownerLetterAction(key, at, action, detail) {
     const entry = access(key, at);
@@ -257,7 +261,8 @@ export function createMostControl(state, now = Date.now) {
         !invite.control && !candidate.delegation && invite.expiresAt > at && ["active", "waiting"].includes(invite.status);
     }) : [];
     const history = owner ? [
-      ...peers.flatMap((peer) => peer.control.history),
+      ...peers.flatMap((peer) => peer.control.history.map((event) =>
+        event.actor === "MOST" ? { ...event, actor: "System" } : event)),
       ...linkedRooms.flatMap((item) => item.history.filter((event) => event.type === "send" && event.role === "helper")
         .map((event) => ({ id: "letter:" + event.id, at: event.at, label: "Wysłano odpowiedź w pokazie", actor: actorName(room, "helper"), detail: event.detail }))),
       ...peers.flatMap((peer) => workflows?.controlHistory(peer, actorName(peer, "helper")) ?? []),
@@ -384,7 +389,7 @@ export function createMostControl(state, now = Date.now) {
     if (typeof text !== "string" || !text.trim() || text.length > 1000) return null;
     const value = text.toLocaleLowerCase("pl");
     if (/wynik|zdrow|badań krwi|pesel|bank|hasło/.test(value))
-      return { text: "Ten kontekst MOST nie udostępnia takich danych.", links: [] };
+      return { text: "Te dane są poza zakresem dostępu.", links: [] };
     const candidates = role === "owner" ? ["history"] : ["letter", "fine", "tax"]
       .filter((id) => (!exactResource || id === exactResource) && allowed(room, "view", id, at));
     const recent = (room.control.assistantCalls ?? []).filter((call) => call > at - 60_000);
@@ -505,11 +510,11 @@ export function createMostControl(state, now = Date.now) {
       const eventId = audit(room, at, actorName(room, role), tracker ? "Otwarto opis operacji na danych"
         : action === "download" ? "Pobrano dokument" : "Otwarto dokument", document.title, document.id, "Odczytano", grant?.id,
         tracker ? "Opis jednej udostępnionej operacji · " + document.title : "Treść udostępnionego dokumentu · " + document.title);
-      if (!owner) notice(room, at, "owner", "Użyto dostępu w MOST · " + document.title, document.id, undefined, { eventId });
+      if (!owner) notice(room, at, "owner", "Użyto udzielonego dostępu · " + document.title, document.id, undefined, { eventId });
       if (tracker) return done({ document: { title: tracker.title, text: tracker.text } });
       const date = control.dates[document.id] ?? warsawDate(control.created + document.offset * day);
       return done({ document: { title: document.title,
-        text: ["DOKUMENT FIKCYJNY · MOST", document.title, "Profil demonstracyjny: " + actorName(room, "owner"), "Ważność: " + date].join("\n") } });
+        text: ["DOKUMENT FIKCYJNY · mObywatel Razem", document.title, "Profil demonstracyjny: " + actorName(room, "owner"), "Ważność: " + date].join("\n") } });
     }
     if (type === "request" && !owner) {
       const item = requestable.find(({ id }) => id === command.resource);
@@ -592,7 +597,7 @@ export function createMostControl(state, now = Date.now) {
       const account = security(room);
       const method = authenticator?.available(account) ? "passkey" : "demo";
       const options = method === "passkey" && await authenticator.options(account, req, authorization.key);
-      if (method === "passkey" && !options) return conflict("Otwórz MOST pod adresem, na którym zarejestrowano klucz dostępu.");
+      if (method === "passkey" && !options) return conflict("Otwórz aplikację pod adresem, na którym zarejestrowano klucz dostępu.");
       if (room.invitation?.token !== authorization.invitation || !activeConnection(room, authorization.invitation, now()))
         return conflict("Połączenie się zmieniło. Otwórz aktualny zakres.");
       control.authorization = authorization;
@@ -661,13 +666,13 @@ export function createMostControl(state, now = Date.now) {
       audit(room, at, actorName(room, role), command.download === true ? "Pobrano pełnomocnictwo" : "Otwarto pełnomocnictwo",
         item.reference, grant.resource, "Odczytano", grant.id);
       return done({ document: { title: item.reference, text: [
-        "PEŁNOMOCNICTWO · WZÓR DEMONSTRACYJNY MOST", "Numer " + item.reference + " · wersja " + item.version,
+        "PEŁNOMOCNICTWO · WZÓR DEMONSTRACYJNY · mObywatel Razem", "Numer " + item.reference + " · wersja " + item.version,
         "Mocodawca: " + (item.principal ?? actorName(room, "owner")),
         "Pełnomocnik: " + (item.representative ?? actorName(room, "helper")), "Sprawa: " + grant.title,
         item.procedure, item.scope, "Forma: " + item.form, "Sporządzono: " + dateTime(item.created),
         ...(item.basis ? ["Podstawa wzoru: " + item.basis.label] : []),
-        "Zakres upoważnienia w MOST: " + grant.actions.map((action) => operations[action]).join(", "),
-        "Dostęp w MOST do: " + dateTime(grant.expires), "Status: " + formalStatus[documentStatus],
+        "Zakres upoważnienia w aplikacji: " + grant.actions.map((action) => operations[action]).join(", "),
+        "Dostęp w aplikacji do: " + dateTime(grant.expires), "Status: " + formalStatus[documentStatus],
         ...(item.method ? ["Symulowana metoda podpisu: " + item.method] : []),
         ...(item.signedAt ? ["Potwierdzono symulację: " + dateTime(item.signedAt)] : []),
         "Dokument demonstracyjny bez skutków prawnych.",

@@ -114,7 +114,7 @@ export function MostDashboardCases({ view, busy, open, share, showAccess, showDa
   </ul>;
 
   return <>
-    <section className="most-dashboard-cases" aria-label={owner ? "Moje sprawy w MOST" : "Sprawy udostępnione w MOST"}>
+    <section className="most-dashboard-cases" aria-label={owner ? "Moje sprawy" : "Udostępnione sprawy"}>
       {first ? <>
         <article key={first.id} className="most-priority" data-role={view.role}>
           {!owner && <p className="most-priority-request"><UsersRound size={22} aria-hidden="true" /> {helperMessage}</p>}
@@ -142,7 +142,7 @@ export function MostDashboardCases({ view, busy, open, share, showAccess, showDa
           </details>}
         </div>}
       </> : <div className="most-dashboard-state">
-        <h2>{owner ? "Brak spraw w MOST" : "Brak udostępnionych spraw"}</h2>
+        <h2>{owner ? "Brak spraw" : "Brak udostępnionych spraw"}</h2>
         <p>{owner ? "Gdy pojawi się sprawa, zobaczysz tu jej termin i następny krok."
           : "Zobaczysz tu sprawy, do których bliska osoba przyzna Ci dostęp."}</p>
       </div>}

@@ -1,27 +1,31 @@
-# mObywatel MOST na mObywatel Challenge
+# mObywatel Razem na mObywatel Challenge
+
+**Twoje sprawy. Twoja decyzja. Nie musisz działać sam.**
 
 ## Tytuł
 
-mObywatel MOST — bliska osoba pomaga, decyzja należy do Ciebie
+mObywatel Razem
 
 ## Opis zgłoszenia
 
-Kiedy Ewa potrzebuje pomocy przy sprawie urzędowej, mObywatel MOST pozwala jej przekazać wnukowi Kacprowi wybraną sprawę. Ustala, które czynności może wykonać i jak długo ma dostęp. W zakładce **Moje** Ewa widzi swoje sprawy, przyznane upoważnienia i historię działań. Może też cofnąć dostęp.
+Kiedy Ewa potrzebuje pomocy przy sprawie urzędowej, mObywatel Razem pozwala jej przekazać wnukowi Kacprowi wybraną sprawę. Ustala, które czynności może wykonać i jak długo ma dostęp. W zakładce **Moje** Ewa widzi swoje sprawy, przyznane upoważnienia i historię działań. Może też cofnąć dostęp.
 
 Kacper widzi przekazane sprawy i udostępnione terminy w zakładce **Pomagam**. Przy mandacie zapisuje szkic i może potwierdzić płatność, jeśli Ewa przyznała mu takie uprawnienie. Przy piśmie Kacper może przygotować odpowiedź do decyzji Ewy. Ewa przegląda treść i załącznik, zatwierdza pakiet albo prosi o poprawki.
 
 Prototyp działa bez logowania i korzysta z fikcyjnych danych. W jednej karcie można przełączyć się między profilami, sprawdzić zakres Kacpra i zobaczyć wynik po stronie Ewy.
 
+[Ekran główny mObywatel Razem](screenshots/razem-start-390.png)
+
 ## Próba dla jurora
 
 Główny link prowadzi do `/?start=most-hub` na publicznej domenie. Cały scenariusz można przejść w jednej karcie.
 
-1. W **MOST → Moje** u Ewy wybierz **Przekaż sprawę Mandat drogowy**. Sprawdź zakres, przejdź do potwierdzenia i wybierz **Potwierdź dostęp**.
-2. Kliknij nazwę profilu nad panelem MOST i wybierz Kacpra. W **Pomagam** otwórz udostępniony mandat na 150 zł.
+1. W **Pomoc → Moje** u Ewy wybierz **Przekaż sprawę Mandat drogowy**. Sprawdź zakres, przejdź do potwierdzenia i wybierz **Potwierdź dostęp**.
+2. Kliknij nazwę profilu nad listą spraw i wybierz Kacpra. W **Pomagam** otwórz udostępniony mandat na 150 zł.
 3. Wybierz **Opłać mandat**, zaznacz BLIK, zapisz szkic i potwierdź płatność demo.
 4. Wróć do listy spraw, przełącz profil na Ewę i otwórz **Moje**. Mandat ma status **Zakończona**. W historii sprawy widać działania Kacpra.
 
-Pod `/?pokaz=most3` oba telefony mają własne Dokumenty, Sprawy, Usługi, Dane i MOST. Wejdź w MOST Ewy i wybierz **Przygotuj zaproszenie**, a następnie **Wyślij zaproszenie do Kacpra**. Drugi telefon wyświetli zaproszenie na aktualnym ekranie. Scenariusz pisma urzędowego opisany poniżej jest również dostępny pod `/?pokaz=most`.
+Pod `/?pokaz=most3` oba telefony mają własne Dokumenty, Sprawy, Usługi, Dane i zakładkę Pomoc. Otwórz zakładkę Pomoc na telefonie Ewy i wybierz **Przygotuj zaproszenie**, a następnie **Wyślij zaproszenie do Kacpra**. Drugi telefon wyświetli zaproszenie na aktualnym ekranie. Scenariusz pisma urzędowego opisany poniżej jest również dostępny pod `/?pokaz=most`.
 
 ### Pokaz w 60 sekund
 
@@ -57,6 +61,6 @@ docker build -t mobywatel-most:contest .
 docker run -d --name mobywatel-most --restart unless-stopped -p 127.0.0.1:4197:8080 -e APP_ORIGIN=http://localhost:4197 --mount type=volume,source=mobywatel-most-data,target=/var/lib/most mobywatel-most:contest
 ```
 
-W wariancie Docker użyj jednej instancji kontenera z trwałym wolumenem `/var/lib/most`. Ustaw `APP_ORIGIN` na dokładny publiczny adres HTTPS bez końcowego ukośnika i skieruj ruch HTTPS na port kontenera 8080. Endpoint `GET /api/health` sprawdza dostępność procesu. Sesje MOST właściciela wygasają po 14 dniach, a zaproszenia Kacpra po 10 minutach. Nowe wejście bez zapisanej sesji tworzy nową sprawę na danych demonstracyjnych.
+W wariancie Docker użyj jednej instancji kontenera z trwałym wolumenem `/var/lib/most`. Ustaw `APP_ORIGIN` na dokładny publiczny adres HTTPS bez końcowego ukośnika i skieruj ruch HTTPS na port kontenera 8080. Endpoint `GET /api/health` sprawdza dostępność procesu. Sesje właściciela wygasają po 14 dniach, a zaproszenia Kacpra po 10 minutach. Nowe wejście bez zapisanej sesji tworzy nową sprawę na danych demonstracyjnych.
 
 Po wdrożeniu przejdź cały scenariusz na publicznym adresie w nowym oknie prywatnym i sprawdź, czy status oraz historia pozostają po odświeżeniu. Formularz wymaga linku HTTPS działającego bez logowania do czasu ogłoszenia wyników. Termin podany przez organizatora to 30 listopada 2026, do końca dnia w Polsce. [Oficjalne warunki konkursu](https://mobywatel.ai/)

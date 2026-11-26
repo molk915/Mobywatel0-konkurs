@@ -196,7 +196,7 @@ export function ControlCenter({ session, role, profile, workflowKey, letterKey, 
   const connectionError = session.error || (!!dashboard && !owner && session.attempted && !session.connected && !session.ended
     ? "Nie udało się wczytać udostępnionych spraw." : "");
   const dashboardTitle = caseInfo?.title ?? (tab === "access" ? owner ? "Kto ma dostęp" : "Mój dostęp"
-    : tab === "overview" ? "MOST – " + dashboard?.profile.first : labels[tab]);
+    : tab === "overview" ? "Sprawy · " + dashboard?.profile.first : labels[tab]);
   const caseHistory = (id: string) => { setCaseInfoId(undefined); setHistoryFilter(id); changeTab("history"); };
   function backToDashboard() {
     if (wizard) { setWizard(undefined); return; }
@@ -205,8 +205,8 @@ export function ControlCenter({ session, role, profile, workflowKey, letterKey, 
     changeTab("overview");
   }
 
-  return <MostLayout role={role} roleLabel={owner ? "Moje dane" : "Pomagam"} contextTitle="mObywatel MOST"
-    title={assistant ? "Asystent MOST" : wizard ? "Udziel dostępu" : trackerEvent ? "Pomoc przy operacji na danych" : dashboard ? dashboardTitle : owner ? "Centrum kontroli"
+  return <MostLayout role={role} roleLabel={owner ? "Moje dane" : "Pomagam"} contextTitle="mObywatel Razem"
+    title={assistant ? "Asystent wspólnych spraw" : wizard ? "Udziel dostępu" : trackerEvent ? "Pomoc przy operacji na danych" : dashboard ? dashboardTitle : owner ? "Centrum kontroli"
       : view ? inShowcase ? "Panel pomocy" : "Sprawy · " + view.owner : "Osoba zaufana"}
     screen={assistant ? "control-assistant" : wizard ? "control-wizard" : caseInfo ? "control-case-info" : "control-" + tab} nav={nav}
     header={overview ? <MostDashboardHeader onFullApp={overview.onFullApp} /> : undefined}
@@ -273,7 +273,7 @@ export function ControlCenter({ session, role, profile, workflowKey, letterKey, 
       {overview && !owner && view?.grants.some(({ resource }) => resource.startsWith("tracker:")) &&
         <button className="most-button most-secondary" onClick={() => changeTab("access")}>Opisy operacji na danych <ChevronRight size={18} /></button>}
       {overview && !view && !session.ended && !connectionError && !(session.view && !connected && !owner) &&
-        <p className="most-dashboard-state" role="status">Wczytujemy sprawy w MOST…</p>}
+        <p className="most-dashboard-state" role="status">Wczytujemy wspólne sprawy…</p>}
       {caseInfo && !wizard && <section className="most-dashboard-state" aria-label="Szczegóły sprawy">
         <p>{[caseStages[caseInfo.stage], caseInfo.paymentAmount].filter(Boolean).join(" · ")}</p>
         <DashboardDeadline deadline={view?.deadlines.find(({ id }) => id === caseInfo.id)} isLetter={caseInfo.kind === "letter"} />
@@ -374,9 +374,9 @@ export function ControlCenter({ session, role, profile, workflowKey, letterKey, 
           {!owner && !view.grants.length && !view.assignments.length && connected && <p className="most-lead">Tutaj pojawią się udostępnione sprawy, dokumenty i terminy.</p>}
           {dashboard && owner && view.grants.length === 0 && <p className="most-lead">Nie udzielono jeszcze dostępu w tym połączeniu.</p>}
         </section>}
-        {view && <button className="most-button most-secondary" onClick={() => setAssistant(true)}><Sparkles size={18} /> Zapytaj asystenta MOST</button>}
+        {view && <button className="most-button most-secondary" onClick={() => setAssistant(true)}><Sparkles size={18} /> Zapytaj asystenta</button>}
         {owner && view && <details className="control-card control-settings"><summary><KeyRound size={17} /> Bezpieczeństwo połączenia</summary>
-          <p>Klucz dostępu potwierdza zmianę upoważnienia w MOST. Podpis dokumentu ma osobną ścieżkę.</p>
+          <p>Klucz dostępu potwierdza zmianę zakresu dostępu. Podpis dokumentu ma osobną ścieżkę.</p>
           {canUsePasskey() ? <button className="most-button most-secondary" disabled={locked || view.passkeyRegistered} onClick={() => void register()}>
             {view.passkeyRegistered ? "Klucz dostępu jest aktywny" : "Dodaj klucz dostępu"}
           </button> : <p>Ta przeglądarka obsługuje tutaj potwierdzenie demonstracyjne.</p>}
@@ -396,11 +396,11 @@ export function ControlCenter({ session, role, profile, workflowKey, letterKey, 
         {visibleHistory.length ? visibleHistory.map((item) => <article key={item.id}>
           <time dateTime={item.at}>{localTime(item.at)}</time><h2>{item.label}</h2>
           <p>{item.actor}{item.result ? " · " + item.result : ""}</p>
-          <p>{view.resources.find(({ id }) => id === item.resource)?.title ?? "Centrum kontroli MOST"}</p>
+          <p>{view.resources.find(({ id }) => id === item.resource)?.title ?? "Zarządzanie dostępem"}</p>
           {item.detail && <p>{item.detail}</p>}
         </article>) : <p className="most-lead">Brak działań w wybranym zakresie.</p>}
       </section>}
-      {!assistant && !wizard && view && tab === "inbox" && <section className="control-section" aria-label="Powiadomienia MOST">
+      {!assistant && !wizard && view && tab === "inbox" && <section className="control-section" aria-label="Powiadomienia o współpracy">
         {view.notifications.length ? view.notifications.map((item) => <article className="control-card" key={item.id}>
           <small>{localTime(item.at)}</small><h2>{item.title}</h2>
           {!item.read && <button className="most-inline" onClick={() => void send({ type: "read", id: item.id })}>Oznacz jako przeczytane</button>}
@@ -432,9 +432,9 @@ function CaseDashboard({ view, cases, busy, connected, spotlightFine, open, shar
   const reviews = cases.filter(({ stage }) => stage === "review").length;
   const visible = cases.filter(({ stage }) => filter === "all" || (filter === "draft" ? ["draft", "correction"].includes(stage) : stage === "review"));
   const priority = (item: ControlCase) => item.stage === "review" ? 2 : spotlightFine && item.id === "fine" ? 1 : 0;
-  return <section className="control-section control-case-board" aria-label={owner ? "Moje sprawy w MOST" : "Sprawy udostępnione w MOST"}>
-    <h2>{owner ? "Moje sprawy w MOST" : "Udostępnione sprawy"}</h2>
-    <div className="control-board-filters" role="group" aria-label="Filtry spraw MOST">
+  return <section className="control-section control-case-board" aria-label={owner ? "Moje sprawy" : "Udostępnione sprawy"}>
+    <h2>{owner ? "Moje sprawy" : "Udostępnione sprawy"}</h2>
+    <div className="control-board-filters" role="group" aria-label="Filtry spraw">
       <button aria-pressed={filter === "all"} onClick={() => setFilter("all")}>Wszystkie <strong>{cases.length}</strong></button>
       <button aria-pressed={filter === "draft"} onClick={() => setFilter("draft")}>Szkice <strong>{drafts}</strong></button>
       <button aria-pressed={filter === "review"} onClick={() => setFilter("review")}>Do zatwierdzenia <strong>{reviews}</strong></button>
@@ -449,8 +449,8 @@ function CaseDashboard({ view, cases, busy, connected, spotlightFine, open, shar
         {item.paymentAmount && <small>{item.paymentAmount}</small>}
         {item.updated && <small>Ostatnia zmiana · {localTime(item.updated)}</small>}
         <div className="control-case-actions">
-          <button className="most-inline" aria-label={(item.stage === "review" && owner ? "Sprawdź szkic " : "Otwórz w MOST ") + item.title}
-            disabled={!owner && Boolean(item.grantId) && busy} onClick={() => open(item)}>{item.stage === "review" && owner ? "Sprawdź szkic" : "Otwórz w MOST"}<ChevronRight size={16} /></button>
+          <button className="most-inline" aria-label={(item.stage === "review" && owner ? "Sprawdź szkic " : "Otwórz sprawę ") + item.title}
+            disabled={!owner && Boolean(item.grantId) && busy} onClick={() => open(item)}>{item.stage === "review" && owner ? "Sprawdź szkic" : "Otwórz sprawę"}<ChevronRight size={16} /></button>
           {owner && connected && (item.stage !== "done" || item.grantId) && <button className="most-inline" disabled={busy}
             aria-label={(item.grantId ? "Zakres dostępu " : "Przekaż sprawę ") + item.title} onClick={() => share(item)}>
             {item.grantId ? "Zakres dostępu" : "Przekaż sprawę"}
@@ -547,7 +547,7 @@ function GrantWizard({ view, launch, busy, send, onClose }: { view: ControlView;
     }
   }
   return <div className="control-card control-wizard" ref={wizardCard}>
-    <p className="control-kicker"><ShieldCheck size={16} /> Upoważnienie aplikacyjne · MOST</p>
+    <p className="control-kicker"><ShieldCheck size={16} /> Upoważnienie w aplikacji</p>
     <h2 ref={stepHeading} tabIndex={-1}>{["Wybierz zasób", "Wybierz czynności i czas dostępu", "Sprawdź, co udostępniasz", "Potwierdź dostęp"][step]}</h2>
     {step < 2 && <p>Osoba zaufana: <strong>{view.helper}</strong></p>}
     {step === 0 && <label className="control-field" htmlFor={resourceLabel}><span>Zasób</span>
@@ -591,7 +591,7 @@ function GrantWizard({ view, launch, busy, send, onClose }: { view: ControlView;
       {canExecute && formalRequired && <p>Końcowa czynność będzie dostępna po weryfikacji dokumentu w symulacji.</p>}
       <p>Ten zakres obowiązuje w aplikacji demonstracyjnej. Dokument pełnomocnictwa ma osobną ścieżkę.</p>
     </>}
-    {step === 3 && authorization && <MostNotice>{authorization.method === "passkey" ? "Potwierdź kluczem dostępu w przeglądarce." : "Potwierdzenie demonstracyjne. W tym kroku MOST używa jednorazowego kodu sesji."}</MostNotice>}
+    {step === 3 && authorization && <MostNotice>{authorization.method === "passkey" ? "Potwierdź kluczem dostępu w przeglądarce." : "Potwierdzenie demonstracyjne. Potwierdź jednorazowym kodem sesji."}</MostNotice>}
     {authError && <p role="alert" className="most-error">{authError}</p>}
     <div className="control-actions">
       {step === 0 && <button className="most-button most-primary" disabled={!resource} onClick={() => setStep(1)}>Dalej</button>}
@@ -752,7 +752,7 @@ function ControlAssistant({ view, busy, send }: { view: ControlView; busy: boole
     </form>
     <div aria-live="polite">{answer && scope === answeredScope && <>
       <p className="control-preformatted">{answer.text}</p>
-      {answer.provider === "demo" && <small>Odpowiedź demonstracyjna na podstawie danych MOST</small>}
+      {answer.provider === "demo" && <small>Odpowiedź demonstracyjna na podstawie dostępnych danych</small>}
       {answer.links.map(({ title, href }) => <a key={href} className="most-button most-secondary" href={href}>{title} <ChevronRight size={16} /></a>)}
     </>}</div>
   </article>;

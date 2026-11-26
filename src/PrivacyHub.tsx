@@ -22,7 +22,7 @@ export type TrackerPermission = {
 const permissionStatus: Record<TrackerPermission["status"], string> = {
   active: "Aktywny", waiting: "Czeka na przyjęcie", revoked: "Cofnięty", expired: "Wygasł", completed: "Zakończony",
 };
-const filters = { all: "Wszystkie rodzaje", registry: "Rejestry publiczne", bank: "Weryfikacja przez bank", pesel: "Zastrzeżenie PESEL", share: "Udostępnienia", most: "Dostęp w MOST" } as const;
+const filters = { all: "Wszystkie rodzaje", registry: "Rejestry publiczne", bank: "Weryfikacja przez bank", pesel: "Zastrzeżenie PESEL", share: "Udostępnienia", most: "Dostęp do spraw" } as const;
 type Filter = keyof typeof filters;
 const filterOptions = Object.entries(filters);
 const dayInPoland = new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Warsaw" });
@@ -150,7 +150,7 @@ export function PrivacyHub({ p, c, events, tab, onTab, onShare, onAccess, onProt
     </header>
     <div className="tracker-segments" role="group" aria-label="Widok Moich danych">
       <button aria-pressed={tab === "history"} onClick={() => onTab("history")}><History size={19} aria-hidden="true" /> Historia dostępu</button>
-      <button aria-pressed={tab === "most"} onClick={() => onTab("most")}><UsersRound size={19} aria-hidden="true" /> MOST</button>
+      <button aria-pressed={tab === "most"} onClick={() => onTab("most")}><UsersRound size={19} aria-hidden="true" /> Uprawnienia</button>
     </div>
     {tab === "history" ? <div className="tracker-view" key="history">
       <section className="tracker-recent" aria-label="Ostatnie 30 dni">
@@ -227,15 +227,15 @@ export function PrivacyHub({ p, c, events, tab, onTab, onShare, onAccess, onProt
         <p>Imię z profilu demo, status ochrony, bieżący ekran i etap otwartej sprawy. Domyślny tryb przetwarza rozmowę na urządzeniu.</p>
       </details>
     </div> : <div className="tracker-view" key="most">
-      <section aria-label="Kto ma dostęp w MOST">
-        <div className="tracker-section-heading"><h2>Kto ma dostęp w MOST</h2></div>
+      <section aria-label="Kto ma dostęp do spraw">
+        <div className="tracker-section-heading"><h2>Kto ma dostęp do spraw</h2></div>
         <p className="tracker-help">Cofnięcie dostępu działa od razu. Wcześniejsze działania zostają w historii.</p>
         {result && <p className={"tracker-state " + (result.error ? "tracker-error" : "tracker-success")} role={result.error ? "alert" : "status"}>
           {!result.error && <Check size={18} aria-hidden="true" />} {result.text}
         </p>}
         {error && <p className="tracker-state tracker-error" role="alert">{error}</p>}
-        {loading && !error && <p className="tracker-state" role="status">Wczytujemy uprawnienia MOST…</p>}
-        {!loading && !error && !active.length && <p className="tracker-state" role="status">Brak aktywnego dostępu w MOST.</p>}
+        {loading && !error && <p className="tracker-state" role="status">Wczytujemy uprawnienia…</p>}
+        {!loading && !error && !active.length && <p className="tracker-state" role="status">Brak aktywnych uprawnień do spraw.</p>}
         {people.map(([id, name]) => {
           const grants = active.filter((permission) => permission.personId === id);
           const portrait = id === "kacper" || id === "ewa" || id === "aleksandra";
@@ -263,7 +263,7 @@ export function PrivacyHub({ p, c, events, tab, onTab, onShare, onAccess, onProt
         {confirmation && <TrackerSheet title={confirmation.person ? "Cofnij cały dostęp" : "Cofnij dostęp"} busy={!!pending} close={() => setConfirmation(undefined)}>
           <div className="tracker-confirm-body">
             <strong>{confirmation.title}</strong>
-            <p>{confirmation.person ? "Ta osoba utraci wszystkie przyznane jej uprawnienia w MOST." : "Osoba zaufana utraci dostęp do tej pozycji."} Wcześniejsze działania zostaną w historii.</p>
+            <p>{confirmation.person ? "Ta osoba utraci wszystkie przyznane jej uprawnienia do spraw." : "Osoba zaufana utraci dostęp do tej pozycji."} Wcześniejsze działania zostaną w historii.</p>
             {result?.error && <p className="tracker-state tracker-error" role="alert">{result.text}</p>}
             <button className="primary" disabled={!!pending} onClick={() => void revoke(confirmation.id, confirmation.action,
               confirmation.person ? "Cofnięto wszystkie uprawnienia osoby „" + confirmation.title + "”." : "Cofnięto dostęp do „" + confirmation.title + "”.")}>

@@ -46,8 +46,8 @@ export function createMostPasskeys(configuredOrigin) {
       const party = relyingParty(req);
       if (!party || control.passkey) return null;
       const options = await generateRegistrationOptions({
-        rpName: "MOST · klucz dostępu", rpID: party.rpID, userID: randomBytes(24),
-        userName: "most-" + randomBytes(8).toString("hex"), userDisplayName: "Profil demonstracyjny MOST",
+        rpName: "mObywatel Razem · klucz dostępu", rpID: party.rpID, userID: randomBytes(24),
+        userName: "most-" + randomBytes(8).toString("hex"), userDisplayName: "Profil demonstracyjny mObywatel Razem",
         attestationType: "none", timeout: 90000,
         authenticatorSelection: { residentKey: "preferred", userVerification: "required" },
       });

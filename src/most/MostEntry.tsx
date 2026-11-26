@@ -7,7 +7,7 @@ export function MostEntry({ isEwa, view, onOpen, compact = false }: { isEwa: boo
   return (
     <button className="most-entry most-entry-switch" onClick={onOpen}>
       <span className="most-icon"><UsersRound size={20} /></span>
-      <span><strong>Wybierz profil Ewy</strong><small>W profilu demonstracyjnym Ewy możesz rozpocząć współpracę w MOST.</small></span>
+      <span><strong>Wybierz profil Ewy</strong><small>W profilu demonstracyjnym Ewy możesz poprosić bliską osobę o pomoc.</small></span>
       <ArrowRight size={19} />
     </button>
   );
@@ -29,7 +29,7 @@ function EwaEntry({ onOpen, view, compact }: { onOpen: () => void; view?: MostVi
   return (
     <button className="most-entry most-entry-feature civic-pattern-card" onClick={onOpen}>
       <WavePattern />
-      <span className="most-entry-meta"><FileText size={16} /> mObywatel MOST</span>
+      <span className="most-entry-meta"><FileText size={16} /> Wspólna sprawa</span>
       <strong>Pismo z urzędu — {view?.status === "new" || !view ? "wymaga Twojej uwagi" : status}</strong>
       <small>{mostSummary}</small>
       <span className="most-entry-footer">

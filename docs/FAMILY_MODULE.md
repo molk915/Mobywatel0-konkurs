@@ -1,4 +1,4 @@
-# mObywatel Rodzina
+# mObywatel Razem — Rodzina
 
 ## Cel produktu
 

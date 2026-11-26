@@ -27,7 +27,7 @@ export function DataEventDetails({ entry, followups, onFollowup, onHelp, onRevok
       {entry.expiresAt && <div><dt>Ważność kodu</dt><dd>{trackerDate.format(new Date(entry.expiresAt))}</dd></div>}
     </dl>
     {(entry.source === "registry" || entry.source === "bank" || entry.source === "pesel") &&
-      <p className="tracker-help">W MOST zarządzasz dostępem osób zaufanych. W sprawie dostępu instytucji możesz zapisać prośbę o wyjaśnienie.</p>}
+      <p className="tracker-help">Tutaj zarządzasz dostępem osób zaufanych. W sprawie dostępu instytucji możesz zapisać prośbę o wyjaśnienie.</p>}
     {entry.active && entry.revocable && <button className="tracker-revoke" onClick={onRevoke}>Wycofaj zgodę</button>}
     <section className="tracker-detail-actions" aria-label="Co możesz zrobić">
       <h4>Co możesz zrobić</h4>
@@ -52,7 +52,7 @@ export function DataEventDetails({ entry, followups, onFollowup, onHelp, onRevok
         <div><button className="secondary" type="button" onClick={() => setAction(undefined)}>Anuluj</button>
           <button className="primary" type="submit">{action === "explain" ? "Zapisz prośbę" : "Zapisz zgłoszenie"}</button></div>
       </form>}
-      <button className="secondary" onClick={onHelp}><UsersRound size={18} aria-hidden="true" /> Poproś o pomoc w MOST</button>
+      <button className="secondary" onClick={onHelp}><UsersRound size={18} aria-hidden="true" /> Poproś o pomoc</button>
     </section>
   </div>;
 }

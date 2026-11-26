@@ -8,7 +8,7 @@ test("a paired trusted person pays only Kacper's assigned mandate and Kacper get
   await button(page, /^Kacper Zieliński/).click();
   await button(page, "Więcej").click();
   await button(page, /^Moje dane Sprawdź/).click();
-  await page.getByRole("group", { name: "Widok Moich danych" }).getByRole("button", { name: "MOST", exact: true }).click();
+  await page.getByRole("group", { name: "Widok Moich danych" }).getByRole("button", { name: "Uprawnienia", exact: true }).click();
   await button(page, /^Osoba zaufana/).click();
   await button(page, "Przygotuj zaproszenie").click();
   await button(page, "Utwórz zaproszenie QR").click();
@@ -40,15 +40,15 @@ test("a paired trusted person pays only Kacper's assigned mandate and Kacper get
     await expect(helperReceipt).toHaveAttribute("download", /^DEMO-/);
     await expect(page.getByText("Wykonane przez osobę zaufaną")).toBeVisible();
     await expect(page.getByRole("link", { name: "Pobierz potwierdzenie" })).toHaveAttribute("download", (await helperReceipt.getAttribute("download"))!);
-    await button(worker, "Wróć do spraw w MOST").click();
+    await button(worker, "Wróć do wspólnych spraw").click();
     await expect(assignment).toBeVisible();
     await worker.goto(directUrl);
-    await button(worker, "Wróć do spraw w MOST").click();
+    await button(worker, "Wróć do wspólnych spraw").click();
     await expect(assignment).toBeVisible();
     await worker.goto(new URL("/", directUrl).href);
     await button(worker, "Sprawy").click();
     await button(worker, "Pomagam").click();
-    await button(worker, /^Otwórz panel pomocy MOST/).click();
+    await button(worker, /^Przejdź do spraw, w których pomagasz/).click();
     await expect(assignment).toBeVisible();
     await assignment.click();
     await button(page, "Cofnij ePełnomocnictwo").click();

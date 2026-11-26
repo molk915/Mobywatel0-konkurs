@@ -1,8 +1,8 @@
 {
   "id": "/",
-  "name": "mObywatel MOST",
-  "short_name": "MOST",
-  "description": "Niezależna koncepcja konkursowa. Dane i operacje demonstracyjne.",
+  "name": "mObywatel Razem",
+  "short_name": "Razem",
+  "description": "Twoje sprawy. Twoja decyzja. Nie musisz działać sam. Niezależna koncepcja konkursowa.",
   "lang": "pl",
   "start_url": "/",
   "scope": "/",

@@ -55,7 +55,7 @@ test("inline demo animates on the same page and both phones receive the mandate 
   await expect(page.locator(".most-priority")).toBeVisible();
   const original = await shells.evaluate(dimensions);
   const pageWidth = await page.evaluate(() => document.documentElement.clientWidth);
-  await b(/^Pokaż MOST na dwóch telefonach/).click();
+  await b(/^Pokaż współpracę na dwóch telefonach/).click();
   const helperPhone = page.getByRole("region", { name: "Telefon Kacpra" });
   await expect(helperPhone).toHaveCSS("animation-name", "most-phone-split");
   await expect(helperPhone.getByText(/Udostępniona sprawa pojawi się tutaj/)).toBeVisible();
@@ -76,7 +76,7 @@ test("inline demo animates on the same page and both phones receive the mandate 
   }
   await expect(page.locator(".most-hub-dashboard .most-scroll")).toHaveCSS("scrollbar-width", "none");
   await expect(kacper.locator(".most-scroll")).toHaveCSS("scrollbar-width", "none");
-  const shared = kacper.getByRole("region", { name: "Sprawy udostępnione w MOST" });
+  const shared = kacper.getByRole("region", { name: "Udostępnione sprawy" });
   await expect(shared.getByText("Podatek od nieruchomości", { exact: true })).toHaveCount(0);
   const frames = await page.locator(".simulator-stage .phone-shell").evaluateAll((nodes) => nodes.map((node) => ({
     width: node.clientWidth, height: node.clientHeight, radius: getComputedStyle(node).borderRadius,
@@ -112,7 +112,7 @@ test("two-phone dashboard keeps a draft, hands it to Ewa, and shows only Kacper'
   const ewa = page.frameLocator('iframe[title="Telefon Ewy"]');
   const kacper = page.frameLocator('iframe[title="Telefon Kacpra"]');
   const mainNav = (phone: FrameLocator) => phone.getByRole("navigation", { name: "Nawigacja główna" });
-  const openMost = (phone: FrameLocator) => mainNav(phone).getByRole("button", { name: "MOST", exact: true }).click();
+  const openMost = (phone: FrameLocator) => mainNav(phone).getByRole("button", { name: "Pomoc", exact: true }).click();
   await expect(ewa.getByRole("heading", { name: "Sprawy", exact: true })).toBeVisible();
   await expect(kacper.getByText("Mandat drogowy", { exact: true })).toBeVisible();
   await mainNav(kacper).getByRole("button", { name: "Dokumenty", exact: true }).click();
@@ -122,13 +122,13 @@ test("two-phone dashboard keeps a draft, hands it to Ewa, and shows only Kacper'
   await btn(ewa, "Przygotuj zaproszenie").click();
   await btn(ewa, "Wyślij zaproszenie do Kacpra").click();
   await expect(helperDocuments).toBeVisible();
-  await btn(kacper, "Odbierz zaproszenie od Ewy w MOST").click();
+  await btn(kacper, "Odbierz zaproszenie od Ewy").click();
   await btn(kacper, "Przyjmij zaproszenie").click();
   const ownerPhone = await page.locator('iframe[title="Telefon Ewy"]').boundingBox();
   const helperPhone = await page.locator('iframe[title="Telefon Kacpra"]').boundingBox();
   expect(ownerPhone!.x + ownerPhone!.width).toBeLessThan(helperPhone!.x);
-  const ownCases = ewa.getByRole("region", { name: "Moje sprawy w MOST" });
-  const sharedCases = kacper.getByRole("region", { name: "Sprawy udostępnione w MOST" });
+  const ownCases = ewa.getByRole("region", { name: "Moje sprawy" });
+  const sharedCases = kacper.getByRole("region", { name: "Udostępnione sprawy" });
   await expect(ownCases.getByText("Podatek od nieruchomości", { exact: true })).toBeVisible();
   await expect(ownCases.getByText("Zgłoszenie pobytu stałego", { exact: true })).toBeVisible();
   await btn(ewa, /^Przekaż sprawę Wezwanie/).click();
@@ -161,7 +161,7 @@ test("two-phone dashboard keeps a draft, hands it to Ewa, and shows only Kacper'
   }
   await page.setViewportSize({ width: 1220, height: 930 });
 
-  await btn(kacper, /^Otwórz w MOST Wezwanie/).click();
+  await btn(kacper, /^Otwórz sprawę Wezwanie/).click();
   await kacper.getByLabel("Uzasadnienie", { exact: true }).fill("Szkic odpowiedzi");
   await btn(kacper, "Zapisz szkic").click();
   await expect(kacper.getByText(/Szkic zapisany/)).toBeVisible();
@@ -169,10 +169,10 @@ test("two-phone dashboard keeps a draft, hands it to Ewa, and shows only Kacper'
   await expect(sharedCases.getByText("Szkic", { exact: true })).toBeVisible();
   await page.reload();
   await openMost(ewa);
-  await expect(btn(kacper, "MOST")).toBeVisible();
+  await expect(btn(kacper, "Pomoc")).toBeVisible();
   await openMost(kacper);
   await expect(sharedCases.getByText("Szkic", { exact: true })).toBeVisible();
-  await btn(kacper, /^Otwórz w MOST Wezwanie/).click();
+  await btn(kacper, /^Otwórz sprawę Wezwanie/).click();
   await expect(kacper.getByLabel("Uzasadnienie", { exact: true })).toHaveValue("Szkic odpowiedzi");
   await kacper.getByLabel("Uzasadnienie", { exact: true }).fill("W imieniu Ewy składam odpowiedź na wezwanie w sprawie mieszkania.");
   await btn(kacper, "Przekaż do zatwierdzenia").click();

@@ -1,25 +1,26 @@
 import { ArrowLeft, Bell, ChevronRight, FileText, FolderOpen, Grid2X2, House, Menu, ShieldCheck, UsersRound, WalletCards, type LucideIcon } from "lucide-react";
+import { useId } from "react";
+import { motion, useReducedMotion } from "motion/react";
 import type { Profile, Tab } from "./domain";
 
-export function CivicBrand({ most = true }: { most?: boolean }) {
-  return <><img src="/icon.svg" alt="" /><span>mObywatel{most && <> <b>MOST</b></>}</span></>;
+export function CivicBrand() {
+  return <><img src="/icon.svg" alt="" /><span>mObywatel <b>Razem</b></span></>;
 }
 
-export function CivicHeader({ profile, onHome, onBack, onNotifications, onProfile, unreadCount = 0, mostBrand = true }: {
+export function CivicHeader({ profile, onHome, onBack, onNotifications, onProfile, unreadCount = 0 }: {
   profile: Profile;
   onHome?: () => void;
   onBack?: () => void;
   onNotifications: () => void;
   onProfile: () => void;
   unreadCount?: number;
-  mostBrand?: boolean;
 }) {
   return (
     <header className="civic-header">
       {onBack && <button className="civic-icon-button" onClick={onBack} aria-label="Wstecz"><ArrowLeft size={20} /></button>}
       {onHome ? (
-        <button className="civic-brand" onClick={onHome} aria-label="Ekran główny"><CivicBrand most={mostBrand} /></button>
-      ) : <span className="civic-brand"><CivicBrand most={mostBrand} /></span>}
+        <button className="civic-brand" onClick={onHome} aria-label="Ekran główny"><CivicBrand /></button>
+      ) : <span className="civic-brand"><CivicBrand /></span>}
       <div className="civic-header-actions">
         <button className="civic-icon-button" onClick={onNotifications} aria-label="Powiadomienia">
           <Bell size={20} />{unreadCount > 0 && <b className="notification-count" aria-label={unreadCount + " nieprzeczytanych"}>{unreadCount}</b>}
@@ -42,7 +43,7 @@ const navigation = [
 const appNavigation = [
   { name: "Start", tab: "home", Icon: House },
   { name: "Dokumenty", tab: "documents", Icon: FileText },
-  { name: "MOST", tab: "most", Icon: UsersRound },
+  { name: "Pomoc", tab: "most", Icon: UsersRound },
   { name: "Sprawy", tab: "cases", Icon: FolderOpen },
   { name: "Więcej", tab: "services", Icon: Menu },
 ] as const;
@@ -54,6 +55,8 @@ export function CivicNav({ tab, onGo, onMost, full = false }: {
   onMost?: () => void;
   full?: boolean;
 }) {
+  const indicatorId = useId();
+  const reduceMotion = useReducedMotion();
   return (
     <nav className={"bottom-nav approved-nav" + (onMost ? " with-most" : "") + (full ? " civic-app-nav" : "")} aria-label="Nawigacja główna">
       {(full ? appNavigation : navigation).map(({ name, tab: target, Icon }) => {
@@ -66,26 +69,34 @@ export function CivicNav({ tab, onGo, onMost, full = false }: {
             aria-current={selected ? "page" : undefined}
             onClick={target === "most" ? onMost : () => onGo(target)}
           >
-            <span className="civic-nav-icon"><Icon size={20} strokeWidth={selected ? 2.25 : 1.75} aria-hidden="true" /></span><span>{name}</span>
+            <span className="civic-nav-icon">
+              {full && selected && (reduceMotion
+                ? <span className="civic-nav-indicator" aria-hidden="true" />
+                : <motion.span className="civic-nav-indicator" aria-hidden="true" layoutId={indicatorId}
+                  transition={{ type: "spring", stiffness: 440, damping: 38 }} />)}
+              <Icon size={20} strokeWidth={full ? 1.85 : selected ? 2.25 : 1.75} aria-hidden="true" />
+            </span>
+            <span>{name}</span>
           </button>
         );
       })}
       {!full && onMost && <button onClick={onMost} className={tab === "most" ? "selected" : undefined} aria-current={tab === "most" ? "page" : undefined}>
-        <span className="civic-nav-icon"><UsersRound size={20} strokeWidth={tab === "most" ? 2.25 : 1.75} aria-hidden="true" /></span><span>MOST</span>
+        <span className="civic-nav-icon"><UsersRound size={20} strokeWidth={tab === "most" ? 2.25 : 1.75} aria-hidden="true" /></span><span>Pomoc</span>
       </button>}
     </nav>
   );
 }
 
-export function CivicLinkRow({ icon: Icon, title, detail, onClick, disabled, label }: {
+export function CivicLinkRow({ icon: Icon, title, detail, onClick, disabled, label, className }: {
   icon: LucideIcon;
   title: string;
   detail?: string;
   onClick: () => void;
   disabled?: boolean;
   label?: string;
+  className?: string;
 }) {
-  return <button className="civic-link-row" onClick={onClick} disabled={disabled} aria-label={label}>
+  return <button className={className ? "civic-link-row " + className : "civic-link-row"} onClick={onClick} disabled={disabled} aria-label={label}>
     <span className="civic-link-icon"><Icon size={23} strokeWidth={1.8} aria-hidden="true" /></span>
     <span className="civic-link-copy"><strong>{title}</strong>{detail && <small>{detail}</small>}</span>
     <ChevronRight size={18} aria-hidden="true" />

@@ -7,6 +7,8 @@ import { delegationToken, demoHelperToken, hasMostInvite, helperDashboardUrl, ro
 import { useControl } from "./most/control-session";
 import { DocumentSelection, ApprovedDocument } from "./ApprovedDocuments";
 import { motion } from "motion/react";
+import { flushSync } from "react-dom";
+import { productName, productTagline } from "./branding";
 import { InlineHelperPhone, InlineShowcaseContext, InlineShowcaseToolbar, PhoneHardware } from "./most/InlineShowcase";
 import { CivicHeader, CivicNav, WavePattern } from "./CivicChrome";
 import { CivicHome } from "./CivicHome";
@@ -373,15 +375,7 @@ export default function App() {
   }
   const screenRef = useRef<HTMLDivElement>(null);
   const previousFocus = useRef<HTMLElement | null>(null);
-  const lastTab = useRef(tab);
-  const tabDirection =
-    ["home", "documents", "cases", "services", "privacy"].indexOf(tab) <
-    ["home", "documents", "cases", "services", "privacy"].indexOf(lastTab.current)
-      ? "back"
-      : "forward";
-  useLayoutEffect(() => {
-    lastTab.current = tab;
-  }, [tab]);
+  const tabTransition = useRef<ViewTransition | null>(null);
   const closeLayer = () => setClosing(true);
   function dismissWorkspace() {
     if (layer?.type === "profile" && layer.returnToMost) {
@@ -575,7 +569,7 @@ export default function App() {
       return () => clearTimeout(t);
     }
   }, [toast]);
-  useEffect(() => {
+  useLayoutEffect(() => {
     screenRef.current?.scrollTo({ top: 0 });
   }, [tab]);
   useLayoutEffect(() => {
@@ -651,9 +645,26 @@ export default function App() {
     setLayer({ type: "document", id });
   };
   const go = (t: Tab) => {
-    setTab(t);
-    if (layer?.type === "most-hub") setLayer(null);
-    else if (layer) closeLayer();
+    const root = document.documentElement;
+    tabTransition.current?.skipTransition();
+    tabTransition.current = null;
+    root.classList.remove("civic-tab-transition");
+    if (layer || t === tab || !document.startViewTransition || matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setTab(t);
+      if (layer) closeLayer();
+      return;
+    }
+    root.classList.add("civic-tab-transition");
+    const transition = document.startViewTransition(() => {
+      if (tabTransition.current === transition) flushSync(() => setTab(t));
+    });
+    tabTransition.current = transition;
+    void transition.ready.catch(() => {});
+    void transition.finished.then(() => {
+      if (tabTransition.current !== transition) return;
+      tabTransition.current = null;
+      root.classList.remove("civic-tab-transition");
+    });
   };
   function openMostTab() {
     if (showcasePhone === "kacper" && mostHelper.hasSession) {
@@ -688,7 +699,7 @@ export default function App() {
       open: () => openDataEvent(event.id),
     })),
     ...[ownerControl, helperControl].flatMap((control, index) => (control.view?.notifications ?? []).map((item): InboxItem => ({
-      ...item, key: "control-" + item.id, context: item.attention ? "Wymaga uwagi · MOST" : "Centrum kontroli MOST",
+      ...item, key: "control-" + item.id, context: item.attention ? "Wymaga uwagi · Dostęp" : "Zarządzanie dostępem",
       markRead: async () => Boolean(await control.send({ type: "read", id: item.id })),
       open: () => {
         if (index === 0 && item.eventId && trackerEvents.some(({ id }) => id === "most:" + item.eventId)) {
@@ -724,7 +735,7 @@ export default function App() {
       open: openMostHelp,
     })),
     ...(mostView?.notifications ?? []).map((item) => ({
-      ...item, key: "most-" + item.id, title: eventLabels[item.type], context: "MOST",
+      ...item, key: "most-" + item.id, title: eventLabels[item.type], context: "Wspólna sprawa",
       markRead: () => mostSession.act({ type: "read", id: item.id }),
       open: () => {
         const event = letterEvents.find(({ id }) => id === "most-letter:" + item.id);
@@ -859,8 +870,8 @@ export default function App() {
           }}
         >
           <Brand />
-          <strong>mObywatel</strong>
-          <span>Po Twojej stronie</span>
+          <strong>{productName}</strong>
+          <span>{productTagline}</span>
         </a>
         <div className="presentation-actions">
           <button
@@ -900,7 +911,6 @@ export default function App() {
           <div className="base" inert={!!layer || inboxOpen} aria-hidden={!!layer || inboxOpen}>
             <CivicHeader
               profile={p}
-              mostBrand={!!showcasePhone}
               unreadCount={inboxCount}
               onHome={() => go("home")}
               onNotifications={openInbox}
@@ -914,12 +924,12 @@ export default function App() {
               </div>
             )}
             {showcasePhone === "kacper" && mostHelper.view?.delegation?.kind === "trusted" && mostHelper.view.invitation?.status === "waiting" &&
-              <button className="showcase-invitation" onClick={openMostTab}>Odbierz zaproszenie od Ewy w MOST <ArrowRight size={17} /></button>}
-            <main className="screen-content" ref={screenRef} id="main-content">
+              <button className="showcase-invitation" onClick={openMostTab}>Odbierz zaproszenie od Ewy <ArrowRight size={17} /></button>}
+            <main className="screen-content" ref={screenRef} id="main-content"
+              data-tab-fallback={!document.startViewTransition || undefined}>
               <div
-                className={"view view-" + tab}
+                className={"view civic-tab-view view-" + tab}
                 key={tab}
-                data-direction={tabDirection}
               >
                 {tab === "home" && !showcasePhone && <CivicHome profile={p} onMost={openMostTab}
                   onDocuments={() => go("documents")} onHealth={() => openHealth()} onFamily={() => openFamily()} onPrivacy={() => go("privacy")} />}
@@ -1016,6 +1026,7 @@ export default function App() {
                   ? "full-layer"
                   : "sheet-layer") +
                 (closing ? " is-closing" : "") +
+                (layer.type === "most-hub" ? " civic-most-layer" : "") +
                 (layer.type === "document" && layer.id === 0 && identityOrigin.current ? " identity-expansion-layer" : "")
               }
               role="dialog"
@@ -1025,8 +1036,8 @@ export default function App() {
                   ? caseMeta[layer.kind].short
                   : layer.type === "assistant"
                     ? "Asystent demonstracyjny"
-                    : layer.type === "family" ? "mObywatel Rodzina"
-                      : layer.type === "most" || layer.type === "most-hub" ? "mObywatel MOST" : layer.type === "most-help" ? mostHelper.view?.delegation ? delegationTitles[mostHelper.view.delegation.kind] : "Pismo Ewy z urzędu"
+                    : layer.type === "family" ? "Rodzina"
+                      : layer.type === "most" || layer.type === "most-hub" ? "Pomoc w sprawach" : layer.type === "most-help" ? mostHelper.view?.delegation ? delegationTitles[mostHelper.view.delegation.kind] : "Pismo Ewy z urzędu"
                         : layer.type === "delegation" ? delegationTitles[layer.kind]
                         : layer.type === "tax-payment" ? demoTax.title
                         : layer.type === "workflow" ? workflowDetails[layer.kind].title
@@ -1035,7 +1046,7 @@ export default function App() {
                           : layer.type === "notifications" ? "Powiadomienia" : "Szczegóły"
               }
             >
-              {layer.type === "most-hub" && <Suspense fallback={<p role="status">Otwieramy MOST…</p>}>
+              {layer.type === "most-hub" && <Suspense fallback={<p role="status">Otwieramy wspólne sprawy…</p>}>
                 <MostHub key={p.id} profile={p} onBack={closeLayer} workflowKey={workflows.token} letterKey={isEwa ? mostSession.token : undefined}
                   initialMode={layer.mode} nav={mostNav ?? appMostNav} showcase={!!showcasePhone}
                   onFullApp={() => go("home")} onOpenShared={showcasePhone === "kacper" && mostHelper.hasSession ? openMostTab : undefined}
@@ -1310,7 +1321,7 @@ export default function App() {
                 />
               ) : null}
               {layer.type === "profile" && (
-                <Sheet title={layer.service === "family" ? "Wybierz profil do Rodziny" : layer.returnToMost ? "Zmień profil w MOST" : "Po Twojej stronie"} onClose={dismissWorkspace}>
+                <Sheet title={layer.service === "family" ? "Wybierz profil do Rodziny" : layer.returnToMost ? "Zmień profil" : "Profil i ustawienia"} onClose={dismissWorkspace}>
                   {layer.service === "family" ? <>
                     <p className="sheet-lead">Sprawy rodzinne w tym prototypie są dostępne na profilu Aleksandry Nowak.</p>
                     {showcasePhone && <a className="secondary" href="/" target="_top">Otwórz wybór profilu w aplikacji</a>}
@@ -1403,12 +1414,12 @@ export default function App() {
               )}
               {layer.type === "about" && (
                 <Sheet
-                  title="Mniej urzędu. Więcej życia."
+                  title={productName}
                   onClose={() => closeLayer()}
                 >
                   <Badge tone="red">Koncepcja konkursowa 2026</Badge>
                   <button className="presentation-author-link about-author-link" aria-haspopup="dialog" onClick={() => setAuthorOpen(true)}>O twórcy</button>
-                  <p className="sheet-lead">mObywatel · Po Twojej stronie</p>
+                  <p className="sheet-lead">{productTagline}</p>
                   <p>
                     Sprawy zaczynają się od Twojej sytuacji. Asystent pomaga
                     przygotować plan, a Ty decydujesz o każdym działaniu i
@@ -2534,7 +2545,7 @@ function Assistant({
   const requestRef = useRef<AbortController | null>(null);
   const workflowLabels: Record<WorkflowAction, string> = {
     fine: "Otwórz mandat", tax: "Otwórz płatność podatku", move: "Załatw formalności po przeprowadzce",
-    letter: "Otwórz pismo i dokumenty", help: "Poproś o pomoc przez MOST", cases: "Sprawdź swoje sprawy",
+    letter: "Otwórz pismo i dokumenty", help: "Poproś o pomoc", cases: "Sprawdź swoje sprawy",
   };
   const chatContext = workflowKind ? workflowDetails[workflowKind].title
     : workflow === "letter" ? "Pismo z urzędu" : workflow ? workflowLabels[workflow] : documentId !== undefined ? documentTitles(p)[documentId]

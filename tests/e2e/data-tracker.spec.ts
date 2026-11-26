@@ -12,7 +12,7 @@ const openFilters = (page: Page) => button(page, /^Filtruj/).click();
 
 async function openMyData(page: Page) {
   await page.getByRole("navigation", { name: "Najważniejsze usługi" })
-    .getByRole("button", { name: "Moje dane Sprawdź, kto korzysta z Twoich danych" }).click();
+    .getByRole("button", { name: /^Moje dane/ }).click();
 }
 
 async function confirmAccess(page: Page) {
@@ -39,8 +39,8 @@ test("history filters, exact disclosure and saved follow-up fit smaller and larg
     await viewport.evaluate((element) => { element.scrollTop = 450; });
     await expect.poll(async () => Math.abs((await accessTabs(page).boundingBox())!.y - (await viewport.boundingBox())!.y)).toBeLessThan(3);
     expect((await mainNav(page).boundingBox())!.y).toBeLessThan(844);
-    await accessTabs(page).getByRole("button", { name: "MOST", exact: true }).click();
-    await expect(page.getByRole("heading", { name: "Kto ma dostęp w MOST" })).toBeInViewport();
+    await accessTabs(page).getByRole("button", { name: "Uprawnienia", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "Kto ma dostęp do spraw" })).toBeInViewport();
     await accessTabs(page).getByRole("button", { name: "Historia dostępu", exact: true }).click();
     await openFilters(page);
     const sheet = page.getByRole("dialog", { name: "Filtruj historię" });
@@ -105,7 +105,7 @@ test("Ewa shares a case and an operation, withdraws both, and keeps Kacper's acc
   await mainNav(page).getByRole("button", { name: "Start", exact: true }).click();
   await openMyData(page);
   await ageExample(page).click();
-  await button(page, "Poproś o pomoc w MOST").click();
+  await button(page, "Poproś o pomoc").click();
   await button(page, "Udostępnij opis operacji").click();
   await confirmAccess(page);
   await kacper.getByRole("button", { name: /Opisy operacji na danych/ }).click();
@@ -115,9 +115,9 @@ test("Ewa shares a case and an operation, withdraws both, and keeps Kacper's acc
   await button(page, "Zamknij").click();
   await expect(historySection(page).getByRole("button", { name: /Kacper Zieliński.*Otwarto opis operacji na danych/ })).toBeVisible();
   await button(page, "Powiadomienia").click();
-  await expect(page.getByRole("dialog", { name: "Powiadomienia" }).getByText(/Użyto dostępu w MOST · Operacja na danych/)).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "Powiadomienia" }).getByText(/Użyto udzielonego dostępu · Operacja na danych/)).toBeVisible();
   await button(page, "Zamknij").click();
-  await accessTabs(page).getByRole("button", { name: "MOST", exact: true }).click();
+  await accessTabs(page).getByRole("button", { name: "Uprawnienia", exact: true }).click();
   const person = page.getByRole("region", { name: "Dostęp osoby Kacper Zieliński" });
   await person.locator(".tracker-profile").click();
   const registration = person.getByRole("article").filter({ hasText: "Zgłoszenie pobytu stałego" });

@@ -35,7 +35,7 @@ export function Cases({ onMove, collaboration, initialShared, onAssistant, onMos
       <button aria-pressed={shared} onClick={() => { setShared(true); selectSection(undefined); setPicker(false); }}>Pomagam</button>
     </div>
     <button className="process-assistant" onClick={() => onMost(shared)}>
-      <UsersRound size={19} /><span><strong>{shared ? "Otwórz panel pomocy MOST" : "Otwórz MOST"}</strong><small>Sprawy, szkice i terminy osób zaufanych</small></span><ArrowRight size={16} />
+      <UsersRound size={19} /><span><strong>{shared ? "Przejdź do spraw, w których pomagasz" : "Przejdź do wspólnych spraw"}</strong><small>Sprawy, szkice i terminy osób zaufanych</small></span><ArrowRight size={16} />
     </button>
     {!shared && <button className="process-assistant" onClick={onAssistant}>
       <Sparkles size={19} /><span><strong>Zapytaj o swoje sprawy</strong><small>Otwórz asystenta</small></span><ArrowRight size={16} />

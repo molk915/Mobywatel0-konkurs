@@ -37,6 +37,12 @@ test("non-reduced motion supports keyboard activation and closing a document", a
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto("/");
   await page.getByRole("navigation", { name: "Nawigacja główna" }).getByRole("button", { name: "Dokumenty", exact: true }).click();
+  const documents = page.locator("#main-content .view-documents");
+  await expect(documents).toBeVisible();
+  await expect(page.locator("html")).not.toHaveClass(/civic-tab-transition/);
+  if (await page.evaluate(() => typeof document.startViewTransition === "function")) {
+    await expect(documents).toHaveCSS("animation-name", "none");
+  }
   const vehicle = page.locator(".approved-document-list").getByRole("button", { name: /^Moje pojazdy/ });
   await vehicle.focus();
   await page.keyboard.press("Enter");

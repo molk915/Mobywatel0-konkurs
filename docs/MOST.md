@@ -1,10 +1,10 @@
-# mObywatel MOST
+# mObywatel Razem — współpraca przy piśmie
 
 W aktualnej nawigacji właściciel wraca do pisma przez **Sprawy → Moje**, a pomocnik przez **Sprawy → Pomagam**. Termin pisma powstaje przy założeniu sprawy i jest wspólny dla obu ról. Właścicielska sesja pisma wygasa po 14 dniach, a zaproszenie pozostaje ważne przez 10 minut.
 
-Ustawienie zmiennej `MOST_STATE_DIR` włącza trwały zapis stanu MOST, Zdrowia i Rodziny. Wskaż katalog zapisywalny przez pojedynczą instancję Node, poza katalogiem publicznym. Zachowaj ten katalog między uruchomieniami. Pliki zawierają dane przykładowe oraz aktywne poświadczenia sesji. Bez ustawienia zmiennej stan pozostaje w pamięci procesu.
+Ustawienie zmiennej `MOST_STATE_DIR` włącza trwały zapis stanu wspólnych spraw, Zdrowia i Rodziny. Wskaż katalog zapisywalny przez pojedynczą instancję Node, poza katalogiem publicznym. Zachowaj ten katalog między uruchomieniami. Pliki zawierają dane przykładowe oraz aktywne poświadczenia sesji. Bez ustawienia zmiennej stan pozostaje w pamięci procesu.
 
-MOST umożliwia wspólne przygotowanie odpowiedzi na jedno fikcyjne wezwanie. Ewa wybiera zakres dostępu. Kacper uzupełnia adres lokalu, dołącza kopię umowy i zapisuje uzasadnienie. Ewa podejmuje jedną decyzję dotyczącą całego pakietu. Po zakończeniu dostępu projekt i historia zostają u Ewy.
+Funkcja współdzielenia spraw umożliwia wspólne przygotowanie odpowiedzi na jedno fikcyjne wezwanie. Ewa wybiera zakres dostępu. Kacper uzupełnia adres lokalu, dołącza kopię umowy i zapisuje uzasadnienie. Ewa podejmuje jedną decyzję dotyczącą całego pakietu. Po zakończeniu dostępu projekt i historia zostają u Ewy.
 
 ## Pomoc w aplikacji
 
@@ -51,11 +51,11 @@ $env:APP_ORIGIN = 'http://127.0.0.1:4190'
 npm run server
 ```
 
-Otwórz `http://127.0.0.1:4190/?pokaz=most`. Na hostingu ustaw `SERVE_DIST=1`, `APP_ORIGIN=https://<publiczna-domena>` i ewentualnie `BIND_HOST=0.0.0.0` jeśli wymaga tego platforma. Proces używa `PORT` przekazanego przez hosting, domyślnie 4190. Zakończ TLS w warstwie platformy lub reverse proxy. Wystaw aplikację i `/api/` pod tym samym originem HTTPS, z jedną instancją procesu Node. Sam statyczny hosting plików jest wystarczający dla lokalnych modułów aplikacji. MOST i Rodzina korzystają z backendu.
+Otwórz `http://127.0.0.1:4190/?pokaz=most`. Na hostingu ustaw `SERVE_DIST=1`, `APP_ORIGIN=https://<publiczna-domena>` i ewentualnie `BIND_HOST=0.0.0.0` jeśli wymaga tego platforma. Proces używa `PORT` przekazanego przez hosting, domyślnie 4190. Zakończ TLS w warstwie platformy lub reverse proxy. Wystaw aplikację i `/api/` pod tym samym originem HTTPS, z jedną instancją procesu Node. Sam statyczny hosting plików jest wystarczający dla lokalnych modułów aplikacji. Wspólne sprawy i Rodzina korzystają z backendu.
 
 ## Ograniczenia prototypu
 
-Link pozwala posiadaczowi odegrać rolę pomocnika w jednej fikcyjnej sprawie w czasie ważności zaproszenia. Wdrożenie urzędowe wymagałoby rzeczywistego uwierzytelnienia, podstawy udzielenia dostępu i audytu. Limit to 256 równoległych spraw MOST w pojedynczym procesie. Aplikacja działa bez klucza do modelu i połączeń z systemami administracji.
+Link pozwala posiadaczowi odegrać rolę pomocnika w jednej fikcyjnej sprawie w czasie ważności zaproszenia. Wdrożenie urzędowe wymagałoby rzeczywistego uwierzytelnienia, podstawy udzielenia dostępu i audytu. Limit to 256 równoległych wspólnych spraw w pojedynczym procesie. Aplikacja działa bez klucza do modelu i połączeń z systemami administracji.
 
 ## Weryfikacja
 

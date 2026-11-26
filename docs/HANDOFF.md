@@ -6,19 +6,19 @@ Stan na 18 listopada 2026. Ten dokument ma pozwolić nowej sesji Codexa kontynuo
 
 Moduł Zdrowie otwiera się ze Spraw. Link zaproszenia otwiera zadanie w zwykłej aplikacji. Kacper może do niego wrócić ze Spraw wspólnych i powiadomień. Serwer przechowuje dane profilu, skierowania, upoważnienia, plan wizyty, terminarz oraz zdarzenia. Zaproszenie daje Kacprowi dostęp do jednego skierowania zgodnie z zakresem wybranym przez Ewę. [Scenariusz i ograniczenia Zdrowia](HEALTH.md).
 
-## Aktualny kierunek wizualny — ciemny interfejs MOST
+## Aktualny kierunek wizualny — ciemny interfejs wspólnych spraw
 
 Zatwierdzona plansza z trzema telefonami wyznacza grafitowe tło, stalowe karty, typografię bezszeryfową, czerwony akcent i jasny panel decyzji. Wspólne tokeny i elementy interfejsu są w `src/civic-system.css` oraz `src/CivicChrome.tsx`. Historyczny opis jasnych Dokumentów niżej dokumentuje poprzednią wersję.
 
-W Sprawach widok **Moje** grupuje zadania według statusu, a **Wspólne** prowadzi do MOST i Rodziny. Profil można zmienić jawnie w selektorze. Pokaz desktopowy ma ekran wejściowy i uruchamia obie sesje po kliknięciu **Rozpocznij demonstrację**.
+W Sprawach widok **Moje** grupuje zadania według statusu, a **Wspólne** prowadzi do wspólnych spraw i Rodziny. Profil można zmienić jawnie w selektorze. Pokaz desktopowy ma ekran wejściowy i uruchamia obie sesje po kliknięciu **Rozpocznij demonstrację**.
 
-Po porównaniu zrzutów z planszą przyciemniono wzór pod tekstem mDowodu, poprawiono kontrast starszych formularzy i przeniesiono zgodę oraz przycisk udostępniania do stałej stopki. Zrzuty ciemnego interfejsu mają prefiks `night-`. Zrzuty aktualnej ścieżki MOST mają prefiks `delegation-`.
+Po porównaniu zrzutów z planszą przyciemniono wzór pod tekstem mDowodu, poprawiono kontrast starszych formularzy i przeniesiono zgodę oraz przycisk udostępniania do stałej stopki. Zrzuty ciemnego interfejsu mają prefiks `night-`. Zrzuty aktualnej ścieżki współpracy mają prefiks `delegation-`.
 
-## Aktualny priorytet konkursowy — mObywatel MOST
+## Aktualny priorytet konkursowy — mObywatel Razem
 
 Kacper przygotowuje kompletny pakiet do wezwania Ewy. Obejmuje adres, dokument demonstracyjny i uzasadnienie. Ewa wybiera zakres dostępu, a potem decyduje o całym pakiecie. Dzwonek pokazuje licznik zdarzeń przypisanych do roli i kieruje do konkretnego etapu sprawy. Pokaz desktopowy uruchamia obie role w jednym oknie z synchronizacją przez API. Przebieg, uprawnienia, reset i konfiguracja są w [MOST.md](MOST.md). Przegląd głównych modułów jest w [PRODUCT_AUDIT.md](PRODUCT_AUDIT.md).
 
-## Nowa decyzja produktowa — mObywatel Rodzina
+## Nowa decyzja produktowa — Rodzina w mObywatel Razem
 
 Scenariusz rodzinny pokazuje wspólne przygotowanie wyjazdu. Aleksandra przygotowuje wniosek paszportowy Zosi, Tomasz rozpatruje prośbę w swojej sesji, a status i historia aktualizują się z jednego źródła na serwerze. Model uprawnień, instrukcja pokazu i ograniczenia są w [FAMILY_MODULE.md](FAMILY_MODULE.md). Poniższe sekcje zachowują wcześniejszy stan przekazania.
 

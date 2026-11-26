@@ -1,6 +1,6 @@
 import { test, expect, type Page, type Locator } from "@playwright/test";
 
-const family = (page: Page) => page.getByRole("dialog", { name: "mObywatel Rodzina" });
+const family = (page: Page) => page.getByRole("dialog", { name: "Rodzina", exact: true });
 const screenshot = (page: Page, name: string) =>
   page.screenshot({ path: test.info().outputPath("night-family-" + name + ".png"), animations: "disabled" });
 

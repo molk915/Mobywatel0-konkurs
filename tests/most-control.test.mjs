@@ -105,7 +105,7 @@ test("MOST control persists privacy, deadlines, requests, formal demo and the le
     const initial = (await api.send(control, helper)).view;
     assert.deepEqual(initial.deadlines.map((row) => row.id).filter((id) => !id.startsWith("grant:")).sort(), ["inspection", "insurance"]);
     assert.equal(initial.resources.some(({ id }) => id === "tax"), false);
-    assert.match((await api.send(control, helper, { type: "assistant", text: "Pokaż wyniki badań Ewy" })).answer.text, /nie udostępnia/);
+    assert.match((await api.send(control, helper, { type: "assistant", text: "Pokaż wyniki badań Ewy" })).answer.text, /poza zakresem dostępu/);
     assert.match((await api.send(control, helper, { type: "assistant", text: "Pokaż pismo" })).answer.text, /Brakuje/);
     assert.match((await api.send(control, helper, { type: "document", id: "passport" })).document.text, /FIKCYJNY/);
     await api.send(control, helper, { type: "document", id: "passport", download: true }, 403);

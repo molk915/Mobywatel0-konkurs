@@ -51,7 +51,7 @@ export async function controlIntent(text, allowed, env) {
   const capabilities = ["overview", "unavailable", ...allowed];
   try {
     const result = await chatCompletion(env, fetch,
-      "Rozpoznaj rodzaj pytania w demonstracji MOST. Wybierz wyłącznie dostępny kontekst, a dla pytania o inne dane wybierz unavailable. overview oznacza listę dostępnych spraw i terminów. Nie wykonuj czynności i nie zwracaj treści danych.",
+      "Rozpoznaj rodzaj pytania w demonstracji współpracy. Wybierz wyłącznie dostępny kontekst, a dla pytania o inne dane wybierz unavailable. overview oznacza listę dostępnych spraw i terminów. Nie wykonuj czynności i nie zwracaj treści danych.",
       { text }, [{ type: "function", function: {
         name: "select_context", description: "Wybiera kontekst do odczytu przez backend",
         parameters: { type: "object", properties: { context: { type: "string", enum: capabilities } },
@@ -100,7 +100,7 @@ export async function workflowReply(body, session, letter, env, request = fetch)
       text: "Otwórz sprawę i sprawdź dostępne opcje pomocy.", workflowAction: "cases", fallback,
     };
     output = action === "help" && !letter.receipt
-      ? "W MOST możesz wybrać zakres pomocy Kacpra i wysłać mu zaproszenie. Odpowiedź wyślesz po własnym zatwierdzeniu."
+      ? "Możesz wybrać zakres pomocy Kacpra i wysłać mu zaproszenie. Odpowiedź wyślesz po własnym zatwierdzeniu."
       : explainLetter(letter, text);
   } else if (action === "move") {
     output = "Podaj nowy adres w formularzu. Możesz przesłać zgłoszenie pobytu stałego albo zaktualizować adres w urzędzie skarbowym. Każda operacja ma osobne potwierdzenie demonstracyjne.";

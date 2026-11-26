@@ -1,6 +1,6 @@
 import { test, expect, type Locator, type Page } from "@playwright/test";
 import { previewOrigin as production } from "./urls";
-const ownerDialog = (page: Page) => page.getByRole("dialog", { name: "mObywatel MOST" });
+const ownerDialog = (page: Page) => page.getByRole("dialog", { name: "Pomoc w sprawach" });
 const shot = (page: Page, name: string) => page.screenshot({ path: test.info().outputPath("delegation-" + name + ".png"), animations: "disabled" });
 type View = Page | Locator | ReturnType<Page["frameLocator"]>;
 const button = (view: View, name: string | RegExp) => view.getByRole("button", { name, exact: typeof name === "string" });

@@ -53,7 +53,7 @@ test("privacy consent is explicit and revocable", async ({ page }) => {
     "Zgoda wycofana",
   );
 });
-test("desktop frame, small phone and full opacity transitions", async ({
+test("desktop frame, small phone and stable content after navigation", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1280, height: 1040 });
@@ -62,7 +62,7 @@ test("desktop frame, small phone and full opacity transitions", async ({
   await expect(page.locator(".presentation")).toHaveAttribute("data-surface", "simulator");
   await expect(page.locator(".phone-shell")).toBeInViewport({ ratio: 1 });
   const mainRect = await page.locator(".bottom-nav").boundingBox();
-  const actionRect = await page.getByRole("button", { name: "Otwórz MOST", exact: true }).boundingBox();
+  const actionRect = await page.getByRole("button", { name: "Poproś o pomoc", exact: true }).boundingBox();
   expect(actionRect!.y + actionRect!.height).toBeLessThanOrEqual(mainRect!.y);
   await page.setViewportSize({ width: 320, height: 740 });
   await expect(page.locator(".phone")).toHaveCSS("width", "320px");
@@ -76,8 +76,9 @@ test("desktop frame, small phone and full opacity transitions", async ({
   ).toBe(true);
   await page.emulateMedia({ reducedMotion: "no-preference" });
   await page.getByRole("button", { name: "Sprawy", exact: true }).click();
-  await expect(page.locator(".view")).toHaveCSS("opacity", "1");
-  await expect(page.locator(".view")).toHaveCSS("animation-duration", "0.23s");
+  await expect(page.locator(".view-cases")).toBeVisible();
+  await expect(page.locator("html")).not.toHaveClass(/civic-tab-transition/);
+  await expect(page.locator(".view-cases")).toHaveCSS("opacity", "1");
 });
 test("production PWA reloads offline and restores the selected case", async ({
   page,

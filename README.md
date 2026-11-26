@@ -1,8 +1,10 @@
-# mObywatel · Po Twojej stronie
+# mObywatel Razem
+
+**Twoje sprawy. Twoja decyzja. Nie musisz działać sam.**
 
 Niezależny, interaktywny prototyp konkursowy w React + TypeScript. Nie jest oficjalną usługą administracji. Uruchamia się bez konta, kluczy i połączeń urzędowych.
 
-Na ekranie Start znajdziesz wejścia do Dokumentów, Zdrowia, Rodziny oraz wyróżnioną kartę „Potrzebujesz pomocy w sprawie?”. W MOST możesz udostępnić wybraną sprawę zaufanej osobie, sprawdzić zakres dostępu i odebrać przygotowany przez nią szkic.
+Na ekranie Start znajdziesz wejścia do Dokumentów, Zdrowia, Rodziny oraz wyróżnioną kartę „Potrzebujesz pomocy w sprawie?”. W zakładce **Pomoc** możesz udostępnić wybraną sprawę zaufanej osobie, sprawdzić zakres dostępu i odebrać przygotowany przez nią szkic.
 
 ## Uruchomienie
 
@@ -13,7 +15,7 @@ npm ci
 npm run dev
 ```
 
-W drugim terminalu uruchom `npm run server`, aby włączyć współpracę w MOST, Zdrowiu i Rodzinie. Wejdź na `http://localhost:5173/` i kliknij „Otwórz MOST”. Nowa sesja zaczyna się na profilu Ewy. Po udostępnieniu sprawy użyj „Zmień profil”, aby kontynuować jako Kacper w tej samej karcie. Pokaz dwóch telefonów działa pod `http://localhost:5173/?pokaz=most3`. Desktop pokazuje ramkę smartfona. Na ekranach do 600 px interfejs zajmuje całą szerokość i wysokość.
+W drugim terminalu uruchom `npm run server`, aby włączyć współdzielenie spraw oraz współpracę w Zdrowiu i Rodzinie. Wejdź na `http://localhost:5173/` i kliknij „Poproś o pomoc”. Nowa sesja zaczyna się na profilu Ewy. Po udostępnieniu sprawy użyj „Zmień profil”, aby kontynuować jako Kacper w tej samej karcie. Pokaz dwóch telefonów działa pod `http://localhost:5173/?pokaz=most3`. Desktop pokazuje ramkę smartfona. Na ekranach do 600 px interfejs zajmuje całą szerokość i wysokość.
 
 ```sh
 npm run build
@@ -21,7 +23,9 @@ npm test
 npm run preview
 ```
 
-Podgląd kompilacji działa pod `http://localhost:4173`. Build generuje `dist/`, manifest PWA, ikony 192/512 oraz service worker z listą aktualnych zasobów. Wejście do zakładki MOST Ewy to `/?start=most-hub`. Pełne wdrożenie z API, zapisem stanu i synchronizacją opisuje [pakiet konkursowy](docs/SUBMISSION.md).
+Podgląd kompilacji działa pod `http://localhost:4173`. Build generuje `dist/`, manifest PWA, ikony 192/512 oraz service worker z listą aktualnych zasobów. Wejście do zakładki Pomoc na profilu Ewy to `/?start=most-hub`. Pełne wdrożenie z API, zapisem stanu i synchronizacją opisuje [pakiet konkursowy](docs/SUBMISSION.md).
+
+Adresy pokazów, endpointy `/api/most/`, klucze sesji i zapisane identyfikatory zachowują dotychczasowe nazwy techniczne.
 
 ## Pokaz w 4 minuty
 
@@ -34,7 +38,7 @@ Profil w prawym górnym rogu pozwala przełączać Aleksandrę, Kacpra i Ewę, z
 
 ## Publikacja HTTPS
 
-Publiczny pokaz MOST wymaga **jednej instancji Node z trwałym katalogiem danych**, która obsługuje interfejs i `/api/` pod wspólnym adresem HTTPS. Gotowa konfiguracja Docker i lista kroków do sprawdzenia są w [pakiecie konkursowym](docs/SUBMISSION.md). Hosting statyczny obsługuje lokalny portfel i procesy, które działają w przeglądarce.
+Publiczny pokaz współpracy wymaga **jednej instancji Node z trwałym katalogiem danych**, która obsługuje interfejs i `/api/` pod wspólnym adresem HTTPS. Gotowa konfiguracja Docker i lista kroków do sprawdzenia są w [pakiecie konkursowym](docs/SUBMISSION.md). Hosting statyczny obsługuje lokalny portfel i procesy, które działają w przeglądarce.
 
 Po publikacji sprawdź link bez logowania w oknie prywatnym, zainstaluj na iOS/Android i przetestuj ponownie scenariusze oraz restart offline. Ta ostatnia próba na fizycznym urządzeniu pozostaje niepotwierdzona — ograniczenia narzędzia opisuje [raport testów](docs/QA.md).
 
@@ -50,11 +54,8 @@ Backend Node w `server/` uruchomisz przez `npm run server` (domyślnie localhost
 
 `src/App.tsx` — widoki i nawigacja; `src/domain.ts` — procesy, walidacja i dostawcy asystenta; `src/storage.ts` — stan per persona; `src/attachments.ts` — lokalne pliki; `src/DeckWallet.tsx` — talia i panel; `src/DigitalCard.tsx` — wspólne projekty dokumentów; `src/CaseHub.tsx`, `src/PrivacyHub.tsx`, `src/ProcessRoute.tsx` — sprawy, dane i oś procesu; `src/styles.css`, `src/redesign.css`, `src/portfolio.css` — system wizualny; `scripts/generate-sw.mjs` — zasoby offline; `tests/` — inwarianty procesów i service workera. [QA.md](docs/QA.md) rozdziela wykonane testy od brakującego potwierdzenia.
 
-Interfejs wykorzystuje React, Lucide i lokalne fonty Inter. Wydanie konkursowe ma własny znak mostu, dekoracje dokumentów i wygenerowane portrety fikcyjnych postaci. Pochodzenie zasobów opisuje [ASSETS.md](docs/ASSETS.md).
+Interfejs wykorzystuje React, Lucide i lokalne fonty Inter. Wydanie konkursowe korzysta z istniejącego znaku graficznego, dekoracji dokumentów i wygenerowane portrety fikcyjnych postaci. Pochodzenie zasobów opisuje [ASSETS.md](docs/ASSETS.md).
 
 
 
 Testy przeglądarkowe: `npx playwright install chromium`, następnie `npm run build` i `npm run test:e2e`. Testy uruchamiają własne lokalne serwery na portach 4183 i 4184.
-
-"# Mobywatel0-konkurs" 
-"# Mobywatel0-konkurs" 

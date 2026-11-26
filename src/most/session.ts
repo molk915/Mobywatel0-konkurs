@@ -133,7 +133,7 @@ export function useMostSession(role: MostRole, context: MostContext, autoStart =
       setView(result.view);
       setConnected(true);
     } catch {
-      setError("Nie udało się połączyć z MOST. Spróbuj ponownie.");
+      setError("Nie udało się połączyć z usługą udostępniania spraw. Spróbuj ponownie.");
     } finally {
       working.current = false;
       setBusy(false);

@@ -404,7 +404,7 @@ export function FamilyWorkspace({ onClose, onGo, activeTab, onAssistant, session
     <div className="family-shell">
       <header className="family-top">
         <button aria-label={canGoBack ? "Wstecz" : activeTab === "services" ? "Wróć do usług" : "Wróć do spraw"} onClick={back}><ArrowLeft size={21} /></button>
-        <span>mObywatel Rodzina</span>
+        <span>Rodzina</span>
         <small>{view ? familyMembers[view.role].name : "Demo"}</small>
         {view && <button className="civic-icon-button" onClick={onInbox} aria-label="Powiadomienia"><Bell size={18} />{unread > 0 && <b className="notification-count">{unread}</b>}</button>}
       </header>

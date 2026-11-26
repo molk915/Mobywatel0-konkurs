@@ -39,10 +39,10 @@ test("MOST 3.0: Ewa and Kacper share one deadline scope and execute only the app
     await expect(inspection(helper).locator("time")).toHaveAttribute("datetime", "2030-08-17");
 
     await button(helper, "Dostęp").click();
-    await button(helper, "Zapytaj asystenta MOST").click();
+    await button(helper, "Zapytaj asystenta").click();
     await helper.getByLabel("Pytanie do asystenta").fill("Pokaż mi wyniki badań Ewy");
     await button(helper, "Zapytaj").click();
-    await expect(helper.getByText("Ten kontekst MOST nie udostępnia takich danych.")).toBeVisible();
+    await expect(helper.getByText("Te dane są poza zakresem dostępu.")).toBeVisible();
     await button(helper, "Wstecz").click();
     await button(helper, "Poproś o dostęp do pisma").click();
     await button(page, "Dostęp").click();
@@ -76,7 +76,7 @@ test("MOST 3.0: Ewa and Kacper share one deadline scope and execute only the app
     await button(casePage, "Zatwierdź i wyślij (demo)").click();
     await expect(casePage.getByText(/Potwierdzenie demonstracyjne DEMO-UP-/)).toBeVisible();
     await button(casePage, "Wstecz").click();
-    await expect(casePage.getByRole("region", { name: "Sprawy udostępnione w MOST" })).toBeVisible();
+    await expect(casePage.getByRole("region", { name: "Udostępnione sprawy" })).toBeVisible();
     await button(casePage, "Terminy").click();
     await expect(casePage.getByRole("heading", { name: "Badanie techniczne pojazdu" })).toBeVisible();
     await button(casePage, "Wstecz").click();

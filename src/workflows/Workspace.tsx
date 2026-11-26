@@ -220,7 +220,7 @@ export function WorkflowWorkspace({ kind, applicant, city, session, onAssistant,
     </div>
     <div className={inline ? "chat-operation-actions" : "flow-footer"}>
       {busy && <p role="status">{prepared ? "Przetwarzamy operację…" : "Zapisujemy dane…"}</p>}
-      {receipt ? <button className="primary" onClick={onBack}>{delegated ? "Wróć do spraw w MOST" : inline ? "Rozpocznij inną rozmowę" : "Wróć do spraw"}</button> : session.ready && (!hasPayment || item) &&
+      {receipt ? <button className="primary" onClick={onBack}>{delegated ? "Wróć do wspólnych spraw" : inline ? "Rozpocznij inną rozmowę" : "Wróć do spraw"}</button> : session.ready && (!hasPayment || item) &&
         (prepared ? <>
           {canPrepare && <button className="text-button" disabled={busy} onClick={() => setEditing(true)}>Zmień dane</button>}
           {canConfirm && <button className="primary" disabled={busy || awaitsHelper} onClick={() => void confirm(item.revision)}>

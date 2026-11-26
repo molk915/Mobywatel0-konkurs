@@ -29,7 +29,7 @@ export default function AuthorDialog({ onClose }: { onClose: () => void }) {
     onClick={(event) => { if (event.target === event.currentTarget) onClose(); }}>
     <div className="author-dialog-frame">
       <header className="author-header">
-        <div className="author-brand"><CivicBrand most /></div>
+        <div className="author-brand"><CivicBrand /></div>
         <span id="author-dialog-title">O twórcy</span>
         <button className="author-close" aria-label="Zamknij O twórcy" autoFocus onClick={onClose}>
           <X size={22} aria-hidden="true" />
@@ -54,7 +54,7 @@ function Professional() {
       <div className="author-intro">
         <p className="author-eyebrow">18 lat <span>·</span> Warszawa</p>
         <h1 id="author-name">Piotr<span>.</span></h1>
-        <p className="author-role">Twórca koncepcji<br />mObywatel MOST</p>
+        <p className="author-role">Twórca koncepcji<br />mObywatel Razem</p>
       </div>
       <figure className="author-portrait">
         <img src="/author/portret.jpg" width="950" height="950" fetchPriority="high" alt="Piotr w garniturze" />
@@ -111,8 +111,8 @@ function Personal({ onClose }: { onClose: () => void }) {
       </div>
     </section>
     <section className="author-why author-section">
-      <h2>Dlaczego mObywatel MOST?</h2>
-      <p>Technologia publiczna powinna być dostępna również dla osób, które nie czują się pewnie w cyfrowym świecie. Projektując MOST, chciałem ułatwić bliskim wzajemną pomoc i zostawić właścicielowi danych decyzję o tym, co i komu udostępnia.</p>
+      <h2>Dlaczego mObywatel Razem?</h2>
+      <p>Technologia publiczna powinna być dostępna również dla osób, które nie czują się pewnie w cyfrowym świecie. Projektując aplikację mObywatel Razem, chciałem ułatwić bliskim wzajemną pomoc i zostawić właścicielowi danych decyzję o tym, co i komu udostępnia.</p>
       <button onClick={onClose}>Wróć do prototypu <ArrowRight size={17} aria-hidden="true" /></button>
     </section>
   </div>;

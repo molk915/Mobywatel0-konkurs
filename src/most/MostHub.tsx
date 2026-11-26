@@ -19,7 +19,7 @@ export default function MostHub({ profile, onSwitchProfile, onBack, workflowKey,
   const dashboard: DashboardProfile = { profile, onFullApp, onSwitchProfile: () => onSwitchProfile(mode) };
   const toolbar = (
     <div className="most-hub-toolbar">
-      <div className="most-hub-tabs" role="group" aria-label="Widok MOST">
+      <div className="most-hub-tabs" role="group" aria-label="Widok wspólnych spraw">
         <button aria-pressed={mode === "own"} onClick={() => setMode("own")}>Moje</button>
         <button aria-pressed={mode === "help"} onClick={() => setMode("help")}>Pomagam</button>
       </div>
@@ -33,10 +33,10 @@ export default function MostHub({ profile, onSwitchProfile, onBack, workflowKey,
           workflowKey={workflowKey} letterKey={letterKey} onBack={onBack} autoStart={!showcase} sameTabDemo={!showcase && profile.id === "ewa"}
           dashboard={showcase ? undefined : dashboard} />
           : token ? <ProfileHelp key={token} token={token} onBack={onBack} dashboard={dashboard} />
-            : <MostLayout role="helper" title={showcase ? "Sprawy, w których pomagam" : "MOST – " + profile.first} screen="most-hub-empty" onBack={onBack}
+            : <MostLayout role="helper" title={showcase ? "Sprawy, w których pomagam" : "Sprawy · " + profile.first} screen="most-hub-empty" onBack={onBack}
               header={showcase ? undefined : <MostDashboardHeader onFullApp={onFullApp} />} headingAvatar={showcase ? undefined : profile.first.charAt(0)}>
               {!showcase && <MostDashboardProfile dashboard={dashboard} />}
-              {onOpenShared ? <button className="most-button most-primary" onClick={onOpenShared}>Otwórz panel pomocy MOST</button>
+              {onOpenShared ? <button className="most-button most-primary" onClick={onOpenShared}>Przejdź do spraw, w których pomagasz</button>
                 : <div className="most-dashboard-state"><h2>Brak udostępnionych spraw</h2>
                   <p>Sprawa pojawi się tutaj, gdy bliska osoba przyzna Ci dostęp.</p></div>}
             </MostLayout>}

@@ -1,4 +1,6 @@
-# mObywatel · Po Twojej stronie
+# mObywatel Razem
+
+**Twoje sprawy. Twoja decyzja. Nie musisz działać sam.**
 
 Decyzje projektowe, 17 listopada 2026. Repozytorium startowe było puste — brak istniejącego interfejsu do poprawy.
 

@@ -3,8 +3,8 @@ import { previewOrigin } from "./urls";
 
 const button = (page: Page, name: string | RegExp) => page.getByRole("button", { name, exact: typeof name === "string" });
 const letter = "Wezwanie do uzupełnienia wniosku";
-const ownerCases = (page: Page) => page.getByRole("region", { name: "Moje sprawy w MOST" });
-const sharedCases = (page: Page) => page.getByRole("region", { name: "Sprawy udostępnione w MOST" });
+const ownerCases = (page: Page) => page.getByRole("region", { name: "Moje sprawy" });
+const sharedCases = (page: Page) => page.getByRole("region", { name: "Udostępnione sprawy" });
 
 async function switchProfile(page: Page, name: RegExp) {
   await button(page, "Zmień profil").click();
@@ -24,14 +24,14 @@ async function grantAccess(page: Page, title: string, duration: string) {
 
 test("Ewa shares her fine and Kacper pays it after changing profiles in the same tab", async ({ page, context }) => {
   await page.goto(previewOrigin);
-  await button(page, "Otwórz MOST").click();
+  await button(page, "Poproś o pomoc").click();
   await ownerCases(page).getByRole("button", { name: /^Mandat drogowy/ }).click();
   await expect(page.getByText("Sprawa prywatna", { exact: true })).toBeVisible();
   await button(page, "Poproś o pomoc").click();
   await grantAccess(page, "Mandat drogowy", "Przez czas połączenia");
   await switchProfile(page, /^Kacper Zieliński/);
   await page.reload();
-  await expect(page.getByRole("heading", { name: "MOST – Kacper" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Sprawy · Kacper" })).toBeVisible();
   await expect(sharedCases(page).getByRole("heading", { name: "Mandat drogowy" })).toBeVisible();
   await expect(sharedCases(page).getByText("Podatek od nieruchomości", { exact: true })).toHaveCount(0);
   await button(page, "Terminy").click();
@@ -45,7 +45,7 @@ test("Ewa shares her fine and Kacper pays it after changing profiles in the same
   await button(page, "Zapisz szkic").click();
   await button(page, "Potwierdź płatność").click();
   await expect(page.getByText("Wykonane przez osobę zaufaną")).toBeVisible();
-  await button(page, "Wróć do spraw w MOST").click();
+  await button(page, "Wróć do wspólnych spraw").click();
   await expect(sharedCases(page).getByText("Zakończona", { exact: true })).toBeVisible();
   await switchProfile(page, /^Ewa Wiśniewska/);
   await page.locator(".most-dashboard-more summary").click();
@@ -66,14 +66,14 @@ test("the contest link recovers an initial connection failure and supports keybo
     } else await route.continue();
   });
   await page.goto(previewOrigin + "/?start=most-hub");
-  const heading = page.getByRole("heading", { name: "MOST – Ewa" });
+  const heading = page.getByRole("heading", { name: "Sprawy · Ewa" });
   await expect(heading).toBeVisible();
   await expect(button(page, "Poproś o pomoc")).toBeInViewport();
   expect(binds).toBeGreaterThanOrEqual(2);
   await expect(page.locator(".most-hub")).not.toHaveText(/Spróbuj ponownie\./);
   await button(page, "Zmień profil").focus();
   await page.keyboard.press("Enter");
-  await expect(page.getByRole("heading", { name: "Zmień profil w MOST" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Zmień profil" })).toBeVisible();
   await page.getByRole("switch", { name: /Większy tekst/ }).click();
   await page.keyboard.press("Escape");
   await expect(heading).toBeVisible();
@@ -94,7 +94,7 @@ test("the contest link recovers an initial connection failure and supports keybo
 test("from Start Ewa shares a letter, Kacper saves and returns to his list, and Ewa reviews the draft", async ({ page }, testInfo) => {
   await page.goto(previewOrigin);
   const shot = (name: string) => page.screenshot({ path: testInfo.outputPath(name + ".png"), animations: "disabled" });
-  await expect(button(page, "Otwórz MOST")).toBeInViewport();
+  await expect(button(page, "Poproś o pomoc")).toBeInViewport();
   await shot("start-390");
   const services = page.getByRole("navigation", { name: "Najważniejsze usługi" });
   await services.getByRole("button", { name: /^Zdrowie/ }).click();
@@ -102,11 +102,11 @@ test("from Start Ewa shares a letter, Kacper saves and returns to his list, and 
   await page.keyboard.press("Escape");
   await services.getByRole("button", { name: /^Rodzina/ }).click();
   await button(page, /^Aleksandra Nowak/).click();
-  await expect(page.getByRole("dialog", { name: "mObywatel Rodzina" })).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "Rodzina", exact: true })).toBeVisible();
   await page.keyboard.press("Escape");
   await button(page, "Profil i ustawienia").click();
   await button(page, /^Ewa Wiśniewska/).click();
-  await button(page, "Otwórz MOST").click();
+  await button(page, "Poproś o pomoc").click();
   await expect(ownerCases(page).getByRole("heading", { name: "Zgłoszenie pobytu stałego" })).toBeVisible();
   await shot("most-ewa-390");
   await ownerCases(page).getByRole("button", { name: new RegExp("^" + letter) }).click();
@@ -153,7 +153,7 @@ test("from Start Ewa shares a letter, Kacper saves and returns to his list, and 
   await button(page, "Przekaż do zatwierdzenia").click();
   await expect(page.getByText("Przekazano Ewie do zatwierdzenia.", { exact: true })).toBeVisible();
   await page.goBack();
-  await expect(page.getByRole("heading", { name: "MOST – Kacper" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Sprawy · Kacper" })).toBeVisible();
   await expect(other).toBeVisible();
   await switchProfile(page, /^Ewa Wiśniewska/);
   await page.setViewportSize({ width: 1440, height: 980 });

@@ -18,7 +18,7 @@ export function PhoneHardware() {
 export function ShowcaseEntry({ onOpen, ready }: { onOpen: () => void; ready?: boolean }) {
   return <button className="most-showcase-entry" onClick={onOpen}>
     <span className="most-showcase-symbol" aria-hidden="true"><Smartphone /><Smartphone /></span>
-    <span><strong>{ready ? "Zobacz sprawę u Kacpra" : "Pokaż MOST na dwóch telefonach"}</strong>
+    <span><strong>{ready ? "Zobacz sprawę u Kacpra" : "Pokaż współpracę na dwóch telefonach"}</strong>
       <small>{ready ? "Otwórz telefon Kacpra obok Ewy." : "Wybierz sprawę Ewy i sprawdź, co Kacper może zrobić."}</small>
     </span>
     <ArrowRight size={19} aria-hidden="true" />
@@ -27,7 +27,7 @@ export function ShowcaseEntry({ onOpen, ready }: { onOpen: () => void; ready?: b
 
 export function InlineShowcaseToolbar({ onClose }: { onClose: () => void }) {
   return <div className="most-duet-toolbar">
-    <strong>Pokaz MOST na dwóch telefonach</strong>
+    <strong>Pokaz współpracy na dwóch telefonach</strong>
     <button onClick={() => document.getElementById("most-inline-helper")?.scrollIntoView({ block: "start" })}>
       Telefon Kacpra <ArrowRight size={16} aria-hidden="true" />
     </button>

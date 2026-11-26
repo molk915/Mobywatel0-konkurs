@@ -6,7 +6,7 @@ const groups = [
   { title: "Usługi osobiste", services: [
     { id: "health", title: "Zdrowie", detail: "Skierowania, wizyty i dokumentacja", keywords: "wizyta wyniki recepta", Icon: HeartPulse },
     { id: "family", title: "Rodzina", detail: "Sprawy bliskich i zgody opiekunów", keywords: "paszport dziecko rodzice", Icon: UsersRound },
-    { id: "privacy", title: "Moje dane", detail: "Sprawdź operacje i uprawnienia MOST", keywords: "rejestry prywatność zgody historia data tracker", Icon: ShieldCheck },
+    { id: "privacy", title: "Moje dane", detail: "Sprawdź historię dostępu i uprawnienia", keywords: "rejestry prywatność zgody historia data tracker", Icon: ShieldCheck },
   ] },
   { title: "Codzienne formalności", services: [
     { id: "move", title: "Przeprowadzka", detail: "Zgłoszenia zmiany adresu", keywords: "adres meldunek", Icon: House },

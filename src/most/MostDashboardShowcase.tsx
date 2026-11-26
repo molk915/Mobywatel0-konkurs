@@ -35,11 +35,11 @@ export default function MostDashboardShowcase() {
   return <main className="most-stage control-showcase">
     <header className="most-stage-top">
       <a className="most-stage-brand" href="/"><CivicBrand /></a>
-      <a className="most-stage-link" href="/?start=most-hub"><ArrowLeft size={17} /> Otwórz MOST w aplikacji</a>
+      <a className="most-stage-link" href="/?start=most-hub"><ArrowLeft size={17} /> Otwórz wspólne sprawy w aplikacji</a>
     </header>
     <div className="most-stage-heading"><div>
-      <h1>mObywatel na dwóch telefonach</h1>
-      <p>Otwórz MOST na telefonie Ewy, wyślij zaproszenie i odbierz je na telefonie Kacpra.</p>
+      <h1>Współpraca na dwóch telefonach</h1>
+      <p>Otwórz zakładkę Pomoc na telefonie Ewy, wyślij zaproszenie i odbierz je na telefonie Kacpra.</p>
     </div></div>
     <div className="most-stage-phones">
       <section className="most-stage-side" aria-label="Telefon Ewy">

@@ -10,16 +10,36 @@ async function checkNav(nav: Locator, selected: string, count = 5) {
   await expect(nav.getByRole("button", { name: selected, exact: true })).toHaveAttribute("aria-current", "page");
 }
 
+test("the Start shortcuts fit without scrolling at 320×568", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 568 });
+  await page.goto("/");
+  const shortcuts = page.getByRole("navigation", { name: "Najważniejsze usługi" });
+  for (const shortcut of await shortcuts.getByRole("button").all()) {
+    await expect(shortcut).toBeInViewport({ ratio: 1 });
+  }
+  expect(await page.locator("#main-content").evaluate((main) => main.scrollHeight - main.clientHeight)).toBeLessThanOrEqual(1);
+});
+
 for (const [width, height] of [[320, 740], [390, 844], [430, 932]]) {
   test(`product design at ${width}×${height} keeps the navigation within the screen`, async ({ page }) => {
     await page.setViewportSize({ width, height });
     const errors: string[] = [];
     page.on("pageerror", (err) => errors.push(err.message));
     await page.goto("/");
+    await expect(page).toHaveTitle("mObywatel Razem");
     const nav = page.getByRole("navigation", { name: "Nawigacja główna" });
     await checkNav(nav, "Start");
-    await expect(button(page, "Otwórz MOST")).toBeInViewport({ ratio: 1 });
-    await expect(page.getByRole("navigation", { name: "Najważniejsze usługi" }).getByRole("button")).toHaveCount(4);
+    await expect(nav.getByRole("button", { name: "Pomoc", exact: true })).toBeVisible();
+    await expect(button(page, "Poproś o pomoc")).toBeInViewport({ ratio: 1 });
+    const shortcuts = page.getByRole("navigation", { name: "Najważniejsze usługi" });
+    await expect(shortcuts.getByRole("button")).toHaveCount(4);
+    await expect(shortcuts.getByRole("button", { name: /^Rodzina/ })).toBeInViewport({ ratio: 1 });
+    expect(await page.locator("#main-content").evaluate((main) => main.scrollHeight - main.clientHeight)).toBeLessThanOrEqual(1);
+    const bottomGap = await shortcuts.evaluate((list) =>
+      list.closest(".base")!.querySelector(".civic-app-nav")!.getBoundingClientRect().top - list.getBoundingClientRect().bottom,
+    );
+    expect(bottomGap).toBeGreaterThanOrEqual(0);
+    expect(bottomGap).toBeLessThanOrEqual(24);
     if (width === 390) await shot(page, "start", width);
     const navRows = await nav.getByRole("button").evaluateAll((nodes) =>
       new Set(nodes.map((node) => Math.round(node.getBoundingClientRect().top))).size,

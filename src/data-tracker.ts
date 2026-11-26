@@ -70,7 +70,7 @@ export function withTrackerExamples(citizen: CitizenState, profile: Profile): Ci
       scope: "Treść jednego udostępnionego pisma",
       at: "2026-11-21T12:10:00+01:00",
       source: "most" as const,
-      sourceLabel: "Przykładowa historia MOST",
+      sourceLabel: "Przykładowa historia współpracy",
       basis: "Zakres dostępu przyznany przez właścicielkę w pokazie",
       active: false,
       revocable: false,
@@ -99,8 +99,8 @@ export function trackedMostEvents(history: ControlEvent[]): Access[] {
   return history.filter(({ grant, result, resource }) =>
     resource && (grant || result === "Wykonano") && ["Odczytano", "Wykonano"].includes(result ?? ""))
     .map((event) => ({
-      id: "most:" + event.id, who: event.actor, purpose: event.label, scope: event.scope ?? event.detail ?? "Udostępniona sprawa w MOST",
-      at: event.at, source: "most", sourceLabel: "Dziennik operacji MOST", basis: "Dostęp przyznany w MOST",
+      id: "most:" + event.id, who: event.actor, purpose: event.label, scope: event.scope ?? event.detail ?? "Udostępniona sprawa",
+      at: event.at, source: "most", sourceLabel: "Dziennik operacji we wspólnej sprawie", basis: "Dostęp przyznany przez właściciela",
       active: false, revocable: false,
     }));
 }
@@ -121,13 +121,14 @@ export function trackedLetterEvents(history: MostEvent[]): Access[] {
     if (event.role !== "helper" || !scope) return [];
     return [{
       id: "most-letter:" + event.id, who: "Kacper Zieliński", purpose: eventLabels[event.type], scope,
-      at: event.at, source: "most" as const, sourceLabel: "Historia pisma w MOST",
-      basis: "Dostęp przyznany w MOST", active: false, revocable: false,
+      at: event.at, source: "most" as const, sourceLabel: "Historia udostępnionego pisma",
+      basis: "Dostęp przyznany przez właściciela", active: false, revocable: false,
     }];
   });
 }
 
 export function trackerSource(entry: Access) {
+  if (entry.id === "tracker-demo-most") return "Przykładowa historia współpracy";
   return entry.sourceLabel ?? entry.registry ??
     (entry.source === "share" || entry.expiresAt ? "Historia udostępnień mObywatela" : "Przykładowa historia aplikacji");
 }

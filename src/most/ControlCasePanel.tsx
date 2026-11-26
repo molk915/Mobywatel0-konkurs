@@ -20,7 +20,7 @@ export default function ControlCasePanel({ item, role, profile, letterKey, back 
   if (role === "helper" && token && item.kind === "letter") return <LetterPanel role="helper" token={token} back={back} />;
   if (role === "helper" && token) return <DelegatedWorkflow token={token} onBack={back} />;
   return <MostLayout role={role} title={item.title} screen="control-case-unavailable" onBack={back}>
-    <MostNotice tone="warning">Sprawa jest obecnie niedostępna w MOST.</MostNotice>
+    <MostNotice tone="warning">Sprawa jest obecnie niedostępna.</MostNotice>
   </MostLayout>;
 }
 
