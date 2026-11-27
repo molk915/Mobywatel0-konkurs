@@ -1,3 +1,4 @@
+import { pollWhileVisible } from "../polling";
 import { useEffect, useRef, useState } from "react";
 import type { WorkflowAction, WorkflowCase, WorkflowInput, WorkflowKind } from "./model";
 
@@ -81,21 +82,17 @@ export function useWorkflows(profile: string, delegatedToken?: string) {
 
   useEffect(() => {
     if (!key) return;
-    let cancelled = false;
-    async function refresh() {
-      if (document.hidden) return;
+    return pollWhileVisible(async (signal) => {
       const revision = ++sequence.current;
       try {
-        const next = await request<Snapshot>(path, key);
-        if (!cancelled && sequence.current === revision) setConnection({ profile, snapshot: { ...next, token: key! } });
+        const next = await request<Snapshot>(path, key, undefined, signal);
+        if (!signal.aborted && sequence.current === revision) setConnection({ profile, snapshot: { ...next, token: key } });
       } catch (error) {
-        if (delegatedToken && !cancelled && sequence.current === revision && error instanceof WorkflowError && [401, 410].includes(error.status))
+        if (delegatedToken && !signal.aborted && sequence.current === revision && error instanceof WorkflowError && [401, 410].includes(error.status))
           setConnection({ profile, error: error.message });
+        throw error;
       }
-    }
-    const timer = window.setInterval(refresh, 3000);
-    window.addEventListener("focus", refresh);
-    return () => { cancelled = true; clearInterval(timer); window.removeEventListener("focus", refresh); };
+    }, 4000, undefined, false);
   }, [key, profile, path, delegatedToken]);
 
   function update(next: Snapshot) {

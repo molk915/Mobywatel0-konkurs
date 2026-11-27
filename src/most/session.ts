@@ -1,3 +1,4 @@
+import { pollWhileVisible } from "../polling";
 import { useEffect, useRef, useState } from "react";
 import type { DelegationContext, MostCommand, MostRole, MostView } from "./model";
 
@@ -175,28 +176,21 @@ export function useMostSession(role: MostRole, context: MostContext, autoStart =
 
   useEffect(() => {
     if (!token || !enabled) return;
-    const controller = new AbortController();
-    let timer: number;
-    const poll = async () => {
+    return pollWhileVisible(async (signal) => {
       try {
-        const response = await request(token, undefined, controller.signal);
-        if (!controller.signal.aborted) {
+        const response = await request(token, undefined, signal);
+        if (!signal.aborted) {
           setAttempted(true);
           update(response.view);
         }
       } catch (cause) {
-        if (!controller.signal.aborted) {
+        if (!signal.aborted) {
           setAttempted(true);
           fail(cause, false);
         }
+        throw cause;
       }
-      if (!controller.signal.aborted && !blocked.current) timer = window.setTimeout(poll, 850);
-    };
-    void poll();
-    return () => {
-      controller.abort();
-      window.clearTimeout(timer);
-    };
+    }, 3500, () => !blocked.current);
   }, [token, retryNumber, enabled]);
 
   async function commandResult(command: MostCommand) {

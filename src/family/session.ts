@@ -1,3 +1,4 @@
+import { pollWhileVisible } from "../polling";
 import { useEffect, useState } from "react";
 import type { FamilyCommand, FamilySessionResponse } from "./model";
 
@@ -74,16 +75,14 @@ export function useFamilySession() {
 
   useEffect(() => {
     if (!token) return;
-    const controller = new AbortController();
-    let timer: number;
-    const poll = async () => {
+    return pollWhileVisible(async (signal) => {
       try {
-        const response = await familyApi(token, undefined, controller.signal);
-        if (controller.signal.aborted) return;
+        const response = await familyApi(token, undefined, signal);
+        if (signal.aborted) return;
         setData((previous) => latest(previous, response));
         setConnected(true);
       } catch (cause) {
-        if (controller.signal.aborted) return;
+        if (signal.aborted) return;
         setConnected(false);
         if (cause instanceof FamilyApiError && cause.status === 401) {
           setError(cause.message);
@@ -91,14 +90,9 @@ export function useFamilySession() {
           setToken(null);
           return;
         }
+        throw cause;
       }
-      timer = window.setTimeout(poll, 1500);
-    };
-    void poll();
-    return () => {
-      controller.abort();
-      window.clearTimeout(timer);
-    };
+    }, 5000);
   }, [token]);
 
   async function start() {

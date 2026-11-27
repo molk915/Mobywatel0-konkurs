@@ -1,3 +1,4 @@
+import { pollWhileVisible } from "../polling";
 import { useEffect, useRef, useState } from "react";
 import type { HealthCommand, HealthProfile, HealthTarget, HealthView } from "./model";
 import type { InboxItem } from "../Inbox";
@@ -101,19 +102,15 @@ export function useWellnessSession(profile: HealthProfile | null, enabled = true
   }
   useEffect(() => {
     if (!token || !enabled) return;
-    const controller = new AbortController();
-    let timer: number;
-    const poll = async () => {
+    return pollWhileVisible(async (signal) => {
       try {
-        const result = await request(token, undefined, controller.signal);
-        if (!controller.signal.aborted) update(result.view);
+        const result = await request(token, undefined, signal);
+        if (!signal.aborted) update(result.view);
       } catch (cause) {
-        if (!controller.signal.aborted) onFailure(cause, false);
+        if (!signal.aborted) onFailure(cause, false);
+        throw cause;
       }
-      if (!controller.signal.aborted && !terminal.current) timer = window.setTimeout(poll, 1000);
-    };
-    void poll();
-    return () => { controller.abort(); window.clearTimeout(timer); };
+    }, 4000, () => !terminal.current);
   }, [token, enabled]);
 
   async function act(command: HealthCommand) {

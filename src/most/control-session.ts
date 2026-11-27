@@ -1,3 +1,4 @@
+import { pollWhileVisible } from "../polling";
 import { useEffect, useRef, useState } from "react";
 import type { ControlView } from "./control-model";
 
@@ -43,29 +44,25 @@ export function useControl(token: string | null, enabled: boolean, workflowKey?:
     setError("");
     setRefreshError("");
     if (!token || !enabled) return;
-    const scope = new AbortController();
-    let timer: number;
     let binding = !!workflowKey;
-    async function refresh() {
+    return pollWhileVisible(async (signal) => {
       const version = generation.current;
       try {
-        const data = await controlRequest(token!, binding ? { type: "bind", workflowKey, letterKey } : undefined, scope.signal);
+        const data = await controlRequest(token!, binding ? { type: "bind", workflowKey, letterKey } : undefined, signal);
         binding = false;
-        if (!scope.signal.aborted && generation.current === version && !working.current) {
+        if (!signal.aborted && generation.current === version && !working.current) {
           setView({ token: token!, view: data.view });
           setRefreshError("");
         }
       } catch (cause) {
         if (cause instanceof ControlError && [400, 401, 403, 410].includes(cause.status)) binding = false;
-        if (!scope.signal.aborted && generation.current === version) {
+        if (!signal.aborted && generation.current === version) {
           if (cause instanceof ControlError && [401, 410].includes(cause.status)) setView(undefined);
           setRefreshError(cause instanceof ControlError ? cause.message : "Nie można odświeżyć spraw. Trwa ponawianie.");
         }
+        throw cause;
       }
-      if (!scope.signal.aborted) timer = window.setTimeout(refresh, 1700);
-    }
-    void refresh();
-    return () => { scope.abort(); clearTimeout(timer); };
+    }, 5000);
   }, [token, enabled, workflowKey, letterKey]);
 
   async function send(command: object) {
