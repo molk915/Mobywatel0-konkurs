@@ -30,7 +30,6 @@ test("Ewa shares her fine and Kacper pays it after changing profiles in the same
   await button(page, "Poproś o pomoc").click();
   await grantAccess(page, "Mandat drogowy", "Przez czas połączenia");
   await switchProfile(page, /^Kacper Zieliński/);
-  await page.reload();
   await expect(page.getByRole("heading", { name: "Sprawy · Kacper" })).toBeVisible();
   await expect(sharedCases(page).getByRole("heading", { name: "Mandat drogowy" })).toBeVisible();
   await expect(sharedCases(page).getByText("Podatek od nieruchomości", { exact: true })).toHaveCount(0);
@@ -148,7 +147,6 @@ test("from Start Ewa shares a letter, Kacper saves and returns to his list, and 
   await expect(other).toBeVisible();
   await button(page, "Wróć do szkicu").click();
   await expect(reason).toHaveValue(text);
-  await page.reload();
   await expect(reason).toHaveValue(text);
   await button(page, "Przekaż do zatwierdzenia").click();
   await expect(page.getByText("Przekazano Ewie do zatwierdzenia.", { exact: true })).toBeVisible();

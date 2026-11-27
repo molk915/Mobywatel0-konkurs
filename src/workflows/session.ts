@@ -1,4 +1,5 @@
 import { pollWhileVisible } from "../polling";
+import { demoStorage } from "../demo-run";
 import { useEffect, useRef, useState } from "react";
 import type { WorkflowAction, WorkflowCase, WorkflowInput, WorkflowKind } from "./model";
 
@@ -41,7 +42,7 @@ function connect(profile: string) {
   if (pending) return pending;
   const storageKey = "most-workflows:" + profile;
   const connection = (async () => {
-    const key = localStorage.getItem(storageKey);
+    const key = demoStorage.getItem(storageKey, true);
     if (key) {
       try {
         return { ...await request<Snapshot>("", key), token: key };
@@ -50,7 +51,7 @@ function connect(profile: string) {
       }
     }
     const snapshot = await request<Snapshot>("/session", null, { profile });
-    if (snapshot.token) localStorage.setItem(storageKey, snapshot.token);
+    if (snapshot.token) demoStorage.setItem(storageKey, snapshot.token, true);
     return snapshot;
   })();
   pendingSessions.set(profile, connection);

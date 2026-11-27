@@ -1,4 +1,5 @@
 import { pollWhileVisible } from "../polling";
+import { demoStorage } from "../demo-run";
 import { useEffect, useState } from "react";
 import type { FamilyCommand, FamilySessionResponse } from "./model";
 
@@ -16,7 +17,7 @@ export function familyInvite(token: string) {
 function readFamilyToken() {
   const invite = location.hash.match(invitePattern)?.[1];
   try {
-    return invite ?? sessionStorage.getItem(sessionKey);
+    return invite ?? demoStorage.getItem(sessionKey);
   } catch {
     return invite ?? null;
   }
@@ -65,9 +66,14 @@ export function useFamilySession() {
 
   useEffect(() => {
     try {
-      if (token) sessionStorage.setItem(sessionKey, token);
-      else sessionStorage.removeItem(sessionKey);
-      if (isFamilyInvite()) history.replaceState(history.state, "", location.pathname + location.search);
+      if (token) demoStorage.setItem(sessionKey, token);
+      else demoStorage.removeItem(sessionKey);
+      if (isFamilyInvite()) {
+        const url = new URL(location.href);
+        url.hash = "";
+        url.searchParams.set("rodzina", "pomoc");
+        history.replaceState(history.state, "", url);
+      }
     } catch {
       // The active view can still function if the browser blocks storage.
     }

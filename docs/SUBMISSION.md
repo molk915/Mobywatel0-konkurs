@@ -12,18 +12,18 @@ Kiedy Ewa potrzebuje pomocy przy sprawie urzędowej, mObywatel Razem pozwala jej
 
 Kacper widzi przekazane sprawy i udostępnione terminy w zakładce **Pomagam**. Przy mandacie zapisuje szkic i może potwierdzić płatność, jeśli Ewa przyznała mu takie uprawnienie. Przy piśmie Kacper może przygotować odpowiedź do decyzji Ewy. Ewa przegląda treść i załącznik, zatwierdza pakiet albo prosi o poprawki.
 
-Prototyp działa bez logowania i korzysta z fikcyjnych danych. W jednej karcie można przełączyć się między profilami, sprawdzić zakres Kacpra i zobaczyć wynik po stronie Ewy.
+Prototyp działa bez logowania i korzysta z fikcyjnych danych. Pokaz dwóch telefonów pozwala w jednej karcie przyjąć zaproszenie na drugim telefonie, sprawdzić zakres dostępu i zobaczyć wynik po stronie Ewy. W sekcji **Moje dane** można zobaczyć historię operacji i cofnąć uprawnienia osoby zaufanej.
 
 [Ekran główny mObywatel Razem](screenshots/razem-start-390.png)
 
 ## Próba dla jurora
 
-Główny link prowadzi do `/?start=most-hub` na publicznej domenie. Cały scenariusz można przejść w jednej karcie.
+[Otwórz publiczny prototyp](https://mobywatel0-konkurs-qznq.vercel.app/?start=most-hub). Cały scenariusz można przejść w jednej karcie.
 
-1. W **Pomoc → Moje** u Ewy wybierz **Przekaż sprawę Mandat drogowy**. Sprawdź zakres, przejdź do potwierdzenia i wybierz **Potwierdź dostęp**.
-2. Kliknij nazwę profilu nad listą spraw i wybierz Kacpra. W **Pomagam** otwórz udostępniony mandat na 150 zł.
-3. Wybierz **Opłać mandat**, zaznacz BLIK, zapisz szkic i potwierdź płatność demo.
-4. Wróć do listy spraw, przełącz profil na Ewę i otwórz **Moje**. Mandat ma status **Zakończona**. W historii sprawy widać działania Kacpra.
+1. U Ewy wybierz **Kto ma dostęp → Utwórz zaproszenie QR → Pokaż na dwóch telefonach**.
+2. Na drugim telefonie przyjmij zaproszenie. U Ewy wybierz **Udostępnij zgłoszenie pobytu stałego**, sprawdź podsumowanie i potwierdź dostęp.
+3. Na telefonie Kacpra wybierz **Przygotuj zgłoszenie**, wpisz przykładowy adres, wybierz typ dokumentu i zapisz szkic. Wybierz **Wyślij zgłoszenie**, aby zakończyć sprawę w pokazie.
+4. U Ewy sprawdź status i historię. Odświeżenie głównego pokazu uruchamia nową sesję demonstracyjną bez wcześniejszych przypisań.
 
 Pod `/?pokaz=most3` oba telefony mają własne Dokumenty, Sprawy, Usługi, Dane i zakładkę Pomoc. Otwórz zakładkę Pomoc na telefonie Ewy i wybierz **Przygotuj zaproszenie**, a następnie **Wyślij zaproszenie do Kacpra**. Drugi telefon wyświetli zaproszenie na aktualnym ekranie. Scenariusz pisma urzędowego opisany poniżej jest również dostępny pod `/?pokaz=most`.
 
@@ -50,7 +50,7 @@ Pod `/?pokaz=most3` oba telefony mają własne Dokumenty, Sprawy, Usługi, Dane 
 
 ## Uruchomienie i publikacja
 
-Zaimportuj główny katalog repozytorium do Vercela jako projekt Vite. Utwórz projekt PostgreSQL na planie Free w Neon i dodaj jego adres połączenia z włączonym poolingiem jako `DATABASE_URL` w zmiennych środowiskowych Vercela. Reguły w `vercel.json` kierują API do funkcji, która tworzy tabelę stanu przy pierwszym wywołaniu. Termin i ważność uprawnień są sprawdzane przy odczycie Centrum kontroli.
+Publiczna aplikacja działa na Vercelu, a sesje demonstracyjne korzystają z bazy PostgreSQL w Render. Reguły w `vercel.json` kierują API do funkcji, która tworzy tabelę stanu przy pierwszym wywołaniu. Serwer sprawdza ważność i zakres uprawnień.
 
 Tryb demonstracyjny działa bez klucza. Aby włączyć własny model, dodaj w zakładce **Environment** usługi `ASSISTANT_PROVIDER=compatible`, `MODEL_BASE_URL`, `MODEL_NAME` i `MODEL_API_KEY`. Po wdrożeniu sprawdź publiczne ścieżki `/api/health` i `/?start=most-hub`.
 
@@ -63,4 +63,4 @@ docker run -d --name mobywatel-most --restart unless-stopped -p 127.0.0.1:4197:8
 
 W wariancie Docker użyj jednej instancji kontenera z trwałym wolumenem `/var/lib/most`. Ustaw `APP_ORIGIN` na dokładny publiczny adres HTTPS bez końcowego ukośnika i skieruj ruch HTTPS na port kontenera 8080. Endpoint `GET /api/health` sprawdza dostępność procesu. Sesje właściciela wygasają po 14 dniach, a zaproszenia Kacpra po 10 minutach. Nowe wejście bez zapisanej sesji tworzy nową sprawę na danych demonstracyjnych.
 
-Po wdrożeniu przejdź cały scenariusz na publicznym adresie w nowym oknie prywatnym i sprawdź, czy status oraz historia pozostają po odświeżeniu. Formularz wymaga linku HTTPS działającego bez logowania do czasu ogłoszenia wyników. Termin podany przez organizatora to 30 listopada 2026, do końca dnia w Polsce. [Oficjalne warunki konkursu](https://mobywatel.ai/)
+Po wdrożeniu przejdź cały scenariusz w nowym oknie prywatnym. Sprawdź synchronizację statusu i historii w czasie pokazu oraz świeży start po odświeżeniu głównej aplikacji. Formularz wymaga linku HTTPS działającego bez logowania do czasu ogłoszenia wyników. Termin podany przez organizatora to 30 listopada 2026, do końca dnia w Polsce. [Oficjalne warunki konkursu](https://mobywatel.ai/)

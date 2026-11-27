@@ -91,6 +91,7 @@ import {
   type Tab,
 } from "./domain";
 import { freshStore, loadStore, saveStore } from "./storage";
+import { freshDemo } from "./demo-run";
 import { Wallet } from "./DeckWallet";
 import { DigitalCard, documentTitles } from "./DigitalCard";
 import { PrivacyHub, type TrackerPermission } from "./PrivacyHub";
@@ -222,14 +223,17 @@ export default function App() {
       history.replaceState(history.state, "", url);
     }
   }
-  const [showcasePhone] = useState<"ewa" | "kacper" | undefined>(() => {
+  const [showcasePhone] = useState<Profile["id"] | undefined>(() => {
     const role = new URLSearchParams(location.search).get("telefon-most");
-    return window.parent !== window && (role === "ewa" || role === "kacper") ? role : undefined;
+    return window.parent !== window ? profiles.find(({ id }) => id === role)?.id : undefined;
   });
-  const [contestEntry] = useState(() => !history.state?.prototype &&
+  const inlineHelper = !!showcasePhone && new URLSearchParams(location.search).has("pokaz-w-aplikacji");
+  const helperPhone = inlineHelper || showcasePhone === "kacper";
+  const [contestEntry] = useState(() => (freshDemo || !history.state?.prototype) &&
     ["most", "centrum", "most-hub"].includes(new URLSearchParams(location.search).get("start") ?? "") &&
     !hasMostInvite() && !hasWellnessInvite() && !isFamilyInvite());
   const [store, setStore] = useState(() => {
+    if (freshDemo) return freshStore();
     const fromInvitation = hasMostInvite() || hasWellnessInvite() || isFamilyInvite();
     const saved = loadStore(showcasePhone, fromInvitation ? "aleksandra" : "ewa");
     if (showcasePhone) return { ...saved, profile: showcasePhone };
@@ -240,28 +244,27 @@ export default function App() {
   const [mostHelpEnabled, setMostHelpEnabled] = useState(() =>
     hasMostInvite() || new URLSearchParams(location.search).get("most") === "pomoc");
   const [showcaseInvite, setShowcaseInvite] = useState<string>();
-  const inlineHelper = showcasePhone === "kacper" && new URLSearchParams(location.search).has("pokaz-w-aplikacji");
-  const [inlineShowcase, setInlineShowcase] = useState<{ token?: string }>();
+  const [inlineShowcase, setInlineShowcase] = useState<{ token?: string; helper: Profile["id"] }>();
   const identityOrigin = useRef<DOMRect>(undefined);
   const [initialNavigation] = useState<{ tab: Tab; layer: Layer | null }>(() => {
     if (isFamilyInvite()) return { tab: "cases", layer: { type: "family" } };
-    if (hasMostInvite() || (mostHelpEnabled && (showcasePhone === "kacper" || !history.state?.prototype)))
+    if (hasMostInvite() || (mostHelpEnabled && (helperPhone || !history.state?.prototype)))
       return { tab: "cases", layer: { type: "most-help" } };
     if (showcasePhone) return history.state?.prototype ? restoreNavigation(history.state, store) : { tab: "cases", layer: null };
     if (hasWellnessInvite() || (healthHelpEnabled && !history.state?.prototype))
       return { tab: "cases", layer: { type: "health", helper: true, target: { section: "referrals" } } };
-    if (new URLSearchParams(location.search).get("pokaz") === "zdrowie" && !history.state?.prototype)
+    if (new URLSearchParams(location.search).get("pokaz") === "zdrowie" && (freshDemo || !history.state?.prototype))
       return { tab: "cases", layer: { type: "health", target: { section: "home" } } };
     if (contestEntry && new URLSearchParams(location.search).get("start") === "most-hub")
       return { tab: "cases", layer: { type: "most-hub" } };
     if (contestEntry) return new URLSearchParams(location.search).get("start") === "centrum"
       ? { tab: "privacy", layer: { type: "delegation", kind: "trusted" } }
       : { tab: "cases", layer: { type: "most" } };
-    return restoreNavigation(history.state, store);
+    return restoreNavigation(freshDemo ? null : history.state, store);
   });
   const [tab, setTab] = useState<Tab>(initialNavigation.tab);
   const [layer, setLayer] = useState<Layer | null>(initialNavigation.layer);
-  const [inboxOpen, setInboxOpen] = useState(() => history.state?.inboxOpen === true);
+  const [inboxOpen, setInboxOpen] = useState(() => !freshDemo && history.state?.inboxOpen === true);
   const [notificationVisit, setNotificationVisit] = useState(0);
   const inboxTrigger = useRef<HTMLElement | null>(null);
   const inboxRef = useRef<HTMLDivElement>(null);
@@ -284,7 +287,7 @@ export default function App() {
   const p = profiles.find((p) => p.id === store.profile)!;
   const c = store.citizens[p.id];
   const isEwa = p.id === "ewa";
-  const duetOpen = !!inlineShowcase && isEwa;
+  const duetOpen = !!inlineShowcase;
   const previewScale = simulator && fitPreview ? deviceScale : 1;
   const workflows = useWorkflows(p.id);
   const ownHealthOpen = layer?.type === "health" && !layer.helper;
@@ -293,9 +296,9 @@ export default function App() {
   const healthKacper = useWellnessSession("kacper", p.id === "kacper" && ownHealthOpen);
   const healthHelper = useWellnessSession(null, healthHelpEnabled);
   const mostHelper = useMostSession("helper", inlineHelper ? "delegation-inline-help" : showcasePhone === "kacper" ? "delegation-showcase-help" : "app",
-    false, mostHelpEnabled || showcasePhone === "kacper", undefined, showcaseInvite);
+    false, mostHelpEnabled || helperPhone, undefined, showcaseInvite);
   useEffect(() => {
-    if (showcasePhone !== "kacper") return;
+    if (!helperPhone) return;
     function receive(event: MessageEvent) {
       if (event.source !== window.parent || event.origin !== location.origin || event.data?.type !== "most-showcase-invitation" ||
           typeof event.data.token !== "string" || !/^[A-Za-z0-9_-]{32}$/.test(event.data.token)) return;
@@ -306,7 +309,7 @@ export default function App() {
     window.addEventListener("message", receive);
     window.parent.postMessage({ type: "most-showcase-ready" }, location.origin);
     return () => window.removeEventListener("message", receive);
-  }, [showcasePhone, inlineHelper]);
+  }, [helperPhone, inlineHelper]);
   const [controlTab, setControlTab] = useState<"access" | "inbox">("access");
   const [dataTab, setDataTab] = useState<"history" | "most">("history");
   const [editAccess, setEditAccess] = useState<{ id: string; connection?: string }>();
@@ -453,7 +456,7 @@ export default function App() {
     });
   }
   useEffect(() => {
-    setSaveFailed(!saveStore(store, showcasePhone));
+    if (!freshDemo) setSaveFailed(!saveStore(store, showcasePhone));
   }, [store, showcasePhone]);
   useEffect(() => {
     const query = window.matchMedia(fullScreenQuery);
@@ -510,7 +513,7 @@ export default function App() {
   }, []);
   useEffect(() => {
     if (!historyReady.current) {
-      const previous = history.state;
+      const previous = freshDemo ? null : history.state;
       const mostNavigation = layer?.type === "most" && previous?.layer?.type === "most" && previous.profile === store.profile
         ? { mostPane: previous.mostPane, mostHistoryReturn: previous.mostHistoryReturn }
         : layer?.type === "most-hub" && previous?.layer?.type === "most-hub" && previous.profile === store.profile
@@ -591,7 +594,7 @@ export default function App() {
         if (inboxOpen) { e.preventDefault(); dismissInbox(); }
         else if (layer) dismissWorkspace();
       }
-      if (e.key === "Tab" && (layer || inboxOpen) && !(inlineShowcase && isEwa)) {
+      if (e.key === "Tab" && (layer || inboxOpen) && !inlineShowcase) {
         const dialog = inboxOpen ? inboxRef.current : document.querySelector(".app-workspace");
         if (!dialog) return;
         const nodes = Array.from(
@@ -612,7 +615,7 @@ export default function App() {
     }
     window.addEventListener("keydown", key);
     return () => window.removeEventListener("keydown", key);
-  }, [layer, inboxOpen, c.receipts, inlineShowcase, isEwa, authorOpen]);
+  }, [layer, inboxOpen, c.receipts, inlineShowcase, authorOpen]);
   const start = (kind: CaseKind, suggestedData?: Record<string, string>) => {
     if (kind === "move") {
       setTab("cases");
@@ -667,7 +670,7 @@ export default function App() {
     });
   };
   function openMostTab() {
-    if (showcasePhone === "kacper" && mostHelper.hasSession) {
+    if (helperPhone && mostHelper.hasSession) {
       if (layer?.type === "most-help") return;
       setControlTab("access");
       openMostHelp();
@@ -851,11 +854,11 @@ export default function App() {
     return true;
   }
   return (
-    <InlineShowcaseContext.Provider value={isEwa && !showcasePhone ? {
+    <InlineShowcaseContext.Provider value={!showcasePhone ? {
       active: !!inlineShowcase,
-      open: (token) => setInlineShowcase({ token }),
+      open: (token, helper) => setInlineShowcase({ token, helper: helper ?? (p.id === "kacper" ? "ewa" : "kacper") }),
       connect: (token) => setInlineShowcase((current) =>
-        current || window.matchMedia("(min-width: 901px)").matches ? { token } : undefined),
+        current || window.matchMedia("(min-width: 901px)").matches ? { token, helper: "kacper" } : undefined),
     } : null}>
     <div className={"presentation " + (store.largeText ? "large-text" : "")}
       data-duet={duetOpen || undefined}
@@ -888,7 +891,7 @@ export default function App() {
           <button className="presentation-author-link" aria-haspopup="dialog" onClick={() => setAuthorOpen(true)}>O twórcy</button>
         </div>
       </header>
-      {inlineShowcase && isEwa && <InlineShowcaseToolbar onClose={() => setInlineShowcase(undefined)} />}
+      {inlineShowcase && <InlineShowcaseToolbar helper={inlineShowcase.helper} onClose={() => setInlineShowcase(undefined)} />}
       <div className="simulator-stage" ref={stageRef}>
       <motion.div layout="position" transition={{ layout: { type: "spring", stiffness: 220, damping: 26 } }}
         className="phone-shell"
@@ -923,7 +926,7 @@ export default function App() {
                   : "Jesteś offline. Prototyp nadal działa lokalnie."}
               </div>
             )}
-            {showcasePhone === "kacper" && mostHelper.view?.delegation?.kind === "trusted" && mostHelper.view.invitation?.status === "waiting" &&
+            {helperPhone && mostHelper.view?.delegation?.kind === "trusted" && mostHelper.view.invitation?.status === "waiting" &&
               <button className="showcase-invitation" onClick={openMostTab}>Odbierz zaproszenie od Ewy <ArrowRight size={17} /></button>}
             <main className="screen-content" ref={screenRef} id="main-content"
               data-tab-fallback={!document.startViewTransition || undefined}>
@@ -1030,7 +1033,7 @@ export default function App() {
                 (layer.type === "document" && layer.id === 0 && identityOrigin.current ? " identity-expansion-layer" : "")
               }
               role="dialog"
-              aria-modal={!(inlineShowcase && isEwa)}
+              aria-modal={!inlineShowcase}
               aria-label={
                 layer.type === "flow"
                   ? caseMeta[layer.kind].short
@@ -1049,7 +1052,7 @@ export default function App() {
               {layer.type === "most-hub" && <Suspense fallback={<p role="status">Otwieramy wspólne sprawy…</p>}>
                 <MostHub key={p.id} profile={p} onBack={closeLayer} workflowKey={workflows.token} letterKey={isEwa ? mostSession.token : undefined}
                   initialMode={layer.mode} nav={mostNav ?? appMostNav} showcase={!!showcasePhone}
-                  onFullApp={() => go("home")} onOpenShared={showcasePhone === "kacper" && mostHelper.hasSession ? openMostTab : undefined}
+                  onFullApp={() => go("home")} onOpenShared={helperPhone && mostHelper.hasSession ? openMostTab : undefined}
                   onSwitchProfile={(mode) => setLayer({ type: "profile", returnToMost: mode })} />
               </Suspense>}
               {layer.type === "workflow" && <>
@@ -1121,7 +1124,7 @@ export default function App() {
                     if (mostHelper.view?.document && storedTrustedHelperToken()) location.assign(helperDashboardUrl);
                     else closeLayer();
                   }}
-                  personal={showcasePhone === "kacper" ? { profile: p.id, items: workflows.items, ready: workflows.ready, error: workflows.error } : undefined}
+                  personal={helperPhone ? { profile: p.id, items: workflows.items, ready: workflows.ready, error: workflows.error } : undefined}
                   dashboard={inlineHelper && trustedHelper ? { profile: p, onFullApp: () => go("home") } : undefined}
                   onInbox={openInbox}
                   nav={inlineHelper ? appMostNav : mostNav ?? <CivicNav tab="cases" onGo={go} onAssistant={() => setLayer({ type: "assistant", screen: "cases" })} />} />
@@ -1343,6 +1346,7 @@ export default function App() {
                       key={pr.id}
                       onClick={() => {
                         if (pr.id !== p.id && pr.id !== "kacper") leaveHealthHelp();
+                        setInlineShowcase(undefined);
                         setStore((s) => ({ ...s, profile: pr.id }));
                         if (layer.service === "family") setLayer({ type: "family" });
                         else if (layer.returnToMost)
@@ -1554,7 +1558,7 @@ export default function App() {
           <div className="home-indicator" aria-hidden="true" />
         </div>
       </motion.div>
-      {inlineShowcase && isEwa && <InlineHelperPhone token={inlineShowcase.token} framed={simulator} scale={previewScale} />}
+      {inlineShowcase && <InlineHelperPhone token={inlineShowcase.token} helper={inlineShowcase.helper} framed={simulator} scale={previewScale} />}
       </div>
       <footer className="presentation-footer" inert={!!layer || inboxOpen}>
         <button onClick={() => setLayer({ type: "about" })}>

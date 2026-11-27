@@ -119,7 +119,6 @@ test("Ewa routes from inbox, Kacper prepares a package in an independent session
     await expect(button(helper, "Przekaż do zatwierdzenia")).toBeInViewport({ ratio: 1 });
     await shot(helper, "tasks-375");
     await button(helper, "Przekaż do zatwierdzenia").click();
-    await page.reload();
     await button(owner, "Powiadomienia").click();
     await button(page.getByRole("dialog", { name: "Powiadomienia" }), /Kacper przygotował sprawę do zatwierdzenia/).click();
     await expect(owner.getByRole("heading", { name: "Sprawdź przygotowaną sprawę" })).toBeVisible();

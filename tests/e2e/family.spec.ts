@@ -122,7 +122,6 @@ for (const { width, height, approve } of [
       await expect(owner.getByText(approve ? "Wyraził zgodę" : "Odmówił zgody")).toBeVisible();
       await expect(owner.getByText("Poprosiła Tomasza o zgodę")).toBeVisible();
       if (approve) await screenshot(page, "history-390");
-      await page.reload();
       await expect(owner.getByRole("button", { name: "Paszport Zosi", exact: true })).toHaveAccessibleDescription(status);
       expect(errors).toEqual([]);
     } finally {

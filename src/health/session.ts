@@ -1,4 +1,5 @@
 import { pollWhileVisible } from "../polling";
+import { demoStorage } from "../demo-run";
 import { useEffect, useRef, useState } from "react";
 import type { HealthCommand, HealthProfile, HealthTarget, HealthView } from "./model";
 import type { InboxItem } from "../Inbox";
@@ -36,7 +37,7 @@ export function useWellnessSession(profile: HealthProfile | null, enabled = true
   const storageKey = profile ? "wellness:app:" + profile : helperStorageKey;
   const [token, setToken] = useState(() => {
     const invite = !profile && location.hash.match(invitePattern)?.[1];
-    try { return invite || sessionStorage.getItem(storageKey); }
+    try { return invite || demoStorage.getItem(storageKey); }
     catch { return invite || null; }
   });
   const [view, setView] = useState<HealthView | null>(null);
@@ -79,7 +80,7 @@ export function useWellnessSession(profile: HealthProfile | null, enabled = true
   useEffect(() => {
     if (!token || !enabled) return;
     try {
-      sessionStorage.setItem(storageKey, token);
+      demoStorage.setItem(storageKey, token);
       if (!profile && hasWellnessInvite()) {
         const url = new URL(location.href);
         url.searchParams.set("zdrowie", "pomoc");
@@ -139,7 +140,7 @@ export function useWellnessSession(profile: HealthProfile | null, enabled = true
     setEnded("");
     setError("");
     setOnline(false);
-    try { sessionStorage.removeItem(helperStorageKey); } catch { /* Access in memory is already cleared. */ }
+    try { demoStorage.removeItem(helperStorageKey); } catch { /* Access in memory is already cleared. */ }
   }
   return { view, online, busy, ended, error, act, start, leave, hasToken: !!token };
 }

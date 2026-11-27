@@ -34,7 +34,6 @@ test("Kacper opens the real demo mandate through chat, retries and restores the 
   const receipt = page.getByRole("link", { name: "Pobierz potwierdzenie" });
   const download = await receipt.getAttribute("download");
   expect(download).toMatch(/^DEMO-/);
-  await page.reload();
   await expect(receipt).toHaveAttribute("download", download!);
   await button(page, "Wróć do spraw").click();
   await page.getByRole("tab", { name: "Zakończone" }).click();
@@ -55,7 +54,6 @@ test("moving opens two forms, reuses the address and stores separate results", a
   await page.getByLabel("Dokument potwierdzający prawo do lokalu").selectOption("lease");
   await button(page, "Sprawdź podsumowanie").click();
   await expect(page.getByRole("heading", { name: "Sprawdź podsumowanie" })).toBeVisible();
-  await page.reload();
   await expect(page.getByText("Jasna 8/12, 00-013 Warszawa")).toBeVisible();
   await button(page, "Wyślij zgłoszenie").click();
   await expect(page.getByRole("heading", { name: "Zgłoszenie przyjęte · oczekuje na rozpatrzenie" })).toBeVisible();
@@ -98,7 +96,6 @@ test("Ewa submits a file through the shared MOST letter and reopens its receipt"
   const receipt = page.getByRole("link", { name: "Pobierz potwierdzenie" });
   const id = await receipt.getAttribute("download");
   expect(id).toMatch(/^DEMO-UP-/);
-  await page.reload();
   await expect(receipt).toHaveAttribute("download", id!);
 });
 

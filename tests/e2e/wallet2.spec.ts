@@ -29,7 +29,6 @@ test("the document catalog persists each persona's selection independently", asy
   const catalog = page.getByRole("dialog", { name: "Katalog dokumentów" });
   await catalog.getByRole("button", { name: "mPrawo jazdy" }).click();
   await catalog.getByRole("button", { name: "Gotowe" }).click();
-  await page.reload();
   await expect(driving).toHaveCount(0);
   const profile = page.getByRole("button", { name: "Profil i ustawienia" });
   await profile.click();

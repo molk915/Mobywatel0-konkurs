@@ -6,6 +6,46 @@ test.use({ serviceWorkers: "block" });
 const btn = (phone: FrameLocator, name: string | RegExp) =>
   phone.getByRole("button", { name, exact: typeof name === "string" });
 
+test("the standalone access center opens the second phone in the same tab", async ({ page, context }) => {
+  await page.setViewportSize({ width: 1280, height: 960 });
+  await page.goto(previewOrigin + "/?start=centrum");
+  const url = page.url();
+  await page.getByRole("button", { name: "Przygotuj zaproszenie", exact: true }).click();
+  await page.getByRole("button", { name: "Utwórz zaproszenie QR", exact: true }).click();
+  await expect(page.getByRole("link", { name: "Otwórz zaproszenie w nowej karcie" })).toHaveCount(0);
+  await page.getByRole("button", { name: "Pokaż na dwóch telefonach", exact: true }).click();
+  const kacper = page.frameLocator('iframe[title="Telefon Kacpra"]');
+  await btn(kacper, "Przyjmij zaproszenie").click();
+  await expect(page.getByText("Osoba zaufana jest połączona")).toBeVisible();
+  await expect(page).toHaveURL(url);
+  expect(context.pages()).toHaveLength(1);
+});
+
+for (const { owner, helper, width } of [
+  { owner: "Aleksandra Nowak", helper: "Telefon Kacpra", width: 1280 },
+  { owner: "Kacper Zieliński", helper: "Telefon Ewy", width: 390 },
+]) {
+  test(`${owner} connects a trusted person on the second phone`, async ({ page, context }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto(previewOrigin);
+    const button = (name: string) => page.getByRole("button", { name, exact: true });
+    await button("Profil i ustawienia").click();
+    await page.getByRole("button", { name: new RegExp("^" + owner) }).click();
+    await page.getByRole("navigation", { name: "Najważniejsze usługi" }).getByRole("button", { name: /^Moje dane/ }).click();
+    await page.getByRole("group", { name: "Widok Moich danych" }).getByRole("button", { name: "Uprawnienia", exact: true }).click();
+    await page.getByRole("button", { name: /^Osoba zaufana/ }).click();
+    await button("Przygotuj zaproszenie").click();
+    await button("Utwórz zaproszenie QR").click();
+    await button("Pokaż na dwóch telefonach").click();
+    const second = page.frameLocator(`iframe[title="${helper}"]`);
+    await btn(second, "Przyjmij zaproszenie").click();
+    await expect(page.getByText("Osoba zaufana jest połączona")).toBeVisible();
+    await btn(second, "Mój dostęp").click();
+    await expect(second.getByText(owner, { exact: true }).first()).toBeVisible();
+    expect(context.pages()).toHaveLength(1);
+  });
+}
+
 test("the QR screen opens Kacper inline and he submits Ewa's residence registration", async ({ page, context }, testInfo) => {
   await page.setViewportSize({ width: 1280, height: 960 });
   await page.goto(previewOrigin + "/?start=most-hub");
@@ -30,7 +70,15 @@ test("the QR screen opens Kacper inline and he submits Ewa's residence registrat
   await kacper.getByLabel("Ulica i numer").fill("Jasna 8/12");
   await kacper.getByLabel("Kod pocztowy").fill("00-013");
   await kacper.getByLabel("Miejscowość").fill("Warszawa");
-  await kacper.getByLabel("Dokument potwierdzający prawo do lokalu").selectOption("lease");
+  await kacper.getByRole("radio", { name: "Kopia umowy najmu" }).check();
+  const documentGroup = kacper.getByRole("group", { name: "Dokument potwierdzający prawo do lokalu" });
+  const save = btn(kacper, "Zapisz szkic");
+  await save.scrollIntoViewIfNeeded();
+  const field = (await documentGroup.boundingBox())!;
+  const action = (await save.boundingBox())!;
+  const screen = (await page.locator('iframe[title="Telefon Kacpra"]').boundingBox())!;
+  expect(action.y - field.y - field.height).toBeGreaterThan(8);
+  expect(action.y + action.height).toBeLessThan(screen.y + screen.height);
   await btn(kacper, "Zapisz szkic").click();
   await expect(kacper.getByText("Jasna 8/12, 00-013 Warszawa")).toBeVisible();
   await btn(kacper, "Wyślij zgłoszenie").click();
@@ -39,6 +87,12 @@ test("the QR screen opens Kacper inline and he submits Ewa's residence registrat
   await page.screenshot({ path: testInfo.outputPath("most-pobyt-dwa-telefony.png"), animations: "disabled" });
   expect(context.pages()).toHaveLength(1);
   await expect(page).toHaveURL(url);
+  await page.reload();
+  await expect(page.locator(".most-priority").getByRole("heading", { name: title })).toBeVisible();
+  await expect(page.locator('iframe[title="Telefon Kacpra"]')).toHaveCount(0);
+  await expect(b(/^Kto ma dostęp/)).toContainText("Nie udostępniasz żadnych spraw");
+  await b(/^Kto ma dostęp/).click();
+  await expect(b("Utwórz zaproszenie QR")).toBeVisible();
 });
 
 test("inline demo animates on the same page and both phones receive the mandate result", async ({ page, context }, testInfo) => {

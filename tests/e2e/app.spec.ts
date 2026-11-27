@@ -80,7 +80,7 @@ test("desktop frame, small phone and stable content after navigation", async ({
   await expect(page.locator("html")).not.toHaveClass(/civic-tab-transition/);
   await expect(page.locator(".view-cases")).toHaveCSS("opacity", "1");
 });
-test("production PWA reloads offline and restores the selected case", async ({
+test("production PWA reloads offline into a fresh demo", async ({
   page,
   context,
 }) => {
@@ -102,7 +102,7 @@ test("production PWA reloads offline and restores the selected case", async ({
   await page.getByRole("button", { name: /^Zgłoś zameldowanie/ }).click();
   await context.setOffline(true);
   await page.reload();
-  await expect(dialog(page)).toHaveAttribute("aria-label", "Zgłoszenie pobytu stałego");
-  await expect(dialog(page)).toContainText("Sprawy online są niedostępne.");
+  await expect(page.getByRole("heading", { name: "Dzień dobry, Ewo" })).toBeVisible();
+  await expect(dialog(page)).toHaveCount(0);
   await context.setOffline(false);
 });

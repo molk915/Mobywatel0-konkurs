@@ -27,7 +27,6 @@ test("a case starts a separate chat automatically and payment works inside the c
   await button(page, "Rozmowy").click();
   await page.getByRole("region", { name: "Zapisane rozmowy" }).getByRole("button", { name: "Czy muszę opłacić ten mandat?" }).click();
   await expect(questions).toHaveText("Czy muszę opłacić ten mandat?");
-  await page.reload();
   await expect(questions).toHaveText("Czy muszę opłacić ten mandat?");
   await button(page, "Pokaż potwierdzenie w czacie").click();
   await expect(form.getByRole("heading", { name: "Opłacony" })).toBeVisible();
@@ -55,7 +54,6 @@ test("the letter assistant explains the deadline, saves an editable draft and tr
   await expect(page.locator(".chat-message.user")).toHaveCount(1);
   await expect(status).toContainText("Kopia umowy najmuGotowe");
   await expect(letter.getByText("Umowa w rozmowie.pdf", { exact: true })).toBeVisible();
-  await page.reload();
   await button(page, "Uzupełnij szkic").click();
   await expect(letter.getByLabel("Uzasadnienie")).toHaveValue(/W odpowiedzi na wezwanie/);
   await button(page, "Nowa rozmowa").click();

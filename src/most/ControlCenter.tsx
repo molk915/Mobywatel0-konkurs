@@ -12,7 +12,7 @@ import { workflowDetails, type WorkflowCase } from "../workflows/model";
 import { caseStages, DashboardDeadline, MostDashboardCases, MostDashboardHeader, MostDashboardProfile, type DashboardProfile } from "./MostDashboard";
 import { InlineShowcaseContext, ShowcaseEntry } from "./InlineShowcase";
 import { trackerDate, trackerSource } from "../data-tracker";
-import type { Access } from "../domain";
+import { profiles, type Access } from "../domain";
 import "./control.css";
 
 type Session = ReturnType<typeof useMostSession>;
@@ -82,7 +82,8 @@ export function ControlCenter({ session, role, profile, workflowKey, letterKey, 
   const [pendingCaseHref, setPendingCaseHref] = useState(requestedCaseHref);
   const [personalCase, setPersonalCase] = useState<ControlCase>();
   const [historyFilter, setHistoryFilter] = useState("");
-  const inShowcase = window.parent !== window && new URLSearchParams(location.search).has("telefon-most");
+  const frameProfile = window.parent !== window ? new URLSearchParams(location.search).get("telefon-most") : null;
+  const inShowcase = !!frameProfile;
   const inviteToken = invitation?.token;
   useEffect(() => {
     if (owner && inShowcase && inviteToken)
@@ -186,11 +187,12 @@ export function ControlCenter({ session, role, profile, workflowKey, letterKey, 
   </Suspense>;
 
   const overview = tab === "overview" && !wizard && !caseInfo && !assistant ? dashboard : undefined;
-  const canShowInline = owner && sameTabDemo && showcase && (!connected || view?.helperProfile === "kacper");
-  const residenceCase = canShowInline && showcase.active && connected
+  const canShowInline = owner && showcase;
+  const connectedHelper = connected ? profiles.find(({ id }) => id === view?.helperProfile)?.id : undefined;
+  const residenceCase = canShowInline && showcase.active && connectedHelper
     ? cases.find(({ id, stage, grantId }) => id === "registration" && stage !== "done" && !grantId) : undefined;
   const showcaseEntry = canShowInline && !showcase.active ?
-    <ShowcaseEntry onOpen={() => showcase.open(invitation?.token)}
+    <ShowcaseEntry onOpen={() => showcase.open(invitation?.token, connectedHelper)}
       ready={connected && view?.grants.some(({ status }) => status === "active")} /> : undefined;
   const awaitingRecipient = wizard?.recipientProfile && view?.helperProfile !== wizard.recipientProfile;
   const connectionError = session.error || (!!dashboard && !owner && session.attempted && !session.connected && !session.ended
@@ -239,7 +241,7 @@ export function ControlCenter({ session, role, profile, workflowKey, letterKey, 
           <option value="aleksandra">Aleksandra Nowak</option>
           </select></label>}
         <button className="most-button most-primary" disabled={locked || !session.connected}
-          onClick={() => void session.act({ type: "join", profile: inShowcase ? "kacper" : helperProfile })}>Przyjmij zaproszenie</button>
+          onClick={() => void session.act({ type: "join", profile: frameProfile || helperProfile })}>Przyjmij zaproszenie</button>
       </>}
       {owner && (!session.view || session.ended) && (!dashboard || session.error || session.ended) && <>
         <p className="most-lead">Udostępnij wybraną sprawę, dokument lub termin bliskiej osobie. Ty ustalasz zakres i czas dostępu.</p>
@@ -248,7 +250,7 @@ export function ControlCenter({ session, role, profile, workflowKey, letterKey, 
       {!dashboard && (view || personal) && !assistant && !wizard && <nav className="control-tabs" aria-label="Centrum kontroli">
         {enabledTabs.map((key) => {
           const Icon = icons[key];
-          const label = personal && key === "access" ? "Sprawy Ewy" : labels[key];
+          const label = personal && key === "access" ? view?.owner === "Ewa Wiśniewska" ? "Sprawy Ewy" : "Udostępnione sprawy" : labels[key];
           return <button key={key} className={tab === key ? "selected" : ""} aria-current={tab === key ? "page" : undefined} onClick={() => {
             if (key === "history") setHistoryFilter("");
             changeTab(key);
@@ -258,7 +260,7 @@ export function ControlCenter({ session, role, profile, workflowKey, letterKey, 
           </button>;
         })}
       </nav>}
-      {personal && tab === "personal" && <section className="control-section" aria-label="Moje sprawy Kacpra">
+      {personal && tab === "personal" && <section className="control-section" aria-label={personal.profile === "kacper" ? "Moje sprawy Kacpra" : "Moje sprawy"}>
         <h2>Moje sprawy</h2>
         {personal.items.map((item) => <WorkflowCard key={item.id} item={item} open={() => setPersonalCase({
           id: item.id, title: workflowDetails[item.kind].title, kind: "workflow", stage: "new",

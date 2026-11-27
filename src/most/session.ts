@@ -1,10 +1,11 @@
 import { pollWhileVisible } from "../polling";
+import { demoStorage } from "../demo-run";
 import { useEffect, useRef, useState } from "react";
 import type { DelegationContext, MostCommand, MostRole, MostView } from "./model";
 
 export type MostContext = "app" | "stage" | `delegation-${string}`;
 export function delegationToken(key: string) {
-  try { return sessionStorage.getItem(storageKey("owner", `delegation-${key}`)); }
+  try { return demoStorage.getItem(storageKey("owner", `delegation-${key}`)); }
   catch { return null; }
 }
 const invitePattern = /^#most=([A-Za-z0-9_-]{32})$/;
@@ -13,14 +14,14 @@ const storageKey = (role: MostRole, context: MostContext) => "mobywatel-most-" +
 const trustedHelperKey = "most-trusted-helper-return";
 export const helperDashboardUrl = "/?most=pomoc&powrot=most";
 export function storedTrustedHelperToken() {
-  try { return sessionStorage.getItem(trustedHelperKey); }
+  try { return demoStorage.getItem(trustedHelperKey); }
   catch { return null; }
 }
 export function demoHelperToken(profile: string) {
-  try { return sessionStorage.getItem("most-demo-helper:" + profile); } catch { return null; }
+  try { return demoStorage.getItem("most-demo-helper:" + profile); } catch { return null; }
 }
 export function rememberDemoHelper(profile: string, token: string) {
-  sessionStorage.setItem("most-demo-helper:" + profile, token);
+  demoStorage.setItem("most-demo-helper:" + profile, token);
 }
 
 export function routeForMost(role: MostRole, context: MostContext, token?: string) {
@@ -37,8 +38,8 @@ function storedToken(role: MostRole, context: MostContext) {
     return location.hash.match(invitePattern)?.[1] ?? null;
   try {
     if (role === "helper" && new URLSearchParams(location.search).get("powrot") === "most")
-      return sessionStorage.getItem(trustedHelperKey);
-    return sessionStorage.getItem(storageKey(role, context));
+      return demoStorage.getItem(trustedHelperKey);
+    return demoStorage.getItem(storageKey(role, context));
   } catch {
     return null;
   }
@@ -86,7 +87,7 @@ export function useMostSession(role: MostRole, context: MostContext, autoStart =
     if (blocked.current || next.role !== role) return;
     if (role === "helper" && context !== "delegation-profile-help" && context !== "delegation-showcase-help" && context !== "delegation-inline-help" &&
         token && next.delegation?.kind === "trusted" && next.invitation?.status === "active") {
-      try { sessionStorage.setItem(trustedHelperKey, token); } catch { /* Optional session storage. */ }
+      try { demoStorage.setItem(trustedHelperKey, token); } catch { /* Optional session storage. */ }
     }
     setView((previous) => {
       if (!previous) return next;
@@ -124,7 +125,7 @@ export function useMostSession(role: MostRole, context: MostContext, autoStart =
       const result = await request(null, delegation ? { delegation } : {});
       if (!result.token) throw new Error("Brak sesji właścicielki.");
       try {
-        sessionStorage.setItem(storageKey(role, context), result.token);
+        demoStorage.setItem(storageKey(role, context), result.token);
       } catch {
         // An active session can still run without browser storage.
       }
@@ -162,7 +163,7 @@ export function useMostSession(role: MostRole, context: MostContext, autoStart =
   useEffect(() => {
     if (role !== "helper" || !token || !enabled) return;
     try {
-      sessionStorage.setItem(storageKey(role, context), token);
+      demoStorage.setItem(storageKey(role, context), token);
       if (hasMostInvite()) {
         const url = new URL(location.href);
         url.searchParams.set("most", "pomoc");
@@ -222,8 +223,8 @@ export function useMostSession(role: MostRole, context: MostContext, autoStart =
       setToken(null);
       setConnected(false);
       try {
-        sessionStorage.removeItem(storageKey(role, context));
-        if (sessionStorage.getItem(trustedHelperKey) === token) sessionStorage.removeItem(trustedHelperKey);
+        demoStorage.removeItem(storageKey(role, context));
+        if (demoStorage.getItem(trustedHelperKey) === token) demoStorage.removeItem(trustedHelperKey);
       } catch { /* The current view is cleared. */ }
     },
     retry: () => {

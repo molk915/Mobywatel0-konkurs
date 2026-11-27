@@ -11,6 +11,10 @@
   color: #19254a; background: #fff; font: inherit;
 }
 .workflow-form label.workflow-option { display: flex; align-items: center; min-height: 44px; gap: 8px; }
+.workflow-form .workflow-document-choices { gap: 3px; margin: 0; padding: 4px 10px 6px; }
+.workflow-document-choices legend { max-width: 100%; font-size: .875rem; line-height: 1.35; }
+.workflow-document-choices input { flex: none; accent-color: var(--civic-accent); }
+.workflow-delegated-actions { margin-top: 16px; margin-bottom: 6px; }
 .workflow-form small, .workflow-history li { color: #485778; }
 .workflow-receipt { display: flex; gap: 12px; align-items: center; border-radius: 14px; background: #e5f4ed; color: #164b36; padding: 15px; }
 .workflow-receipt h2, .workflow-receipt p { margin: 0; overflow-wrap: anywhere; }

@@ -18,7 +18,7 @@ export function freshStore(initialProfile: Profile["id"] = "ewa"): Store {
     largeText: false,
   };
 }
-export function loadStore(phone?: "ewa" | "kacper", initialProfile?: Profile["id"]): Store {
+export function loadStore(phone?: Profile["id"], initialProfile?: Profile["id"]): Store {
   try {
     const raw = JSON.parse((phone ? sessionStorage.getItem(KEY + ":" + phone) : localStorage.getItem(KEY)) || "null");
     if (
@@ -49,7 +49,7 @@ export function loadStore(phone?: "ewa" | "kacper", initialProfile?: Profile["id
   }
   return freshStore(initialProfile);
 }
-export function saveStore(s: Store, phone?: "ewa" | "kacper"): boolean {
+export function saveStore(s: Store, phone?: Profile["id"]): boolean {
   if (phone) {
     try { sessionStorage.setItem(KEY + ":" + phone, JSON.stringify(s)); return true; }
     catch { return false; }

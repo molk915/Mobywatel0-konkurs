@@ -60,7 +60,6 @@ test("wellness prepares, approves and restores a visit across two browser sessio
     await capture(helper, "plan-375");
     await final.click();
     await expect(task.getByText("Czeka na decyzję Ewy", { exact: true })).toBeVisible();
-    await page.reload();
     await button(owner, "Powiadomienia").click();
     await button(page.getByRole("dialog"), /Kacper przygotował wizytę do zatwierdzenia/).click();
     await expect(owner.getByRole("heading", { name: "Sprawdź przygotowaną wizytę" })).toBeVisible();
@@ -69,7 +68,6 @@ test("wellness prepares, approves and restores a visit across two browser sessio
     await capture(page, "review-390");
     await button(owner, "Zatwierdź wizytę").click();
     await expect(owner.getByText("Zapisano w terminarzu")).toBeVisible();
-    await page.reload();
     await expect(owner.getByText("Zapisano w terminarzu")).toBeVisible();
     await button(owner, "Powiadomienia").click();
     await expect(button(page.getByRole("dialog"), /Nowe skierowanie.*Przeczytane/)).toBeVisible();
@@ -159,7 +157,6 @@ test("320px catalogue, history filters, prescriptions, result document, visits a
   await button(owner, "Pomoc w przygotowaniu do wizyty").click();
   await expect(owner.getByText(/Przygotowania do sprawy.*Konsultacja okulistyczna/)).toBeVisible();
   await owner.getByRole("checkbox", { name: "Gdzie znajdę opis badania?" }).check();
-  await page.reload();
   await expect(owner.getByRole("checkbox", { name: "Gdzie znajdę opis badania?" })).toBeChecked();
   await button(owner, "Wstecz").click();
   await button(owner, "Wstecz").click();
@@ -231,7 +228,6 @@ test("home services lead to a reminder and a scoped result at 430px", async ({ p
   await button(owner, /Konsultacja okulistyczna.*Otwórz skierowanie/).click();
   await button(owner, "Przypomnij jutro").click();
   await expect(owner.getByText(/Przypomnienie ustawione na/)).toBeVisible();
-  await page.reload();
   await button(owner, "Wyłącz przypomnienie").click();
   await expect(button(owner, "Przypomnij jutro")).toBeVisible();
   await button(owner, "Wstecz").click();

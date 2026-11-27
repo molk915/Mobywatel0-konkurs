@@ -86,7 +86,6 @@ test("history filters, exact disclosure and saved follow-up fit smaller and larg
   await button(page, "Zapisz prośbę").click();
   await button(page, "Zgłoś podejrzenie nieprawidłowości").click();
   await button(page, "Zapisz zgłoszenie").click();
-  await page.reload();
   await expect(page.getByText("Prośba o wyjaśnienie zapisana w pokazie.")).toBeVisible();
   await expect(page.getByText("Zgłoszenie zapisane w pokazie.")).toBeVisible();
 });

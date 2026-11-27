@@ -7,6 +7,7 @@ import { helperDashboardUrl } from "../most/session";
 import "./workflows.css";
 
 const paymentMethods: Record<PaymentMethod, string> = { blik: "BLIK", card: "Karta", "test-failure": "Płatność testowo odrzucona" };
+const registrationDocuments = { lease: "Kopia umowy najmu", ownership: "Potwierdzenie własności" };
 const date = (at: string) => new Date(at).toLocaleString("pl-PL", { dateStyle: "short", timeStyle: "short" });
 const moveKinds = ["registration", "tax-address"] as const;
 const actionTitle = (item: WorkflowCase) => item.receipt ? "Otwórz potwierdzenie" : item.status === "prepared" ? "Sprawdź i zatwierdź" : workflowDetails[item.kind].action;
@@ -190,10 +191,16 @@ export function WorkflowWorkspace({ kind, applicant, city, session, onAssistant,
               <label>Ulica i numer<input name="street" required minLength={4} maxLength={100} defaultValue={data && "street" in data ? data.street : ""} /></label>
               <label>Kod pocztowy<input name="postalCode" placeholder="00-000" pattern="[0-9]{2}-[0-9]{3}" required defaultValue={data && "street" in data ? data.postalCode : ""} /></label>
               <label>Miejscowość<input name="city" required minLength={2} maxLength={60} defaultValue={data && "street" in data ? data.city : city ?? ""} /></label>
-              {kind === "registration" ? <label>Dokument potwierdzający prawo do lokalu
+              {kind === "registration" ? delegated ? <fieldset className="workflow-document-choices">
+                <legend>Dokument potwierdzający prawo do lokalu</legend>
+                {Object.entries(registrationDocuments).map(([value, label]) => (
+                  <label className="workflow-option" key={value}><input type="radio" name="basis" value={value} required
+                    defaultChecked={data && "street" in data && data.basis === value} />{label}</label>
+                ))}
+              </fieldset> : <label>Dokument potwierdzający prawo do lokalu
                 <select name="basis" required defaultValue={data && "street" in data ? data.basis ?? "" : ""}>
-                  <option value="">Wybierz dokument</option><option value="lease">Kopia umowy najmu</option>
-                  <option value="ownership">Potwierdzenie własności</option>
+                  <option value="">Wybierz dokument</option>
+                  {Object.entries(registrationDocuments).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
                 </select>
               </label> : <label>Właściwy urząd skarbowy<input name="office" required minLength={4} maxLength={120} defaultValue={data && "street" in data ? data.office : ""} /></label>}
             </>}
@@ -218,7 +225,7 @@ export function WorkflowWorkspace({ kind, applicant, city, session, onAssistant,
         </details>}
       {onAssistant && <button className="process-assistant" onClick={onAssistant}><Sparkles size={20} /><span><strong>Zapytaj asystenta</strong><small>Otwórz rozmowę o tej sprawie</small></span><ArrowRight size={16} /></button>}
     </div>
-    <div className={inline ? "chat-operation-actions" : "flow-footer"}>
+    <div className={inline ? "chat-operation-actions" + (delegated ? " workflow-delegated-actions" : "") : "flow-footer"}>
       {busy && <p role="status">{prepared ? "Przetwarzamy operację…" : "Zapisujemy dane…"}</p>}
       {receipt ? <button className="primary" onClick={onBack}>{delegated ? "Wróć do wspólnych spraw" : inline ? "Rozpocznij inną rozmowę" : "Wróć do spraw"}</button> : session.ready && (!hasPayment || item) &&
         (prepared ? <>
