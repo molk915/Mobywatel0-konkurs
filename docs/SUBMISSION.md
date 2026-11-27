@@ -18,9 +18,9 @@ Prototyp działa bez logowania i korzysta z fikcyjnych danych. Pokaz dwóch tele
 
 ## Próba dla jurora
 
-[Otwórz publiczny prototyp](https://mobywatel0-konkurs-qznq.vercel.app/?start=most-hub). Cały scenariusz można przejść w jednej karcie.
+[Otwórz ekran główny publicznego prototypu](https://mobywatel0-konkurs-qznq.vercel.app/). Cały scenariusz można przejść w jednej karcie.
 
-1. U Ewy wybierz **Kto ma dostęp → Utwórz zaproszenie QR → Pokaż na dwóch telefonach**.
+1. Na ekranie startowym Ewy wybierz **Poproś o pomoc → Kto ma dostęp → Utwórz zaproszenie QR → Pokaż na dwóch telefonach**.
 2. Na drugim telefonie przyjmij zaproszenie. U Ewy wybierz **Udostępnij zgłoszenie pobytu stałego**, sprawdź podsumowanie i potwierdź dostęp.
 3. Na telefonie Kacpra wybierz **Przygotuj zgłoszenie**, wpisz przykładowy adres, wybierz typ dokumentu i zapisz szkic. Wybierz **Wyślij zgłoszenie**, aby zakończyć sprawę w pokazie.
 4. U Ewy sprawdź status i historię. Odświeżenie głównego pokazu uruchamia nową sesję demonstracyjną bez wcześniejszych przypisań.
@@ -64,3 +64,4 @@ docker run -d --name mobywatel-most --restart unless-stopped -p 127.0.0.1:4197:8
 W wariancie Docker użyj jednej instancji kontenera z trwałym wolumenem `/var/lib/most`. Ustaw `APP_ORIGIN` na dokładny publiczny adres HTTPS bez końcowego ukośnika i skieruj ruch HTTPS na port kontenera 8080. Endpoint `GET /api/health` sprawdza dostępność procesu. Sesje właściciela wygasają po 14 dniach, a zaproszenia Kacpra po 10 minutach. Nowe wejście bez zapisanej sesji tworzy nową sprawę na danych demonstracyjnych.
 
 Po wdrożeniu przejdź cały scenariusz w nowym oknie prywatnym. Sprawdź synchronizację statusu i historii w czasie pokazu oraz świeży start po odświeżeniu głównej aplikacji. Formularz wymaga linku HTTPS działającego bez logowania do czasu ogłoszenia wyników. Termin podany przez organizatora to 30 listopada 2026, do końca dnia w Polsce. [Oficjalne warunki konkursu](https://mobywatel.ai/)
+
